@@ -10,11 +10,11 @@ import PublicNav, { Footer } from "../components/PublicNav";
 
 const FEED = [
   ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
-  ["High", "SOC112", "Brute force: 240 x 4625 from 45.155.205.12", "VPN-GW-01", "240 failed VPN logins, then one success, from a hosting provider IP. Did the attacker get in?"],
+  ["Medium", "SOC112", "Brute force: 240 x 4625 from 45.155.205.12", "VPN-GW-01", "240 failed VPN logins, then one success, from a hosting provider IP. Did the attacker get in?"],
   ["Medium", "SOC201", "Beacon to newly registered domain", "FIN-WS-07", "A finance workstation calls out to a 2-day-old domain every 60 seconds. C2 or harmless update check?"],
   ["High", "SOC151", "PSEXESVC installed on domain controller", "DC-01", "A marketing user installed a remote service on the domain controller. Lateral movement in progress?"],
   ["Low", "SOC134", "Scheduled task created by service account", "IT-SRV-02", "A patch service account created a daily task. Persistence, or approved IT change?"],
-  ["Critical", "SOC101", "Macro spawned encoded PowerShell", "FIN-WS-07", "An invoice attachment launched hidden, encoded PowerShell. Trace the payload before it spreads."],
+  ["High", "SOC101", "Macro spawned encoded PowerShell", "FIN-WS-07", "An invoice attachment launched hidden, encoded PowerShell. Trace the payload before it spreads."],
   ["Medium", "SOC177", "DMARC fail + lookalike sender domain", "MAIL-GW", "An 'overdue invoice' from a lookalike domain failed every email check. Phishing or false alarm?"],
 ];
 const SEV_ORDER = ["Critical", "High", "Medium", "Low"];
@@ -46,7 +46,7 @@ function SeverityCounters({ items, filter, setFilter }) {
     <div className="grid grid-cols-4 border-b border-cyan-500/15" data-testid="alert-severity-counters">
       {counts.map(([s, c]) => (
         <button key={s} onClick={() => setFilter(filter === s ? null : s)} data-testid={`alert-filter-${s.toLowerCase()}`}
-          className={`text-left px-3 py-2 border-r last:border-r-0 border-cyan-500/10 transition-colors ${filter === s ? "bg-cyan-500/10 shadow-[inset_0_-2px_0_#00F0FF]" : filter ? "opacity-40 hover:opacity-80" : "hover:bg-white/5"}`}>
+          className={`text-left px-3 py-2 border-r last:border-r-0 border-cyan-500/10 transition-colors ${filter === s ? "bg-cyan-500/10 shadow-[inset_0_-2px_0_#00F0FF]" : filter ? "opacity-60 hover:opacity-90" : "hover:bg-white/5"}`}>
           <div className={`text-lg font-mono font-bold ${SEV_TEXT[s]}`} data-testid={`alert-count-${s.toLowerCase()}`}>{c}</div>
           <div className="text-[10px] font-mono uppercase text-slate-500">{s}</div>
         </button>))}
@@ -57,7 +57,7 @@ function SeverityCounters({ items, filter, setFilter }) {
 function AlertPrompt({ alert, onClose }) {
   if (!alert) return null;
   const [sev, id, title, host, teaser] = alert;
-  const remember = () => localStorage.setItem("pending_case", CASE_FOR[id]);
+  const remember = () => localStorage.setItem("pending_case", JSON.stringify({ id: CASE_FOR[id], at: Date.now() }));
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-lg" data-testid="alert-signup-prompt">
@@ -103,7 +103,7 @@ function AlertFeed() {
         <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/15 font-mono text-xs text-slate-400">
           <span className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${hold ? "bg-yellow-400" : "bg-red-500 animate-pulse"}`} /> {hold ? "QUEUE PAUSED" : "LIVE ALERT QUEUE"}</span>
           <span className="flex items-center gap-3">
-            <span data-testid="alert-feed-status" className="hidden sm:inline">{hold ? "hover to read · click to investigate" : filter ? `filter: ${filter.toLowerCase()}` : "siem://socforge/queue"}</span>
+            <span data-testid="alert-feed-status" className="hidden sm:inline">{filter ? `filter: ${filter.toLowerCase()} · click again to clear` : hold ? "hover to read · click to investigate" : "siem://socforge/queue"}</span>
             <button onClick={() => { setSound(!sound); if (!sound) ping(); }} title={sound ? "Mute critical alert ping" : "Ping on critical alerts"} data-testid="alert-sound-toggle"
               className={`flex items-center gap-1 px-2 py-0.5 border rounded-sm transition-colors ${sound ? "border-red-400/50 text-red-300" : "border-white/10 text-slate-500 hover:text-slate-300"}`}>
               {sound ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}{sound ? "ON" : "MUTED"}

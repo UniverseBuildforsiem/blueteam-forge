@@ -29,9 +29,10 @@ const F = ({ label, ...p }) => (
 const ErrorLine = ({ e }) => e ? <div data-testid="auth-error" className="text-sm text-red-400 font-mono mb-4">! {e}</div> : null;
 
 export const takePendingCase = () => {
-  const c = localStorage.getItem("pending_case");
+  let c = null;
+  try { c = JSON.parse(localStorage.getItem("pending_case")); } catch { c = null; }
   localStorage.removeItem("pending_case");
-  return c ? `/app/challenges?case=${c}` : null;
+  return c?.id && Date.now() - c.at < 3600e3 ? `/app/challenges?case=${c.id}` : null;
 };
 
 export function Login() {
@@ -48,7 +49,7 @@ export function Login() {
     try {
       const { data } = await api.post("/auth/login", f);
       setUser(data);
-      const pending = data.onboarded ? takePendingCase() : null;
+      const pending = data.onboarded && data.role === "student" ? takePendingCase() : null;
       nav(pending || (data.role === "admin" ? "/admin" : data.role === "instructor" ? "/instructor" : loc.state?.from || "/app"));
     } catch (x) { setErr(errMsg(x)); } finally { setBusy(false); }
   };
