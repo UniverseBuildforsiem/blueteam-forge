@@ -78,17 +78,31 @@ export default function Challenges() {
     if (want) setSp({}, { replace: true });
   });
   useEffect(() => { load(); }, []); // eslint-disable-line
+  const [f, setF] = useState({ q: "", cat: "All", diff: "All", status: "All" });
+  const cats = ["All", ...Array.from(new Set(cs.map((c) => c.category)))];
+  const shown = cs.filter((c) => (f.cat === "All" || c.category === f.cat) && (f.diff === "All" || c.difficulty === f.diff)
+    && (f.status === "All" || (f.status === "Solved" ? !!c.submission : !c.submission))
+    && `${c.title} ${c.alert.rule} ${c.alert.host}`.toLowerCase().includes(f.q.toLowerCase()));
+  const sel = (k, opts) => (
+    <select value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} className="bg-black/40 border border-white/10 text-sm font-mono px-2 py-1.5 rounded-sm focus:border-cyan-400 outline-none" data-testid={`challenge-filter-${k}`}>
+      {opts.map((o) => <option key={o} value={o}>{k === "cat" && o === "All" ? "All categories" : k === "diff" && o === "All" ? "All difficulties" : k === "status" && o === "All" ? "All statuses" : o}</option>)}
+    </select>);
   return (
     <div>
       <PageHeader eyebrow="// alert queue" title="SOC Challenges" sub="Investigate each alert, decide True or False Positive, and write a short report. Auto-graded on verdict and evidence coverage." />
+      <div className="flex flex-wrap items-center gap-2 mb-4" data-testid="challenge-filters">
+        <input value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} placeholder="Search alerts, rules, hosts" className="field !w-64" data-testid="challenge-search" />
+        {sel("cat", cats)}{sel("diff", ["All", "Easy", "Medium", "Hard"])}{sel("status", ["All", "Open", "Solved"])}
+        <span className="ml-auto text-xs font-mono text-slate-400" data-testid="challenge-count">{shown.length} of {cs.length} alerts · {cs.filter((c) => c.submission).length} solved</span>
+      </div>
       <Glass className="overflow-x-auto">
         <table className="w-full text-sm" data-testid="challenges-table">
-          <thead><tr className="text-left text-xs font-mono text-slate-500 border-b border-cyan-500/15">{["Severity", "Rule / Title", "Category", "Host", "Points", "Status"].map((h) => <th key={h} className="px-4 py-3 font-normal">{h}</th>)}</tr></thead>
-          <tbody>{cs.map((c) => (
+          <thead><tr className="text-left text-xs font-mono text-slate-500 border-b border-cyan-500/15">{["Severity", "Rule / Title", "Category", "Difficulty", "Host", "Points", "Status"].map((h) => <th key={h} className="px-4 py-3 font-normal">{h}</th>)}</tr></thead>
+          <tbody>{shown.map((c) => (
             <tr key={c.id} onClick={() => setOpen(c)} className="border-b border-white/5 hover:bg-cyan-500/5 cursor-pointer transition-colors" data-testid={`challenge-row-${c.id}`}>
               <td className="px-4 py-3"><SeverityBadge level={c.severity} /></td>
               <td className="px-4 py-3"><div className="font-mono text-xs text-cyan-400">{c.alert.rule}</div><div>{c.title}</div></td>
-              <td className="px-4 py-3 text-slate-400">{c.category}</td><td className="px-4 py-3 font-mono text-xs">{c.alert.host}</td>
+              <td className="px-4 py-3 text-slate-400">{c.category}</td><td className={`px-4 py-3 text-xs font-mono ${c.difficulty === "Hard" ? "text-red-300" : c.difficulty === "Medium" ? "text-yellow-300" : "text-green-300"}`} data-testid={`challenge-difficulty-${c.id}`}>{c.difficulty}</td><td className="px-4 py-3 font-mono text-xs">{c.alert.host}</td>
               <td className="px-4 py-3 font-mono text-green-400">{c.points}</td>
               <td className="px-4 py-3 text-xs font-mono">{c.submission ? <span className={c.submission.verdict_correct ? "text-green-400" : "text-orange-300"}>{c.submission.auto_score}/100</span> : <span className="text-slate-500">open</span>}</td>
             </tr>))}</tbody>

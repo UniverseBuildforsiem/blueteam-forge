@@ -1,5 +1,7 @@
+import json
 import random
 from datetime import timedelta
+from pathlib import Path
 from core import now
 
 
@@ -133,6 +135,9 @@ CHALLENGES = [
                   "4720: user 'support01' created at 22:33", "WS-MKT-11 ran mimikatz-like binary 'm.exe' at 22:15"],
      "keywords": ["psexec", "4732", "domain admins", "support01", "mimikatz", "credential", "disable"]},
 ]
+for _c in CHALLENGES:
+    _c.setdefault("difficulty", {80: "Easy", 100: "Easy", 120: "Medium"}.get(_c["points"], "Hard"))
+CHALLENGES += json.loads((Path(__file__).parent / "assets" / "challenges.json").read_text())
 
 CTFS = [
     {"id": "ctf-log-1", "category": "Log Analysis", "title": "Who Knocked?", "points": 100, "flag": "SOCF{45.155.205.12}",

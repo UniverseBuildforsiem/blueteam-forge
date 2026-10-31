@@ -15,6 +15,8 @@ SOURCE = "https://api.classplusapp.com/v2/course/preview/similar/eyJ0dXRvcklkIjp
 IMG = "https://cdn-wl-assets.classplus.co/production/single/jepxbq/"
 
 # Last known catalogue, used only if the very first sync can't reach the store.
+SEED_CONTENT = {803635: (464, 0, 0), 715800: (0, 1, 0), 715797: (0, 1, 0), 715790: (0, 1, 0), 715679: (0, 1, 0), 715668: (0, 1, 0), 712610: (0, 0, 1),
+                711866: (99, 0, 0), 586238: (211, 0, 0), 585979: (52, 0, 0), 585279: (315, 0, 0), 584863: (52, 0, 0), 584264: (58, 0, 0)}
 SEED = [
     (803635, "SOC Analyst Bundle (5 Courses)", "Videos", 4859, 14999, "cadd7065-f2a2-4c0e-99c8-11e395802a8d", []),
     (715800, "JN0-104 - Real Exam practice test with explanations - 2025", "Tests", 973, 1999, "0382be8b-0648-4ac8-8f5a-076ef59520b9", []),
@@ -110,7 +112,8 @@ def from_store(c, order):
     ctype = next((l.title() for l in labels if l in ("VIDEOS", "TESTS", "FILES")), "Videos")
     tags = (["New"] if c.get("isNew") or "NEW" in labels else []) + (["Free content"] if c.get("freeResources") or "FREE CONTENT" in labels else [])
     return {"id": c["id"], "title": " ".join(c["name"].split()), "type": ctype, "price": c["finalPrice"], "mrp": c["price"],
-            "image": c["imageUrl"], "url": c.get("shareableLink") or f"{STORE}/{c['id']}", "tags": tags, "order": order}
+            "image": c["imageUrl"], "url": c.get("shareableLink") or f"{STORE}/{c['id']}", "tags": tags, "order": order,
+            "content": {k: int((c.get("resources") or {}).get(k) or 0) for k in ("videos", "tests", "files")}}
 
 
 async def fetch_store():
@@ -197,7 +200,8 @@ async def ensure_courses():
     if not await sync_courses():
         for i, (cid, title, ctype, price, mrp, img, tags) in enumerate(SEED):
             await db.courses.insert_one({"id": cid, "title": title, "type": ctype, "price": price, "mrp": mrp, "image": f"{IMG}{img}.png",
-                                         "url": f"{STORE}/{cid}", "tags": tags, "order": i, "active": True, "synced_at": None})
+                                         "url": f"{STORE}/{cid}", "tags": tags, "order": i, "active": True, "synced_at": None,
+                                         "content": dict(zip(("videos", "tests", "files"), SEED_CONTENT.get(cid, (0, 0, 0))))})
 
 
 async def active_courses():

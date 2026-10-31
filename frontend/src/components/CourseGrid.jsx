@@ -10,6 +10,11 @@ import { api } from "../lib/api";
 const TYPE_ICON = { Videos: PlayCircle, Tests: ClipboardCheck, Files: FileText };
 const KIND_ICON = { Lab: FlaskConical, CTF: Flag, Drill: Flame, Tool: Terminal, Path: BookOpen, Challenge: ShieldCheck, Quiz: ClipboardCheck };
 export const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
+const plural = (n, w) => `${n.toLocaleString("en-IN")} ${w}${n === 1 ? "" : "s"}`;
+export const contentLabel = (c) => {
+  const k = c.content || {};
+  return [k.videos && plural(k.videos, "video"), k.tests && plural(k.tests, "practice test"), k.files && plural(k.files, c.type === "Files" ? "ebook" : "file")].filter(Boolean).join(" · ");
+};
 
 export const PracticeList = ({ c }) => {
   const { user } = useAuth();
@@ -42,7 +47,7 @@ const CourseDialog = ({ c, onClose, done, toggle }) => (
       <div className="grid sm:grid-cols-[220px_1fr] gap-5">
         <img src={c.image} alt={c.title} className="w-full aspect-[16/11] object-cover border border-white/10" />
         <DialogHeader className="text-left">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300">{c.type} · {c.off}% off</span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300" data-testid="course-dialog-content">{contentLabel(c) || c.type} · {c.off}% off</span>
           <DialogTitle className="text-lg leading-snug" data-testid="course-dialog-title">{c.title}</DialogTitle>
           <DialogDescription className="font-mono"><span className="text-xl font-bold neon-green">{inr(c.price)}</span> <span className="line-through text-slate-500 text-sm">{inr(c.mrp)}</span></DialogDescription>
         </DialogHeader>
@@ -79,7 +84,7 @@ export const CourseCard = ({ c, i = 0, onOpen, done }) => {
         <div className="mt-auto pt-4 flex items-baseline gap-2 font-mono">
           <span className="text-lg font-bold neon-green" data-testid={`course-price-${c.id}`}>{inr(c.price)}</span>
           <span className="text-xs text-slate-500 line-through" data-testid={`course-mrp-${c.id}`}>{inr(c.mrp)}</span>
-          <span className="ml-auto text-[10px] text-green-400/80">{c.practice.length} labs & drills</span>
+          <span className="ml-auto text-[10px] text-green-400/80" data-testid={`course-content-${c.id}`}>{contentLabel(c)}</span>
         </div>
         <span className="mt-3 inline-flex items-center justify-center gap-1.5 text-xs font-mono py-2 border border-cyan-500/40 text-cyan-200 rounded-sm group-hover:bg-cyan-400 group-hover:text-black transition-colors" data-testid={`course-cta-${c.id}`}>
           View course & practice

