@@ -21,7 +21,10 @@ export const Glass = ({ className = "", children, ...p }) => (
 export const Logo = ({ to = "/" }) => (
   <Link to={to} data-testid="brand-logo" className="flex items-center gap-2 font-mono font-extrabold tracking-tight text-lg">
     <ShieldHalf className="h-6 w-6 text-[#00F0FF]" />
-    <span>SOC<span className="neon-green">Forge</span></span>
+    <span className="flex flex-col leading-none">
+      <span>SOC<span className="neon-green">Professionals</span></span>
+      <span className="text-[9px] font-mono tracking-[0.35em] text-slate-400 mt-1">ACADEMY</span>
+    </span>
   </Link>
 );
 

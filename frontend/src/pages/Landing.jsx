@@ -106,7 +106,7 @@ function AlertFeed() {
         <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/15 font-mono text-xs text-slate-400">
           <span className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${hold ? "bg-yellow-400" : "bg-red-500 animate-pulse"}`} /> {hold ? "QUEUE PAUSED" : "LIVE ALERT QUEUE"}</span>
           <span className="flex items-center gap-3">
-            <span data-testid="alert-feed-status" className="hidden sm:inline">{filter ? `filter: ${filter.toLowerCase()} · click again to clear` : hold ? "hover to read · click to investigate" : "siem://socforge/queue"}</span>
+            <span data-testid="alert-feed-status" className="hidden sm:inline">{filter ? `filter: ${filter.toLowerCase()} · click again to clear` : hold ? "hover to read · click to investigate" : "siem://socpro-academy/queue"}</span>
             <button onClick={() => { setSound(!sound); if (!sound) ping(); }} title={sound ? "Mute critical alert ping" : "Ping on critical alerts"} data-testid="alert-sound-toggle"
               className={`flex items-center gap-1 px-2 py-0.5 border rounded-sm transition-colors ${sound ? "border-red-400/50 text-red-300" : "border-white/10 text-slate-500 hover:text-slate-300"}`}>
               {sound ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}{sound ? "ON" : "MUTED"}
@@ -129,7 +129,7 @@ function AlertFeed() {
             ))}
           </AnimatePresence>
         </div>
-        <div className="px-4 py-3 border-t border-cyan-500/15 font-mono text-xs text-green-400 cursor-blink">analyst@socforge:~$ triage --next </div>
+        <div className="px-4 py-3 border-t border-cyan-500/15 font-mono text-xs text-green-400 cursor-blink">analyst@socpro:~$ triage --next </div>
       </Glass>
       <AlertPrompt alert={open} onClose={() => setOpen(null)} />
     </>
@@ -170,7 +170,7 @@ export default function Landing() {
         <div className="rise">
           <div className="eyebrow mb-5">// blue team training ground</div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.05]">Train on the alerts<br />real analysts <span className="neon-text">triage.</span></h1>
-          <p className="mt-6 text-slate-400 text-base max-w-xl">SOCForge drops you into a working SOC: a live alert queue, a SIEM full of noisy logs, a Kali shell with evidence and incidents that escalate. Learn by investigating.</p>
+          <p className="mt-6 text-slate-400 text-base max-w-xl">SOCProfessionals Academy drops you into a working SOC: a live alert queue, a SIEM full of noisy logs, a Kali shell with evidence and incidents that escalate. Learn by investigating.</p>
           <div className="mt-9 flex flex-wrap gap-4">
             <Link to="/register" data-testid="hero-signup-button" className="glow-btn">Start free <ArrowRight className="h-4 w-4" /></Link>
             <Link to="/catalog" data-testid="hero-catalog-button" className="ghost-btn">Browse paths</Link>
@@ -196,7 +196,7 @@ export default function Landing() {
       <section id="courses" className="max-w-7xl mx-auto px-6 pb-24">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
           <div><div className="eyebrow mb-3">// self-paced courses · soc professionals</div><h2 className="text-3xl font-bold">Learn at your own pace.</h2>
-            <p className="text-slate-400 text-sm mt-2 max-w-xl">Recorded courses, exam prep and ebooks. Then practise each skill in SOCForge labs.</p></div>
+            <p className="text-slate-400 text-sm mt-2 max-w-xl">Recorded courses, exam prep and ebooks. Then practise each skill in SOCProfessionals Academy labs.</p></div>
           <Link to="/courses" className="ghost-btn" data-testid="landing-courses-see-all">See all {courses.length} courses <ArrowRight className="h-4 w-4" /></Link>
         </div>
         <CourseGrid courses={courses.slice(0, 8)} testId="landing-course-grid" />

@@ -17,7 +17,7 @@ const CourseEmailToggle = () => {
   };
   return (
     <label className="flex items-center gap-2 text-xs font-mono text-slate-400 mt-4 cursor-pointer">
-      <Mail className="h-3.5 w-3.5" />Email me about new courses
+      <Mail className="h-3.5 w-3.5" />Email me about new courses & badges
       <Switch checked={on} onCheckedChange={flip} data-testid="course-emails-toggle" />
     </label>
   );

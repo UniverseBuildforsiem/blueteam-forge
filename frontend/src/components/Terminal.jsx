@@ -3,7 +3,7 @@ import { createShell } from "../lib/kali";
 
 const Terminal = forwardRef(function Terminal({ lab, height = "520px" }, ref) {
   const shell = useMemo(() => createShell(lab), [lab?.id]); // eslint-disable-line
-  const [lines, setLines] = useState([{ t: "out", v: "SOCForge Kali simulator — offline sandbox. Type 'help' to list commands, 'cat README.txt' to start." }]);
+  const [lines, setLines] = useState([{ t: "out", v: "SOCProfessionals Academy Kali simulator — offline sandbox. Type 'help' to list commands, 'cat README.txt' to start." }]);
   const [cmd, setCmd] = useState("");
   const [hi, setHi] = useState(-1);
   const hist = useRef([]);

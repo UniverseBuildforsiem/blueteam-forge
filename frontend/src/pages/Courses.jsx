@@ -16,7 +16,7 @@ export default function Courses() {
         <div className="rise">
           <div className="eyebrow mb-4">// self-paced courses · by soc professionals</div>
           <h1 className="text-4xl sm:text-5xl font-extrabold">Recorded courses & exam prep.</h1>
-          <p className="mt-4 text-slate-400 max-w-2xl">Video courses, practice exams and ebooks from SOC Professionals. Learn at your own pace, then drill the skills in SOCForge labs. Click a course to see the matching labs and drills.</p>
+          <p className="mt-4 text-slate-400 max-w-2xl">Video courses, practice exams and ebooks from SOC Professionals. Learn at your own pace, then drill the skills in SOCProfessionals Academy labs. Click a course to see the matching labs and drills.</p>
           {synced_at && <p className="mt-2 text-[11px] font-mono text-slate-500" data-testid="courses-synced-at">prices synced {new Date(synced_at).toLocaleString()}</p>}
         </div>
         <div className="mt-10 flex flex-wrap items-center gap-3">

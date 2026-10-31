@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import os
@@ -149,6 +150,24 @@ def unsub_token(uid):
     return hmac.new(os.environ["JWT_SECRET"].encode(), f"course-unsub:{uid}".encode(), hashlib.sha256).hexdigest()[:32]
 
 
+def unsub_url(uid):
+    return f"{os.environ['FRONTEND_URL']}/api/public/unsubscribe/course-alerts?u={uid}&t={unsub_token(uid)}"
+
+
+async def send_badge_email(user, c, badge):
+    from urllib.parse import quote
+    from routes_share import ensure_token, api_base
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "name": 1, "email": 1, "course_emails": 1, "share_token": 1})
+    if not u or u.get("course_emails") is False:
+        return
+    share = f"{api_base()}/public/course-badge/{await ensure_token({**u, 'id': user['id']})}/{c['id']}"
+    linkedin = f"https://www.linkedin.com/sharing/share-offsite/?url={quote(share, safe='')}"
+    lines = [f"You earned +{BONUS_XP} XP and the {badge} badge for watching '{c['title']}' and practising it in our labs.",
+             "Your badge card is ready to post. Share it on LinkedIn below, or click the card to download it."]
+    await send_email(to=u["email"], subject=f"Your {badge} badge is ready to share",
+                     html=email_template(u["name"], lines, linkedin, "Share on LinkedIn", unsub_url(user["id"]), (f"{share}.png", f"{share}.png", f"{badge} badge card")))
+
+
 async def notify_new_courses(fresh):
     sent = 0
     async for u in db.users.find({"role": "student", "status": "active", "course_emails": {"$ne": False}}, {"_id": 0, "id": 1, "name": 1, "email": 1}):
@@ -163,8 +182,8 @@ async def notify_new_courses(fresh):
             continue
         lines = ["A new self-paced course just landed on SOC Professionals:" if len(todo) == 1 else f"{len(todo)} new self-paced courses just landed on SOC Professionals:"]
         lines += [f"{c['title']} · {c['type']} · ₹{c['price']:,} (was ₹{c['mrp']:,})" for c in todo]
-        lines.append("Open it in SOCForge to see the labs and drills that go with it.")
-        unsub = f"{os.environ['FRONTEND_URL']}/api/public/unsubscribe/course-alerts?u={u['id']}&t={unsub_token(u['id'])}"
+        lines.append("Open it in SOCProfessionals Academy to see the labs and drills that go with it.")
+        unsub = unsub_url(u["id"])
         subject = f"New course: {todo[0]['title']}" if len(todo) == 1 else f"{len(todo)} new SOC courses are live"
         await send_email(to=u["email"], subject=subject[:120],
                          html=email_template(u["name"], lines, f"{os.environ['FRONTEND_URL']}/courses", "See the new course" if len(todo) == 1 else "See the new courses", unsub))
@@ -230,6 +249,7 @@ async def courses_progress(user=Depends(get_current_user)):
                 await award(user["id"], BONUS_XP, f"Course bonus: practised '{short_title(c['title'])}'")
                 awarded.append(c["title"])
                 paid = True
+                asyncio.create_task(send_badge_email(user, c, short_title(c["title"])))
             except DuplicateKeyError:
                 paid = True
         track = [i for i in items if i["trackable"]]
@@ -265,8 +285,8 @@ async def unsubscribe(u: str = "", t: str = ""):
     ok = bool(u and t) and hmac.compare_digest(t, unsub_token(u))
     if ok:
         await db.users.update_one({"id": u}, {"$set": {"course_emails": False}})
-    msg = "You're unsubscribed from new course emails. You can turn them back on from your SOCForge dashboard." if ok else "This unsubscribe link is invalid or has expired."
-    return HTMLResponse(f"<html><body style='background:#0B0F1A;color:#E2E8F0;font-family:monospace;padding:60px'><h2 style='color:#00F0FF'>SOCForge</h2><p>{msg}</p>"
+    msg = "You're unsubscribed from new course and badge emails. You can turn them back on from your SOCProfessionals Academy dashboard." if ok else "This unsubscribe link is invalid or has expired."
+    return HTMLResponse(f"<html><body style='background:#0B0F1A;color:#E2E8F0;font-family:monospace;padding:60px'><h2 style='color:#00F0FF'>SOCProfessionals Academy</h2><p>{msg}</p>"
                         f"<a style='color:#00FF66' href='{os.environ['FRONTEND_URL']}/app'>Open dashboard</a></body></html>", status_code=200 if ok else 400)
 
 

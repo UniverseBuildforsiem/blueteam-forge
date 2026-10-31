@@ -60,7 +60,7 @@ async def cert_pdf(cert_id: str):
     cv.setFillColor(HexColor("#0B0F1A")); cv.rect(0, 0, w, h, fill=1, stroke=0)
     cv.setStrokeColor(HexColor("#00F0FF")); cv.setLineWidth(2); cv.rect(24, 24, w - 48, h - 48)
     cv.setStrokeColor(HexColor("#00FF66")); cv.setLineWidth(0.5); cv.rect(32, 32, w - 64, h - 64)
-    cv.setFillColor(HexColor("#00F0FF")); cv.setFont("Courier-Bold", 30); cv.drawString(60, h - 90, "> SOCFORGE")
+    cv.setFillColor(HexColor("#00F0FF")); cv.setFont("Courier-Bold", 30); cv.drawString(60, h - 90, "> SOCPROFESSIONALS ACADEMY")
     cv.setFillColor(HexColor("#94A3B8")); cv.setFont("Courier", 12); cv.drawString(60, h - 112, "CERTIFICATE OF COMPLETION")
     cv.setFillColor(HexColor("#F8FAFC")); cv.setFont("Helvetica", 14); cv.drawString(60, h - 190, "This certifies that")
     cv.setFont("Helvetica-Bold", 36); cv.drawString(60, h - 240, c["name"])
@@ -76,7 +76,7 @@ async def cert_pdf(cert_id: str):
     qb = io.BytesIO(); qr.save(qb, format="PNG"); qb.seek(0)
     cv.drawImage(ImageReader(qb), w - 200, 60, 140, 140)
     cv.showPage(); cv.save(); buf.seek(0)
-    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f"inline; filename=SOCForge-{c['id']}.pdf"})
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f"inline; filename=SOCProfessionals-Academy-{c['id']}.pdf"})
 
 
 # ---------- Paths & lessons ----------
@@ -129,7 +129,7 @@ async def resource(name: str, user=Depends(get_current_user)):
     if not p:
         raise HTTPException(404, "Resource not found")
     l = next(l for m in p["modules"] for l in m["lessons"] if l["id"] == lid)
-    return PlainTextResponse(f"SOCForge cheat-sheet — {l['title']}\n{'=' * 40}\n\n{l['content']}\n", headers={"Content-Disposition": f"attachment; filename={lid}.txt"})
+    return PlainTextResponse(f"SOCProfessionals Academy cheat-sheet — {l['title']}\n{'=' * 40}\n\n{l['content']}\n", headers={"Content-Disposition": f"attachment; filename={lid}.txt"})
 
 
 # ---------- Quizzes ----------
@@ -213,7 +213,7 @@ async def maybe_issue_cert(user, pid, score):
             "path_title": p["title"], "score": score, "issued_at": now_iso(), "status": "valid"}
     await db.certificates.insert_one(dict(cert))
     await award(user["id"], 200, f"Earned certificate: {p['title']}")
-    await send_email(to=user["email"], subject=f"Your SOCForge certificate: {p['title']}",
+    await send_email(to=user["email"], subject=f"Your SOCProfessionals Academy certificate: {p['title']}",
                      html=email_template(user["name"], [f"Congratulations on completing {p['title']}.", f"Certificate ID: {cert['id']}"],
                                          f"{os.environ['FRONTEND_URL']}/verify/{cert['id']}", "View certificate"))
     return cert

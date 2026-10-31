@@ -13,7 +13,7 @@ from routes_share import router as share_router
 from routes_courses import router as courses_router, ensure_courses
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-app = FastAPI(title="SOCForge API")
+app = FastAPI(title="SOCProfessionals Academy API")
 for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router):
     app.include_router(r)
 
@@ -22,7 +22,7 @@ app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.envi
 
 @app.get("/api/")
 async def root():
-    return {"service": "SOCForge", "status": "ok"}
+    return {"service": "SOCProfessionals Academy", "status": "ok"}
 
 
 async def seed_collection(name, items):
@@ -38,8 +38,22 @@ async def seed_user(email, password, name, username, role, xp=0, streak=0):
                                    "onboarded": True, "xp": xp, "streak": streak, "last_active": None, "created_at": now_iso()})
 
 
+async def rebrand():
+    old, new = "@socforge.io", "@socprofessionals.academy"
+    async for u in db.users.find({"email": {"$regex": "@socforge\\.io$"}}, {"_id": 0, "id": 1, "email": 1}):
+        target = u["email"].replace(old, new)
+        if await db.users.find_one({"email": target}):
+            continue
+        await db.users.update_one({"id": u["id"]}, {"$set": {"email": target}})
+    async for s in db.sessions.find({"join_link": {"$regex": "socforge"}}, {"_id": 0, "id": 1, "join_link": 1}):
+        await db.sessions.update_one({"id": s["id"]}, {"$set": {"join_link": s["join_link"].replace("socforge", "socpro")}})
+    await db.settings.update_many({"platform_name": "SOCForge"}, {"$set": {"platform_name": "SOCProfessionals Academy"}})
+    await db.settings.update_many({"support_email": "support@socforge.io"}, {"$set": {"support_email": "support@socprofessionals.academy"}})
+
+
 @app.on_event("startup")
 async def startup():
+    await rebrand()
     await db.users.create_index("email", unique=True)
     await db.users.create_index("username", unique=True)
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
@@ -48,10 +62,10 @@ async def startup():
     await db.drill_freezes.create_index([("user_id", 1), ("date", 1)], unique=True)
     await db.drill_rescue.create_index([("user_id", 1), ("date", 1)], unique=True)
     await seed_user(os.environ["ADMIN_EMAIL"], os.environ["ADMIN_PASSWORD"], "Platform Admin", "admin", "admin")
-    await seed_user("instructor@socforge.io", "Instructor@123", "Riya Sen", "riya", "instructor")
-    await seed_user("student@socforge.io", "Student@123", "Demo Student", "demo", "student", 120, 1)
+    await seed_user("instructor@socprofessionals.academy", "Instructor@123", "Riya Sen", "riya", "instructor")
+    await seed_user("student@socprofessionals.academy", "Student@123", "Demo Student", "demo", "student", 120, 1)
     for i, (n, xp) in enumerate([("Kai Brooks", 3450), ("Amara Osei", 2210), ("Leo Fischer", 1620), ("Nina Park", 940), ("Omar Haddad", 610)]):
-        await seed_user(f"bot{i}@socforge.io", "BotUser@123!x", n, n.split()[0].lower() + str(i), "student", xp, i + 1)
+        await seed_user(f"bot{i}@socprofessionals.academy", "BotUser@123!x", n, n.split()[0].lower() + str(i), "student", xp, i + 1)
     await seed_collection("paths", S.PATHS)
     await seed_collection("quizzes", S.QUIZZES)
     await seed_collection("challenges", S.CHALLENGES)

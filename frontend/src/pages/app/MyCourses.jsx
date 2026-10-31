@@ -19,10 +19,10 @@ function ShareBadge({ cid }) {
         <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-2xl" data-testid="course-share-dialog">
           <DialogHeader><DialogTitle className="font-mono">Share your course badge</DialogTitle></DialogHeader>
           {card && <>
-            <img src={card.image_url} alt="Your SOCForge course badge card" className="w-full border border-cyan-500/20" data-testid="course-share-image" />
+            <img src={card.image_url} alt="Your SOCProfessionals Academy course badge card" className="w-full border border-cyan-500/20" data-testid="course-share-image" />
             <div className="flex flex-wrap gap-2">
               <a href={li} target="_blank" rel="noreferrer" className="glow-btn" data-testid="course-share-linkedin"><Linkedin className="h-4 w-4" />Share on LinkedIn</a>
-              <a href={card.image_url} download="socforge-course-badge.png" target="_blank" rel="noreferrer" className="ghost-btn" data-testid="course-share-download"><Download className="h-4 w-4" />Download image</a>
+              <a href={card.image_url} download="socpro-academy-badge.png" target="_blank" rel="noreferrer" className="ghost-btn" data-testid="course-share-download"><Download className="h-4 w-4" />Download image</a>
               <button className="ghost-btn" onClick={() => { navigator.clipboard.writeText(card.share_url); toast.success("Link copied"); }} data-testid="course-share-copy"><Copy className="h-4 w-4" />Copy link</button>
             </div>
             <p className="text-xs text-slate-500 font-mono">LinkedIn shows this card as the link preview. Anyone with the link can see your name and badge.</p>

@@ -239,10 +239,10 @@ SANDBOX = [
 ]
 
 THREAT_FEED = [
-    {"title": "LockdCrypt affiliates targeting finance via invoice lures", "severity": "Critical", "source": "SOCForge Intel", "date": "2026-06-11"},
-    {"title": "Spike in SSH brute force from bulletproof hosting ranges", "severity": "High", "source": "SOCForge Intel", "date": "2026-06-09"},
-    {"title": "Typosquatted payment domains registered in bulk", "severity": "Medium", "source": "SOCForge Intel", "date": "2026-06-07"},
-    {"title": "Benign: new CDN ranges for productivity suite", "severity": "Low", "source": "SOCForge Intel", "date": "2026-06-05"},
+    {"title": "LockdCrypt affiliates targeting finance via invoice lures", "severity": "Critical", "source": "SOCProfessionals Academy Intel", "date": "2026-06-11"},
+    {"title": "Spike in SSH brute force from bulletproof hosting ranges", "severity": "High", "source": "SOCProfessionals Academy Intel", "date": "2026-06-09"},
+    {"title": "Typosquatted payment domains registered in bulk", "severity": "Medium", "source": "SOCProfessionals Academy Intel", "date": "2026-06-07"},
+    {"title": "Benign: new CDN ranges for productivity suite", "severity": "Low", "source": "SOCProfessionals Academy Intel", "date": "2026-06-05"},
 ]
 
 
@@ -304,8 +304,8 @@ SIEM_ALERTS = [
 def sessions_seed():
     n = now()
     return [
-        {"id": "ls-1", "title": "Live Triage: Phishing Queue Walkthrough", "instructor": "Riya Sen", "description": "Work a real-looking phishing queue together.", "start": (n + timedelta(days=2, hours=3)).isoformat(), "duration_min": 60, "join_link": "https://meet.example.com/socforge-phish", "capacity": 100, "recording_url": ""},
-        {"id": "ls-2", "title": "Threat Hunting with Hypotheses", "instructor": "Marcus Vale", "description": "Build and run three hunts in the SIEM lab.", "start": (n + timedelta(days=6)).isoformat(), "duration_min": 90, "join_link": "https://meet.example.com/socforge-hunt", "capacity": 50, "recording_url": ""},
-        {"id": "ls-3", "title": "Mock SOC Interview Night", "instructor": "Riya Sen", "description": "Rapid-fire interview questions and feedback.", "start": (n + timedelta(days=12)).isoformat(), "duration_min": 60, "join_link": "https://meet.example.com/socforge-interview", "capacity": 30, "recording_url": ""},
-        {"id": "ls-0", "title": "Windows Event Logs Deep Dive", "instructor": "Marcus Vale", "description": "Recorded: the 15 event IDs that matter most.", "start": (n - timedelta(days=5)).isoformat(), "duration_min": 75, "join_link": "https://meet.example.com/socforge-winlogs", "capacity": 100, "recording_url": YT},
+        {"id": "ls-1", "title": "Live Triage: Phishing Queue Walkthrough", "instructor": "Riya Sen", "description": "Work a real-looking phishing queue together.", "start": (n + timedelta(days=2, hours=3)).isoformat(), "duration_min": 60, "join_link": "https://meet.example.com/socpro-phish", "capacity": 100, "recording_url": ""},
+        {"id": "ls-2", "title": "Threat Hunting with Hypotheses", "instructor": "Marcus Vale", "description": "Build and run three hunts in the SIEM lab.", "start": (n + timedelta(days=6)).isoformat(), "duration_min": 90, "join_link": "https://meet.example.com/socpro-hunt", "capacity": 50, "recording_url": ""},
+        {"id": "ls-3", "title": "Mock SOC Interview Night", "instructor": "Riya Sen", "description": "Rapid-fire interview questions and feedback.", "start": (n + timedelta(days=12)).isoformat(), "duration_min": 60, "join_link": "https://meet.example.com/socpro-interview", "capacity": 30, "recording_url": ""},
+        {"id": "ls-0", "title": "Windows Event Logs Deep Dive", "instructor": "Marcus Vale", "description": "Recorded: the 15 event IDs that matter most.", "start": (n - timedelta(days=5)).isoformat(), "duration_min": 75, "join_link": "https://meet.example.com/socpro-winlogs", "capacity": 100, "recording_url": YT},
     ]

@@ -92,10 +92,10 @@ function ShareStreak() {
         <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-2xl" data-testid="drill-share-dialog">
           <DialogHeader><DialogTitle className="font-mono">Share your drill streak</DialogTitle></DialogHeader>
           {card && <>
-            <img src={`${card.image_url}?v=${v}`} alt="Your SOCForge drill streak card" className="w-full border border-cyan-500/20" data-testid="drill-share-image" />
+            <img src={`${card.image_url}?v=${v}`} alt="Your SOCProfessionals Academy drill streak card" className="w-full border border-cyan-500/20" data-testid="drill-share-image" />
             <div className="flex flex-wrap gap-2">
               <a href={li} target="_blank" rel="noreferrer" className="glow-btn" data-testid="drill-share-linkedin"><Linkedin className="h-4 w-4" />Share on LinkedIn</a>
-              <a href={card.image_url} download="socforge-streak.png" target="_blank" rel="noreferrer" className="ghost-btn" data-testid="drill-share-download"><Download className="h-4 w-4" />Download image</a>
+              <a href={card.image_url} download="socpro-academy-streak.png" target="_blank" rel="noreferrer" className="ghost-btn" data-testid="drill-share-download"><Download className="h-4 w-4" />Download image</a>
               <button className="ghost-btn" onClick={() => { navigator.clipboard.writeText(card.share_url); toast.success("Link copied"); }} data-testid="drill-share-copy"><Copy className="h-4 w-4" />Copy link</button>
             </div>
             <p className="text-xs text-slate-500 font-mono">LinkedIn shows this card as the link preview. Anyone with the link can see your name and streak.</p>

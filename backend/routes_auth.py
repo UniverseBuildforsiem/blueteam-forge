@@ -124,7 +124,7 @@ async def forgot(body: ForgotIn):
         token = secrets.token_urlsafe(32)
         await db.password_reset_tokens.insert_one({"token": token, "user_id": user["id"], "used": False, "expires_at": now() + timedelta(hours=1)})
         link = f"{os.environ['FRONTEND_URL']}/reset-password?token={token}"
-        await send_email(to=email, subject="Reset your SOCForge password",
+        await send_email(to=email, subject="Reset your SOCProfessionals Academy password",
                          html=email_template(user["name"], ["We received a request to reset your password. This link expires in 1 hour.", "If you did not request this, you can ignore this email."], link, "Reset password"))
     return {"ok": True, "message": "If that email exists, a reset link has been sent."}
 

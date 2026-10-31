@@ -41,6 +41,6 @@ export default function PublicNav() {
 
 export const Footer = () => (
   <footer className="border-t border-cyan-500/10 py-10 text-center text-xs font-mono text-slate-500">
-    © {new Date().getFullYear()} SOCForge · All labs are simulated and safe · Built for aspiring blue teamers
+    © {new Date().getFullYear()} SOCProfessionals Academy · All labs are simulated and safe · Built for aspiring blue teamers
   </footer>
 );

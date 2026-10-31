@@ -232,7 +232,7 @@ async def logs(user=Depends(admin_only)):
 @router.get("/admin/settings")
 async def get_settings(user=Depends(admin_only)):
     s = await db.settings.find_one({"id": "platform"}, NO_ID)
-    return s or {"id": "platform", "platform_name": "SOCForge", "allow_signups": True, "pass_mark": 70, "support_email": "support@socforge.io"}
+    return s or {"id": "platform", "platform_name": "SOCProfessionals Academy", "allow_signups": True, "pass_mark": 70, "support_email": "support@socprofessionals.academy"}
 
 
 @router.put("/admin/settings")

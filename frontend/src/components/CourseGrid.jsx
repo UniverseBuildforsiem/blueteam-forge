@@ -48,7 +48,7 @@ const CourseDialog = ({ c, onClose, done, toggle }) => (
         </DialogHeader>
       </div>
       <div>
-        <div className="eyebrow mb-3">// practise it in socforge</div>
+        <div className="eyebrow mb-3">// practise it in the academy</div>
         <PracticeList c={c} />
       </div>
       <div className={`grid gap-3 ${toggle ? "sm:grid-cols-2" : ""}`}>

@@ -24,6 +24,14 @@ def api_base():
     return os.environ["FRONTEND_URL"].rstrip("/") + "/api"
 
 
+def draw_logo(d):
+    logo = font("LiberationMono-Bold.ttf", 40)
+    d.text((64, 60), "> SOC", font=logo, fill=(248, 250, 252))
+    x = 64 + d.textlength("> SOC", font=logo)
+    d.text((x, 60), "Professionals", font=logo, fill=GREEN)
+    d.text((x + d.textlength("Professionals", font=logo) + 14, 76), "ACADEMY", font=font("LiberationMono-Bold.ttf", 20), fill=MUTED)
+
+
 @router.post("/me/share-card")
 async def share_card(user=Depends(get_current_user)):
     token = user.get("share_token")
@@ -51,8 +59,7 @@ def render(name, current, longest, total, xp, handle=None):
     for y in range(0, h, 40):
         d.line([(0, y), (w, y)], fill=(15, 24, 38))
     d.rectangle([24, 24, w - 24, h - 24], outline=CYAN, width=3)
-    d.text((64, 60), "> SOC", font=font("LiberationMono-Bold.ttf", 40), fill=(248, 250, 252))
-    d.text((64 + d.textlength("> SOC", font=font("LiberationMono-Bold.ttf", 40)), 60), "Forge", font=font("LiberationMono-Bold.ttf", 40), fill=GREEN)
+    draw_logo(d)
     d.text((64, 120), "DAILY ALERT DRILL", font=font("LiberationMono-Bold.ttf", 22), fill=CYAN)
     d.text((64, 190), name[:28], font=font("LiberationSans-Bold.ttf", 56), fill=(248, 250, 252))
     big = font("LiberationMono-Bold.ttf", 150)
@@ -64,7 +71,7 @@ def render(name, current, longest, total, xp, handle=None):
         d.text((x, 478), k, font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
         d.text((x, 504), v, font=font("LiberationMono-Bold.ttf", 34), fill=GREEN if k == "RANK" else (248, 250, 252))
     if handle:
-        d.text((w - 64, 560), f"socforge · /u/{handle}", font=font("LiberationMono-Bold.ttf", 20), fill=CYAN, anchor="ra")
+        d.text((w - 64, 560), f"socpro academy · /u/{handle}", font=font("LiberationMono-Bold.ttf", 20), fill=CYAN, anchor="ra")
     d.text((w - 64, 66), "blue team training", font=font("LiberationSans-Regular.ttf", 22), fill=MUTED, anchor="ra")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -124,9 +131,7 @@ def render_badge(name, badge, full_title, date, handle=None):
     for y in range(0, h, 40):
         d.line([(0, y), (w, y)], fill=(15, 24, 38))
     d.rectangle([24, 24, w - 24, h - 24], outline=CYAN, width=3)
-    logo = font("LiberationMono-Bold.ttf", 40)
-    d.text((64, 60), "> SOC", font=logo, fill=(248, 250, 252))
-    d.text((64 + d.textlength("> SOC", font=logo), 60), "Forge", font=logo, fill=GREEN)
+    draw_logo(d)
     d.text((w - 64, 66), "course badge", font=font("LiberationSans-Regular.ttf", 22), fill=MUTED, anchor="ra")
     cx, cy, r = 980, 330, 120
     hexagon = [(cx + r * c, cy + r * s) for c, s in ((0, -1), (0.87, -0.5), (0.87, 0.5), (0, 1), (-0.87, 0.5), (-0.87, -0.5))]
@@ -148,7 +153,7 @@ def render_badge(name, badge, full_title, date, handle=None):
     d.text((560, 478), "WATCHED", font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
     d.text((560, 504), date, font=font("LiberationMono-Bold.ttf", 34), fill=GREEN)
     if handle:
-        d.text((w - 64, 560), f"socforge · /u/{handle}", font=font("LiberationMono-Bold.ttf", 20), fill=CYAN, anchor="ra")
+        d.text((w - 64, 560), f"socpro academy · /u/{handle}", font=font("LiberationMono-Bold.ttf", 20), fill=CYAN, anchor="ra")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
@@ -165,8 +170,8 @@ async def course_badge_png(token: str, cid: int):
 @router.get("/public/course-badge/{token}/{cid}", response_class=HTMLResponse)
 async def course_badge_page(token: str, cid: int):
     u, done, badge = await badge_data(token, cid)
-    title = escape(f"{u['name']} earned the {badge} course badge on SOCForge")
-    desc = escape(f"Completed '{done['title']}' on SOC Professionals and practised it in SOCForge labs.")
+    title = escape(f"{u['name']} earned the {badge} course badge on SOCProfessionals Academy")
+    desc = escape(f"Completed '{done['title']}' on SOC Professionals and practised it in SOCProfessionals Academy labs.")
     img = f"{api_base()}/public/course-badge/{escape(token)}/{cid}.png"
     base = os.environ["FRONTEND_URL"].rstrip("/")
     home = escape(f"{base}/u/{u['username']}" if u.get("public_profile") is not False else f"{base}/courses")
@@ -252,10 +257,10 @@ async def contact(username: str, body: ContactIn, request: Request):
         raise HTTPException(429, "You already contacted this candidate today")
     lines = [f"{body.recruiter_name} from {body.company} would like to talk to you about a SOC role{f' ({body.role})' if body.role else ''}.",
              f"Their message: {body.message}", f"To reply, email them directly at {email}. Your email address has not been shared with them.",
-             "Only reply if you are interested. SOCForge never asks you to share passwords or payment details."]
+             "Only reply if you are interested. SOCProfessionals Academy never asks you to share passwords or payment details."]
     try:
         html = email_template(u["name"], lines, f"{os.environ['FRONTEND_URL']}/app/certificates", "Manage job preferences")
-        msg_id = await send_email(to=u["email"], subject=f"Recruiter contact: {body.company} via SOCForge", html=html)
+        msg_id = await send_email(to=u["email"], subject=f"Recruiter contact: {body.company} via SOCProfessionals Academy", html=html)
     except ValueError:
         raise HTTPException(400, "Your message contains content we can't send. Please rephrase it.")
     if not msg_id:
@@ -314,7 +319,7 @@ async def profile_visibility(body: ProfileVis, user=Depends(get_current_user)):
 @router.get("/public/streak/{token}", response_class=HTMLResponse)
 async def streak_page(token: str):
     u, current, longest, _ = await card_data(token)
-    title = escape(f"{u['name']} is on a {current}-day SOC drill streak on SOCForge")
+    title = escape(f"{u['name']} is on a {current}-day SOC drill streak on SOCProfessionals Academy")
     desc = escape(f"Daily alert triage practice. Longest streak: {longest} days. Train like a real SOC analyst.")
     img = f"{api_base()}/public/streak/{escape(token)}.png"
     base = os.environ["FRONTEND_URL"].rstrip("/")

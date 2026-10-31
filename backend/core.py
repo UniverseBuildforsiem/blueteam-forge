@@ -17,7 +17,7 @@ from fastapi import Request, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 
 load_dotenv(Path(__file__).parent / ".env")
-logger = logging.getLogger("socforge")
+logger = logging.getLogger("socpro")
 
 client = AsyncIOMotorClient(os.environ["MONGO_URL"])
 db = client[os.environ["DB_NAME"]]
@@ -214,9 +214,12 @@ async def send_email(*, to: str, subject: str, html: str):
         return None
 
 
-def email_template(name, lines, link=None, link_text=None, unsubscribe=None):
+def email_template(name, lines, link=None, link_text=None, unsubscribe=None, image=None):
     brand = escape(os.environ["EMAIL_FROM_NAME"])
     body = "".join(f"<p style='margin:0 0 12px'>{escape(line)}</p>" for line in lines)
+    if image:
+        body += (f"<p><a href='{escape(image[1])}'><img src='{escape(image[0])}' alt='{escape(image[2])}' width='560' "
+                 f"style='max-width:100%;border:1px solid #00F0FF'></a></p>")
     btn = (f"<p><a href='{escape(link)}' style='background:#00F0FF;color:#0B0F1A;padding:10px 18px;text-decoration:none;font-weight:bold'>{escape(link_text)}</a></p>" if link else "")
     unsub = f" <a href='{escape(unsubscribe)}' style='color:#64748B'>Unsubscribe from these emails</a>." if unsubscribe else ""
     return (f"<table role='presentation' width='100%' style='background:#0B0F1A'><tr><td style='padding:28px;font-family:Arial,sans-serif;color:#E2E8F0'>"

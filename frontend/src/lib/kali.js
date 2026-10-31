@@ -65,7 +65,7 @@ export function createShell(lab) {
   const C = {
     help: () => "Available: " + ["ls", "cd", "pwd", "cat", "grep", "awk", "cut", "head", "tail", "wc", "sort", "uniq", "strings", "file", "echo", "whois", "nslookup", "dig", "ping", "nmap", "curl", "base64", "sha256sum", "md5sum", "tcpdump", "tshark", "john", "hashcat", "whoami", "id", "uname", "date", "history", "clear"].join("  "),
     pwd: () => st.cwd, whoami: () => "analyst", id: () => "uid=1000(analyst) gid=1000(analyst) groups=1000(analyst),27(sudo)",
-    uname: (a) => (a.includes("-a") ? "Linux socforge-kali 6.6.0-kali-amd64 #1 SMP x86_64 GNU/Linux (simulated)" : "Linux"),
+    uname: (a) => (a.includes("-a") ? "Linux socpro-kali 6.6.0-kali-amd64 #1 SMP x86_64 GNU/Linux (simulated)" : "Linux"),
     date: () => new Date().toUTCString(), history: () => st.history.map((h, i) => `${String(i + 1).padStart(4)}  ${h}`).join("\n"),
     echo: (a) => a.join(" "),
     ls: (a) => {
@@ -153,5 +153,5 @@ export function createShell(lab) {
     return out;
   }
 
-  return { run, prompt: () => `analyst@socforge-kali:${st.cwd.replace(HOME, "~")}$`, complete: (w) => listDir(st.cwd).filter((n) => n.startsWith(w)) };
+  return { run, prompt: () => `analyst@socpro-kali:${st.cwd.replace(HOME, "~")}$`, complete: (w) => listDir(st.cwd).filter((n) => n.startsWith(w)) };
 }

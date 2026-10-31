@@ -136,7 +136,7 @@ export default function FeatureShowcase() {
           </button>))}
       </div>
       <Glass className="relative scanlines overflow-hidden p-6 sm:p-8 min-h-[420px] flex flex-col" data-testid="feature-preview">
-        <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500 mb-5"><span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />preview://socforge/{key}</div>
+        <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500 mb-5"><span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />preview://socpro-academy/{key}</div>
         <AnimatePresence mode="wait">
           <motion.div key={key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }} className="flex-1 flex flex-col">
             <h3 className="text-xl font-bold" data-testid="feature-preview-title">{title}</h3>

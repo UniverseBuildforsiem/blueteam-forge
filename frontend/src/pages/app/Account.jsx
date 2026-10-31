@@ -10,7 +10,7 @@ import { Glass, PageHeader, Empty } from "../../components/common";
 
 const linkedInUrl = (c) => {
   const d = new Date(c.issued_at);
-  const q = new URLSearchParams({ startTask: "CERTIFICATION_NAME", name: `SOCForge — ${c.path_title}`, organizationName: "SOCForge", issueYear: d.getUTCFullYear(), issueMonth: d.getUTCMonth() + 1,
+  const q = new URLSearchParams({ startTask: "CERTIFICATION_NAME", name: `SOCProfessionals Academy — ${c.path_title}`, organizationName: "SOCProfessionals Academy", issueYear: d.getUTCFullYear(), issueMonth: d.getUTCMonth() + 1,
     certUrl: `${window.location.origin}/verify/${c.id}`, certId: c.id });
   return `https://www.linkedin.com/profile/add?${q.toString()}`;
 };
@@ -100,7 +100,7 @@ export function Billing() {
     try {
       await loadScript("https://checkout.razorpay.com/v1/checkout.js");
       const { data } = await api.post("/payments/razorpay/order", { plan });
-      new window.Razorpay({ key: data.key_id, amount: data.amount, currency: "INR", order_id: data.order_id, name: "SOCForge", description: cfg.plans[plan].name,
+      new window.Razorpay({ key: data.key_id, amount: data.amount, currency: "INR", order_id: data.order_id, name: "SOCProfessionals Academy", description: cfg.plans[plan].name,
         prefill: { name: data.name, email: data.email }, theme: { color: "#00F0FF" },
         handler: async (r) => { try { await api.post("/payments/razorpay/verify", r); toast.success("Payment verified — Pro unlocked"); refresh(); load(); } catch (e) { toast.error(errMsg(e)); } } }).open();
     } catch (e) { toast.error(errMsg(e)); }
