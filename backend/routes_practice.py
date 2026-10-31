@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from core import db, now_iso, new_id, get_current_user, award, rank_for, frame_for
 from seed_data import gen_logs, INTEL, SANDBOX, THREAT_FEED
+from siem_engine import run as siem_run, match, QueryError, timeline
 
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
@@ -139,15 +140,20 @@ async def scoreboard(user=Depends(get_current_user)):
 # ---------- Scenario labs ----------
 def strip_lab(l, prog):
     answered = (prog or {}).get("answered", {})
-    return {**{k: v for k, v in l.items() if k != "tasks"}, "tasks": [{k: v for k, v in t.items() if k != "answer"} | {"solved": t["id"] in answered} for t in l["tasks"]],
-            "progress": {"answered": list(answered.keys()), "report": (prog or {}).get("report", ""), "report_submitted": (prog or {}).get("report_submitted", False)}}
+    p = prog or {}
+    return {**{k: v for k, v in l.items() if k not in ("tasks", "report_keywords")}, "tasks": [{k: v for k, v in t.items() if k != "answer"} | {"solved": t["id"] in answered} for t in l["tasks"]],
+            "keyword_count": len(l.get("report_keywords", [])),
+            "progress": {"answered": list(answered.keys()), "report": p.get("report", ""), "report_submitted": p.get("report_submitted", False),
+                         "report_score": p.get("report_score"), "keywords_hit": p.get("keywords_hit", []), "keywords_missed": p.get("keywords_missed", []),
+                         "instructor_grade": p.get("instructor_grade"), "feedback": p.get("feedback", "")}}
 
 
 @router.get("/labs")
 async def list_labs(user=Depends(get_current_user)):
     labs = await db.labs.find({"published": {"$ne": False}}, {"_id": 0, "kali": 0}).to_list(100)
     progs = {p["lab_id"]: p for p in await db.lab_progress.find({"user_id": user["id"]}, NO_ID).to_list(100)}
-    return [{"id": l["id"], "title": l["title"], "description": l["description"], "difficulty": l["difficulty"], "duration": l.get("duration"),
+    return [{"id": l["id"], "title": l["title"], "description": l["description"], "difficulty": l["difficulty"], "duration": l.get("duration"), "category": l.get("category", "Incident"),
+             "phases": list(dict.fromkeys(t.get("phase", "Investigation") for t in l["tasks"])), "report_score": progs.get(l["id"], {}).get("report_score"),
              "task_count": len(l["tasks"]), "solved": len(progs.get(l["id"], {}).get("answered", {}))} for l in labs]
 
 
@@ -190,10 +196,17 @@ async def lab_report(lid: str, body: ReportIn, user=Depends(get_current_user)):
     prog = await db.lab_progress.find_one({"user_id": user["id"], "lab_id": lid}, NO_ID) or {}
     if len(prog.get("answered", {})) < len(l["tasks"]):
         raise HTTPException(400, "Solve all tasks before submitting the final report")
-    await db.lab_progress.update_one({"user_id": user["id"], "lab_id": lid}, {"$set": {"report": body.report, "report_submitted": True, "report_at": prog.get("report_at") or now_iso(), "user_name": user["name"], "lab_title": l["title"]}})
+    kws = l.get("report_keywords", [])
+    low = body.report.lower()
+    hits = [k for k in kws if k.lower() in low]
+    score = round(100 * len(hits) / len(kws)) if kws else 100
+    best = max(score, prog.get("report_score") or 0)
+    await db.lab_progress.update_one({"user_id": user["id"], "lab_id": lid}, {"$set": {"report": body.report, "report_submitted": True, "report_at": prog.get("report_at") or now_iso(),
+                                                                                      "report_score": best, "keywords_hit": hits, "keywords_missed": [k for k in kws if k not in hits],
+                                                                                      "user_name": user["name"], "lab_title": l["title"]}})
     if not prog.get("report_submitted"):
-        await award(user["id"], 50, f"Submitted final report for lab '{l['title']}'")
-    return {"ok": True}
+        await award(user["id"], 20 + round(80 * score / 100), f"Final report for lab '{l['title']}' ({score}/100)")
+    return {"ok": True, "score": score, "best": best, "keywords_hit": hits, "keywords_missed": [k for k in kws if k not in hits]}
 
 
 # ---------- Daily alert drill ----------
@@ -372,37 +385,12 @@ async def prefs(body: PrefsIn, user=Depends(get_current_user)):
 
 
 # ---------- SIEM ----------
-def match(e, tok):
-    m = re.match(r"^([a-z_]+)(!=|=)(.+)$", tok, re.I)
-    if m:
-        f, op, v = m.group(1).lower(), m.group(2), m.group(3).lower()
-        val = str(e.get(f, "")).lower()
-        rx = "^" + re.escape(v).replace("\\*", ".*") + "$"
-        hit = re.match(rx, val) is not None
-        return hit if op == "=" else not hit
-    t = tok.lower().strip("*")
-    return any(t in str(v).lower() for v in e.values())
-
-
 @router.get("/siem/search")
-async def siem_search(q: str = "", start: str = "", end: str = "", user=Depends(get_current_user)):
-    main, _, pipe = q.partition("|")
+async def siem_search(q: str = "", lang: str = "spl", start: str = "", end: str = "", user=Depends(get_current_user)):
     try:
-        toks = [t for t in shlex.split(main) if t.upper() != "AND"]
-    except ValueError:
-        toks = main.split()
-    res = [e for e in LOGS if (not start or e["_time"] >= start) and (not end or e["_time"] <= end) and all(match(e, t) for t in toks)]
-    stats = None
-    sm = re.match(r"\s*stats\s+count\s+by\s+([a-z_]+)", pipe, re.I)
-    if sm:
-        f = sm.group(1)
-        stats = {"field": f, "rows": [{"value": k, "count": v} for k, v in Counter(str(e.get(f, "-")) for e in res).most_common(20)]}
-    fields = {}
-    for f in ["sourcetype", "host", "user", "event_id", "src_ip", "dest_ip", "action", "query"]:
-        c = Counter(str(e[f]) for e in res if f in e)
-        if c:
-            fields[f] = [{"value": k, "count": v} for k, v in c.most_common(8)]
-    return {"total": len(res), "events": list(reversed(res))[:300], "fields": fields, "stats": stats}
+        return siem_run(LOGS, q, "kql" if lang == "kql" else "spl", start, end)
+    except QueryError as e:
+        raise HTTPException(400, str(e))
 
 
 @router.get("/siem/alerts")
@@ -421,13 +409,15 @@ async def siem_alerts(user=Depends(get_current_user)):
 @router.get("/siem/dashboard")
 async def siem_dash(user=Depends(get_current_user)):
     by = lambda f: [{"name": k, "value": v} for k, v in Counter(str(e.get(f)) for e in LOGS if f in e).most_common(6)]
-    return {"total": len(LOGS), "by_sourcetype": by("sourcetype"), "by_host": by("host"), "by_action": by("action"),
-            "failed_logons": len([e for e in LOGS if e.get("event_id") == 4625])}
+    return {"total": len(LOGS), "by_sourcetype": by("sourcetype"), "by_host": by("host"), "by_action": by("action"), "by_country": by("country"),
+            "failed_logons": len([e for e in LOGS if e.get("event_id") == 4625 or e.get("result_code") == 50126]),
+            "timeline": [{"t": t["t"][5:].replace("T", " ") + "h", "c": t["c"]} for t in timeline(LOGS)]}
 
 
 class SavedIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
-    query: str = Field(max_length=500)
+    query: str = Field(max_length=1500)
+    lang: str = Field(default="spl", pattern="^(spl|kql)$")
 
 
 @router.get("/siem/saved")

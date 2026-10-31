@@ -13,10 +13,12 @@ from routes_share import router as share_router
 from routes_courses import router as courses_router, ensure_courses
 from routes_book import router as book_router
 from routes_interview import router as interview_router
+from routes_sop import router as sop_router
+from routes_blog import router as blog_router, ensure_blog
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCProfessionals Academy API")
-for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])
@@ -76,6 +78,9 @@ async def startup():
                                        {"$set": {"difficulty": c["difficulty"], "alert.rule": c["alert"]["rule"]}})
     await seed_collection("ctfs", S.CTFS)
     await seed_collection("labs", S.LABS)
+    for l in S.LABS:
+        await db.labs.update_one({"id": l["id"], "report_keywords": {"$exists": False}},
+                                 {"$set": {k: l[k] for k in ("tasks", "report_keywords", "category", "scenario", "report_guide")}})
     await seed_collection("sessions", S.sessions_seed())
     await seed_collection("siem_alerts", S.SIEM_ALERTS)
     await ensure_courses()
@@ -89,6 +94,7 @@ async def startup():
     for q in [("Failed logons", "event_id=4625 | stats count by src_ip"), ("Beacon hunting", "sourcetype=proxy url=*gate.php*"), ("Shadow copy deletion", "vssadmin")]:
         if not await db.saved_searches.find_one({"user_id": "system", "name": q[0]}):
             await db.saved_searches.insert_one({"id": new_id(), "user_id": "system", "name": q[0], "query": q[1], "created_at": now_iso()})
+    await ensure_blog()
     logger.info("Seed complete")
 
 

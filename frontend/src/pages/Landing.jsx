@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { api } from "../lib/api";
 import { Glass, SeverityBadge } from "../components/common";
 import PublicNav, { Footer } from "../components/PublicNav";
+import { LatestPosts } from "./Blog";
 
 const FEED = [
   ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
@@ -195,6 +196,8 @@ export default function Landing() {
         <h2 className="text-3xl font-bold mb-12 max-w-xl">A full SOC, rendered in your browser.</h2>
         <FeatureShowcase />
       </section>
+
+      <LatestPosts />
 
       <section id="courses" className="max-w-7xl mx-auto px-6 pb-24">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-10">

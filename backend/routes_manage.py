@@ -248,7 +248,8 @@ async def put_settings(body: dict, user=Depends(admin_only)):
 
 # ---------- Payments (Razorpay / Cashfree) ----------
 PLANS = {"pro_monthly": {"name": "Pro Monthly", "amount": 999}, "pro_yearly": {"name": "Pro Yearly", "amount": 7999}}
-PRODUCTS = {"soc-interview-ebook": {"name": "SOC Interview Preparation - Ebook", "amount": 973, "return": "/book"}}
+PRODUCTS = {"soc-interview-ebook": {"name": "SOC Interview Preparation - Ebook", "amount": 973, "return": "/book"},
+            "sop-bundle": {"name": "SOC SOP Library - Full Access", "amount": 499, "return": "/sops"}}
 
 
 def item_for(key):
@@ -284,7 +285,8 @@ async def activate(user_id, pid):
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
             from routes_book import send_book_receipt
-            t = asyncio.create_task(send_book_receipt(user_id, p))
+            from routes_sop import send_sop_receipt
+            t = asyncio.create_task((send_sop_receipt if p["plan"] == "sop-bundle" else send_book_receipt)(user_id, p))
             BG_TASKS.add(t)
             t.add_done_callback(BG_TASKS.discard)
         else:
