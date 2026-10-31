@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Siren, CheckCircle2, XCircle } from "lucide-react";
+import { Siren, CheckCircle2, XCircle, Crosshair, ArrowRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/ui/sheet";
 import { api, errMsg } from "../../lib/api";
 import { Glass, PageHeader, SeverityBadge } from "../../components/common";
 
-function Investigate({ c, onDone }) {
+export function Investigate({ c, onDone, submitUrl }) {
   const [verdict, setVerdict] = useState(c.submission?.verdict || "");
   const [report, setReport] = useState(c.submission?.report || "");
   const [res, setRes] = useState(null);
   const submit = async () => {
-    try { const { data } = await api.post(`/challenges/${c.id}/submit`, { verdict, report }); setRes(data); onDone(); } catch (e) { toast.error(errMsg(e)); }
+    try { const { data } = await api.post(submitUrl || `/challenges/${c.id}/submit`, { verdict, report }); setRes(data); onDone(); } catch (e) { toast.error(errMsg(e)); }
   };
   return (
     <div className="space-y-5 mt-4">
@@ -40,14 +41,40 @@ function Investigate({ c, onDone }) {
   );
 }
 
+const STEPS = ["Read the alert: rule, host, user and time", "Work through every evidence line and note the IOCs", "Decide: True Positive or False Positive", "Write a short report: what happened, impact, next actions"];
+
+function Briefing({ c, onBegin, onClose }) {
+  if (!c) return null;
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-lg" data-testid="mission-briefing">
+        <DialogHeader>
+          <div className="eyebrow">// mission briefing · {c.category}</div>
+          <DialogTitle className="font-mono text-xl mt-1 flex items-center gap-2"><Crosshair className="h-5 w-5 text-red-400" />{c.title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex items-center gap-3 font-mono text-xs"><SeverityBadge level={c.severity} /><span className="text-cyan-400">{c.alert.rule}</span></div>
+        <p className="text-sm text-slate-300">{c.description}</p>
+        <div className="grid grid-cols-3 gap-2 font-mono text-xs">
+          {[["host", c.alert.host], ["user", c.alert.user], ["reward", `${c.points} XP`]].map(([k, v]) => <div key={k} className="bg-black/40 border border-white/5 p-2"><div className="text-slate-500">{k}</div><div className="text-slate-200 truncate">{v}</div></div>)}
+        </div>
+        <div><div className="eyebrow mb-2">objectives</div>
+          <ol className="space-y-1.5">{STEPS.map((t, i) => <li key={t} className="flex gap-3 text-sm text-slate-300"><span className="font-mono text-green-400">0{i + 1}</span>{t}</li>)}</ol></div>
+        <button className="glow-btn justify-center mt-1" onClick={onBegin} data-testid="mission-begin-button">Begin investigation <ArrowRight className="h-4 w-4" /></button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Challenges() {
   const [cs, setCs] = useState([]);
   const [open, setOpen] = useState(null);
+  const [briefing, setBriefing] = useState(null);
   const [sp, setSp] = useSearchParams();
   const load = () => api.get("/challenges").then((r) => {
     setCs(r.data);
     const want = sp.get("case");
-    setOpen((o) => (o ? r.data.find((x) => x.id === o.id) : want ? r.data.find((x) => x.id === want) || null : o));
+    setOpen((o) => (o ? r.data.find((x) => x.id === o.id) : o));
+    if (want) setBriefing(r.data.find((x) => x.id === want) || null);
     if (want) setSp({}, { replace: true });
   });
   useEffect(() => { load(); }, []); // eslint-disable-line
@@ -67,6 +94,7 @@ export default function Challenges() {
             </tr>))}</tbody>
         </table>
       </Glass>
+      <Briefing c={briefing} onBegin={() => { setOpen(briefing); setBriefing(null); }} onClose={() => setBriefing(null)} />
       <Sheet open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
         <SheetContent className="bg-[#0B0F1A] border-cyan-500/20 w-full sm:max-w-xl overflow-y-auto">
           {open && <><SheetHeader><SheetTitle className="font-mono flex items-center gap-2"><Siren className="h-5 w-5 text-red-400" />{open.title}</SheetTitle><div><SeverityBadge level={open.severity} /></div></SheetHeader>

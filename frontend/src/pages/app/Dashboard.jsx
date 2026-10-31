@@ -2,9 +2,27 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Flame, Trophy, Zap, CalendarClock, Award, Lock } from "lucide-react";
 import { api, fmtDate } from "../../lib/api";
-import { Glass, PageHeader, ProgressRing, Empty, Stat } from "../../components/common";
+import { Glass, PageHeader, ProgressRing, Empty, Stat, SeverityBadge } from "../../components/common";
 
 const RANK_COLORS = { Recruit: "text-slate-300", Analyst: "text-cyan-300", Hunter: "text-orange-300", Elite: "neon-green" };
+
+function DrillBanner() {
+  const [d, setD] = useState(null);
+  useEffect(() => { api.get("/drill/today").then((r) => setD(r.data)).catch(() => {}); }, []);
+  if (!d) return null;
+  const done = !!d.submission;
+  return (
+    <Link to="/app/drill" data-testid="dashboard-drill-banner" className={`glass rounded-sm p-4 mb-4 flex flex-wrap items-center gap-4 transition-colors ${done ? "!border-green-400/40" : "!border-orange-400/50 hover:bg-orange-500/5"}`}>
+      <Zap className={`h-6 w-6 ${done ? "text-green-400" : "text-orange-400"}`} />
+      <div className="flex-1 min-w-[200px]">
+        <div className="eyebrow">daily alert drill · {d.drill_streak} day streak</div>
+        <div className="font-bold mt-0.5">{done ? `Done for today · ${d.submission.auto_score}/100 · +${d.submission.xp} XP` : d.title}</div>
+      </div>
+      {!done && <SeverityBadge level={d.severity} />}
+      <span className={done ? "ghost-btn" : "glow-btn"}>{done ? "Review" : `Triage now · +${d.bonus_xp} XP bonus`}</span>
+    </Link>
+  );
+}
 
 export default function Dashboard() {
   const [d, setD] = useState(null);
@@ -26,6 +44,7 @@ export default function Dashboard() {
         <Stat label="Streak" value={<span className="flex items-center gap-2 text-orange-400"><Flame className="h-5 w-5" />{d.streak}d</span>} testId="dashboard-streak" />
         <Stat label="Flags / Cases / Quizzes" value={`${d.counts.ctf} / ${d.counts.challenges} / ${d.counts.quizzes}`} testId="dashboard-counts" />
       </div>
+      <DrillBanner />
       <div className="grid lg:grid-cols-3 gap-4">
         <Glass className="p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-6"><h3 className="font-bold">Path progress</h3>

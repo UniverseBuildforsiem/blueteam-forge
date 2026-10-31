@@ -158,6 +158,42 @@ async def lab_report(lid: str, body: ReportIn, user=Depends(get_current_user)):
     return {"ok": True}
 
 
+# ---------- Daily alert drill ----------
+from datetime import timedelta
+from core import now
+from drills import drill_for
+
+
+@router.get("/drill/today")
+async def drill_today(user=Depends(get_current_user)):
+    d = drill_for(now().date().isoformat())
+    sub = await db.drill_submissions.find_one({"user_id": user["id"], "date": d["date"]}, NO_ID)
+    streak = 0
+    day = now().date() - (timedelta(0) if sub else timedelta(days=1))
+    while await db.drill_submissions.find_one({"user_id": user["id"], "date": day.isoformat()}):
+        streak += 1
+        day -= timedelta(days=1)
+    public = {k: v for k, v in d.items() if k not in ("verdict", "keywords")}
+    return {**public, "submission": sub, "drill_streak": streak}
+
+
+@router.post("/drill/today/submit")
+async def drill_submit(body: TriageIn, user=Depends(get_current_user)):
+    d = drill_for(now().date().isoformat())
+    if await db.drill_submissions.find_one({"user_id": user["id"], "date": d["date"]}):
+        raise HTTPException(400, "You already completed today's drill. Come back tomorrow!")
+    low = body.report.lower()
+    hits = [k for k in d["keywords"] if k.lower() in low]
+    vc = body.verdict == d["verdict"]
+    score = (60 if vc else 0) + round(40 * len(hits) / len(d["keywords"]))
+    xp = round(d["points"] * score / 100) + d["bonus_xp"]
+    sub = {"user_id": user["id"], "date": d["date"], "verdict": body.verdict, "verdict_correct": vc, "report": body.report,
+           "auto_score": score, "keywords_hit": hits, "xp": xp, "created_at": now_iso()}
+    await db.drill_submissions.insert_one(dict(sub))
+    await award(user["id"], xp, f"Daily drill '{d['title']}' ({score}/100, +{d['bonus_xp']} bonus)")
+    return {**sub, "expected_verdict": d["verdict"], "missed_keywords": [k for k in d["keywords"] if k not in hits]}
+
+
 # ---------- SIEM ----------
 def match(e, tok):
     m = re.match(r"^([a-z_]+)(!=|=)(.+)$", tok, re.I)

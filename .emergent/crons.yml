@@ -1,0 +1,8 @@
+crons:
+  - name: session-reminders
+    description: "Emails RSVP'd students a reminder about live sessions starting within the next hour"
+    cron: "*/15 * * * *"
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    endpoint: "{{BASE_URL}}/api/cron/session-reminders"
+    method: POST
+    enabled: true

@@ -8,10 +8,11 @@ from routes_auth import router as auth_router
 from routes_learn import router as learn_router
 from routes_practice import router as practice_router
 from routes_manage import router as manage_router
+from routes_cron import router as cron_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCForge API")
-for r in (auth_router, learn_router, practice_router, manage_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])
