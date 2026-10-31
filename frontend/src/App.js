@@ -8,6 +8,7 @@ import Catalog from "./pages/Catalog";
 import { Login, Register, ForgotPassword, ResetPassword } from "./pages/AuthPages";
 import Onboarding from "./pages/Onboarding";
 import Verify from "./pages/Verify";
+import PublicProfile from "./pages/PublicProfile";
 import Dashboard from "./pages/app/Dashboard";
 import { Paths, PathDetail } from "./pages/app/Paths";
 import Sessions from "./pages/app/Sessions";
@@ -36,6 +37,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify/:id" element={<Verify />} />
+            <Route path="/u/:username" element={<PublicProfile />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/app" element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />

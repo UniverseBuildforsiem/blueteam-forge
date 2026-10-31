@@ -5,6 +5,7 @@ from html import escape
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse, HTMLResponse
+from pydantic import BaseModel
 from PIL import Image, ImageDraw, ImageFont
 from core import db, get_current_user, rank_for
 from routes_practice import streak_stats
@@ -72,6 +73,30 @@ def render(name, current, longest, total, xp):
 async def streak_png(token: str):
     u, current, longest, total = await card_data(token)
     return StreamingResponse(render(u["name"], current, longest, total, u.get("xp")), media_type="image/png", headers={"Cache-Control": "public, max-age=600"})
+
+
+@router.get("/public/profile/{username}")
+async def public_profile(username: str):
+    from routes_learn import compute_badges
+    u = await db.users.find_one({"username": username.lower(), "status": "active"}, {"_id": 0, "password_hash": 0})
+    if not u or u.get("public_profile") is False:
+        raise HTTPException(404, "Profile not found")
+    current, longest, total = await streak_stats(u["id"])
+    certs = await db.certificates.find({"user_id": u["id"], "status": "valid"}, {"_id": 0, "id": 1, "path_title": 1, "score": 1, "issued_at": 1}).sort("issued_at", -1).to_list(50)
+    badges = [b for b in await compute_badges(u) if b["earned"]]
+    return {"name": u["name"], "username": u["username"], "rank": rank_for(u.get("xp", 0)), "xp": u.get("xp", 0), "goal": u.get("goal"),
+            "joined": u["created_at"][:10], "badges": badges, "certificates": certs,
+            "drill": {"current": current, "longest": longest, "total": total}}
+
+
+class ProfileVis(BaseModel):
+    public_profile: bool
+
+
+@router.patch("/me/profile-visibility")
+async def profile_visibility(body: ProfileVis, user=Depends(get_current_user)):
+    await db.users.update_one({"id": user["id"]}, {"$set": {"public_profile": body.public_profile}})
+    return {"public_profile": body.public_profile}
 
 
 @router.get("/public/streak/{token}", response_class=HTMLResponse)

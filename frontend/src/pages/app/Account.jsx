@@ -1,10 +1,36 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Award, Download, ExternalLink, Check } from "lucide-react";
+import { Award, Download, ExternalLink, Check, Linkedin, UserRound, Copy } from "lucide-react";
+import { Switch } from "../../components/ui/switch";
 import { toast } from "sonner";
 import { api, API, errMsg, fmtDate } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { Glass, PageHeader, Empty } from "../../components/common";
+
+const linkedInUrl = (c) => {
+  const d = new Date(c.issued_at);
+  const q = new URLSearchParams({ startTask: "CERTIFICATION_NAME", name: `SOCForge — ${c.path_title}`, organizationName: "SOCForge", issueYear: d.getUTCFullYear(), issueMonth: d.getUTCMonth() + 1,
+    certUrl: `${window.location.origin}/verify/${c.id}`, certId: c.id });
+  return `https://www.linkedin.com/profile/add?${q.toString()}`;
+};
+
+function ProfileCard() {
+  const { user, setUser } = useAuth();
+  const on = user.public_profile !== false;
+  const url = `${window.location.origin}/u/${user.username}`;
+  const flip = async () => { const { data } = await api.patch("/me/profile-visibility", { public_profile: !on }); setUser({ ...user, ...data }); toast.success(data.public_profile ? "Profile is public" : "Profile is private"); };
+  return (
+    <Glass className="p-5 mb-6 flex flex-wrap items-center gap-4" data-testid="public-profile-card">
+      <UserRound className="h-6 w-6 text-cyan-400" />
+      <div className="flex-1 min-w-[220px]"><div className="font-bold">Public badge showcase</div>
+        <div className="text-xs font-mono text-slate-400 break-all">{on ? url : "Private — only you can see your badges and certificates"}</div></div>
+      <label className="flex items-center gap-2 text-xs font-mono text-slate-400"><Switch checked={on} onCheckedChange={flip} data-testid="public-profile-toggle" />{on ? "public" : "private"}</label>
+      {on && <>
+        <Link to={`/u/${user.username}`} className="ghost-btn !py-1.5 !text-xs" data-testid="public-profile-view"><ExternalLink className="h-3.5 w-3.5" />View</Link>
+        <button className="ghost-btn !py-1.5 !text-xs" onClick={() => { navigator.clipboard.writeText(url); toast.success("Profile link copied"); }} data-testid="public-profile-copy"><Copy className="h-3.5 w-3.5" />Copy link</button></>}
+    </Glass>
+  );
+}
 
 export function Certificates() {
   const [cs, setCs] = useState([]);
@@ -12,12 +38,14 @@ export function Certificates() {
   return (
     <div>
       <PageHeader eyebrow="// credentials" title="Certificates" sub="Complete every lesson in a path and pass its final exam (70%+) to earn a certificate." />
+      <ProfileCard />
       {cs.length ? <div className="grid md:grid-cols-2 gap-4">{cs.map((c) => (
         <Glass key={c.id} className="p-6" data-testid={`certificate-${c.id}`}>
           <Award className="h-7 w-7 text-green-400" /><div className="font-bold text-lg mt-3">{c.path_title}</div>
           <div className="text-xs font-mono text-slate-400 mt-1">{c.id} · {c.score}% · {c.issued_at.slice(0, 10)} · <span className={c.status === "valid" ? "text-green-400" : "text-red-400"}>{c.status}</span></div>
-          <div className="flex gap-2 mt-5"><a href={`${API}/public/certificates/${c.id}/pdf`} target="_blank" rel="noreferrer" className="glow-btn" data-testid={`certificate-pdf-${c.id}`}><Download className="h-4 w-4" />PDF</a>
-            <Link to={`/verify/${c.id}`} className="ghost-btn" data-testid={`certificate-verify-${c.id}`}><ExternalLink className="h-4 w-4" />Verify page</Link></div>
+          <div className="flex flex-wrap gap-2 mt-5"><a href={`${API}/public/certificates/${c.id}/pdf`} target="_blank" rel="noreferrer" className="glow-btn" data-testid={`certificate-pdf-${c.id}`}><Download className="h-4 w-4" />PDF</a>
+            <Link to={`/verify/${c.id}`} className="ghost-btn" data-testid={`certificate-verify-${c.id}`}><ExternalLink className="h-4 w-4" />Verify page</Link>
+            {c.status === "valid" && <a href={linkedInUrl(c)} target="_blank" rel="noreferrer" className="ghost-btn !border-[#0A66C2]/60 !text-[#7FB8F0] hover:!bg-[#0A66C2]/15" data-testid={`certificate-linkedin-${c.id}`}><Linkedin className="h-4 w-4" />Add to LinkedIn profile</a>}</div>
         </Glass>))}</div> : <Empty text="no certificates yet — finish a path to earn one" />}
     </div>
   );
