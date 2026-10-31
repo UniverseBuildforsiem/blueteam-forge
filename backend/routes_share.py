@@ -3,11 +3,12 @@ import os
 import secrets
 from html import escape
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Depends
+from datetime import timedelta
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import StreamingResponse, HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from PIL import Image, ImageDraw, ImageFont
-from core import db, get_current_user, rank_for
+from core import db, get_current_user, rank_for, now, now_iso, send_email, email_template
 from routes_practice import streak_stats
 
 router = APIRouter(prefix="/api")
@@ -77,7 +78,7 @@ async def streak_png(token: str):
     return StreamingResponse(render(u["name"], current, longest, total, u.get("xp"), u["username"] if u.get("public_profile") is not False else None), media_type="image/png", headers={"Cache-Control": "public, max-age=600"})
 
 
-async def skills_for(uid):
+async def skill_scores(uid):
     topics = {}
     for a in await db.quiz_attempts.find({"user_id": uid}, {"_id": 0, "topics": 1}).to_list(1000):
         for t, (c, n) in a["topics"].items():
@@ -90,16 +91,75 @@ async def skills_for(uid):
         x = topics.setdefault(s["category"], [0, 0])
         x[0] += 1 if s["verdict_correct"] else 0
         x[1] += 1
-    return sorted(t for t, (c, n) in topics.items() if n and c / n >= 0.7)
+    return sorted(({"topic": t, "accuracy": round(100 * c / n)} for t, (c, n) in topics.items() if n), key=lambda x: x["topic"])
+
+
+async def skills_for(uid):
+    return [s["topic"] for s in await skill_scores(uid) if s["accuracy"] >= 70]
+
+
+JOB_FIELDS = ("open_to_work", "location", "work_mode")
 
 
 async def profile_summary(u):
     from routes_learn import compute_badges
     current, longest, total = await streak_stats(u["id"])
     certs = await db.certificates.find({"user_id": u["id"], "status": "valid"}, {"_id": 0, "id": 1, "path_title": 1, "score": 1, "issued_at": 1}).sort("issued_at", -1).to_list(50)
+    scores = await skill_scores(u["id"])
     return {"name": u["name"], "username": u["username"], "rank": rank_for(u.get("xp", 0)), "xp": u.get("xp", 0), "goal": u.get("goal"),
             "joined": u["created_at"][:10], "badges": [b for b in await compute_badges(u) if b["earned"]], "certificates": certs,
-            "skills": await skills_for(u["id"]), "drill": {"current": current, "longest": longest, "total": total}}
+            "skills": [s["topic"] for s in scores if s["accuracy"] >= 70], "skill_scores": scores,
+            "open_to_work": bool(u.get("open_to_work")), "location": u.get("location", ""), "work_mode": u.get("work_mode", ""),
+            "drill": {"current": current, "longest": longest, "total": total}}
+
+
+class JobPrefs(BaseModel):
+    open_to_work: bool
+    location: str = Field(default="", max_length=60)
+    work_mode: str = Field(default="", pattern="^(|Remote|Hybrid|On-site)$")
+
+
+@router.patch("/me/job-prefs")
+async def job_prefs(body: JobPrefs, user=Depends(get_current_user)):
+    data = {**body.model_dump(), "location": body.location.strip()}
+    await db.users.update_one({"id": user["id"]}, {"$set": data})
+    return data
+
+
+class ContactIn(BaseModel):
+    recruiter_name: str = Field(min_length=2, max_length=60)
+    recruiter_email: str = Field(max_length=120)
+    company: str = Field(min_length=2, max_length=80)
+    role: str = Field(default="", max_length=80)
+    message: str = Field(min_length=20, max_length=1500)
+
+
+@router.post("/public/profile/{username}/contact")
+async def contact(username: str, body: ContactIn, request: Request):
+    from routes_auth import EMAIL_RE
+    email = body.recruiter_email.strip().lower()
+    if not EMAIL_RE.match(email):
+        raise HTTPException(400, "Enter a valid work email")
+    u = await db.users.find_one({"username": username.lower(), "status": "active", "public_profile": {"$ne": False}}, {"_id": 0, "id": 1, "name": 1, "email": 1, "open_to_work": 1})
+    if not u or not u.get("open_to_work"):
+        raise HTTPException(404, "This candidate is not accepting contact requests")
+    ip = request.client.host if request.client else "x"
+    day_ago = (now() - timedelta(days=1)).isoformat()
+    if await db.contact_requests.count_documents({"$or": [{"ip": ip}, {"recruiter_email": email}], "created_at": {"$gte": day_ago}}) >= 5:
+        raise HTTPException(429, "Daily contact limit reached. Try again tomorrow.")
+    if await db.contact_requests.find_one({"recruiter_email": email, "user_id": u["id"], "created_at": {"$gte": day_ago}}):
+        raise HTTPException(429, "You already contacted this candidate today")
+    lines = [f"{body.recruiter_name} from {body.company} would like to talk to you about a SOC role{f' ({body.role})' if body.role else ''}.",
+             f"Their message: {body.message}", f"To reply, email them directly at {email}. Your email address has not been shared with them.",
+             "Only reply if you are interested. SOCForge never asks you to share passwords or payment details."]
+    try:
+        html = email_template(u["name"], lines, f"{os.environ['FRONTEND_URL']}/app/certificates", "Manage job preferences")
+        msg_id = await send_email(to=u["email"], subject=f"Recruiter contact: {body.company} via SOCForge", html=html)
+    except ValueError:
+        raise HTTPException(400, "Your message contains content we can't send. Please rephrase it.")
+    await db.contact_requests.insert_one({"user_id": u["id"], "recruiter_name": body.recruiter_name, "recruiter_email": email, "company": body.company,
+                                          "role": body.role, "message": body.message, "ip": ip, "sent": bool(msg_id), "created_at": now_iso()})
+    return {"ok": True, "message": "Your request was sent. The candidate will reply by email if interested."}
 
 
 @router.get("/public/profile/{username}")
@@ -111,9 +171,13 @@ async def public_profile(username: str):
 
 
 @router.get("/public/talent")
-async def talent(q: str = "", rank: str = "", cert: str = "", skill: str = ""):
-    us = await db.users.find({"role": "student", "status": "active", "public_profile": {"$ne": False}, "onboarded": True},
-                             {"_id": 0, "password_hash": 0}).sort("xp", -1).to_list(300)
+async def talent(q: str = "", rank: str = "", cert: str = "", skill: str = "", open: bool = False, location: str = ""):
+    filt = {"role": "student", "status": "active", "public_profile": {"$ne": False}, "onboarded": True}
+    if open:
+        filt["open_to_work"] = True
+    us = await db.users.find(filt, {"_id": 0, "password_hash": 0}).sort("xp", -1).to_list(300)
+    if location:
+        us = [u for u in us if location.lower() in (u.get("location") or "").lower() or (location.lower() == "remote" and u.get("work_mode") == "Remote")]
     if cert:
         holders = set(await db.certificates.distinct("user_id", {"path_title": cert, "status": "valid"}))
         us = [u for u in us if u["id"] in holders]
@@ -128,7 +192,7 @@ async def talent(q: str = "", rank: str = "", cert: str = "", skill: str = ""):
             continue
         if skill and skill not in p["skills"]:
             continue
-        rows.append({k: p[k] for k in ("name", "username", "rank", "xp", "goal", "skills", "drill")} | {"certificates": [c["path_title"] for c in p["certificates"]], "badge_count": len(p["badges"])})
+        rows.append({k: p[k] for k in ("name", "username", "rank", "xp", "goal", "skills", "drill", "open_to_work", "location", "work_mode")} | {"certificates": [c["path_title"] for c in p["certificates"]], "badge_count": len(p["badges"])})
     paths = await db.paths.find({"published": True}, {"_id": 0, "title": 1}).sort("order", 1).to_list(50)
     skills = sorted({s for r in rows for s in r["skills"]} | {"Phishing", "Malware", "Brute Force", "Ransomware", "Lateral Movement", "Network", "Windows Logs"})
     return {"results": rows[:60], "total": len(rows), "options": {"ranks": ["Recruit", "Analyst", "Hunter", "Elite"], "certificates": [p["title"] for p in paths], "skills": skills}}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Flame, Award, Users } from "lucide-react";
+import { Search, Flame, Award, Users, Briefcase, MapPin } from "lucide-react";
+import { Switch } from "../components/ui/switch";
 import { api } from "../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Glass } from "../components/common";
@@ -24,6 +25,8 @@ function Candidate({ c }) {
       <div className="flex justify-between items-start"><div><div className="font-bold text-lg">{c.name}</div><div className="text-xs font-mono text-slate-500">@{c.username}{c.goal ? ` · ${c.goal}` : ""}</div></div>
         <span className={`font-mono text-sm ${RANK_COLOR[c.rank]}`}>{c.rank}</span></div>
       <div className="flex gap-4 mt-3 text-xs font-mono text-slate-400"><span className="text-green-400">{c.xp} XP</span><span className="flex items-center gap-1 text-orange-400"><Flame className="h-3 w-3" />{c.drill.longest}d best</span><span>{c.badge_count} badges</span></div>
+      {c.open_to_work && <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" data-testid={`talent-open-${c.username}`}><span className="inline-flex items-center gap-1 px-2 py-0.5 border border-green-400/50 bg-green-500/10 text-green-300 font-mono"><Briefcase className="h-3 w-3" />Open to work</span>
+        {(c.location || c.work_mode) && <span className="text-slate-400 flex items-center gap-1"><MapPin className="h-3 w-3" />{[c.location, c.work_mode].filter(Boolean).join(" · ")}</span>}</div>}
       <div className="flex flex-wrap gap-1.5 mt-4">{c.skills.length ? c.skills.map((s) => <span key={s} className="px-2 py-0.5 text-[11px] font-mono border border-cyan-500/30 text-cyan-300">{s}</span>) : <span className="text-[11px] font-mono text-slate-600">no verified skills yet</span>}</div>
       <div className="mt-4 space-y-1">{c.certificates.map((t) => <div key={t} className="text-xs flex items-center gap-1.5 text-slate-300"><Award className="h-3.5 w-3.5 text-green-400" />{t}</div>)}</div>
     </Link>
@@ -31,7 +34,7 @@ function Candidate({ c }) {
 }
 
 export default function Talent() {
-  const [f, setF] = useState({ q: "", rank: "", cert: "", skill: "" });
+  const [f, setF] = useState({ q: "", rank: "", cert: "", skill: "", open: false, location: "" });
   const [d, setD] = useState(null);
   useEffect(() => {
     const t = setTimeout(() => api.get("/public/talent", { params: f }).then((r) => setD(r.data)), 250);
@@ -51,7 +54,9 @@ export default function Talent() {
           {d && <><Pick label="Any rank" value={f.rank} set={set("rank")} options={d.options.ranks} testId="talent-rank-filter" />
             <Pick label="Any certificate" value={f.cert} set={set("cert")} options={d.options.certificates} testId="talent-cert-filter" />
             <Pick label="Any skill" value={f.skill} set={set("skill")} options={d.options.skills} testId="talent-skill-filter" /></>}
-          {(f.q || f.rank || f.cert || f.skill) && <button className="text-xs font-mono text-slate-400 hover:text-cyan-300" onClick={() => setF({ q: "", rank: "", cert: "", skill: "" })} data-testid="talent-clear-filters">clear</button>}
+          <input className="field !w-44 text-xs" placeholder="Location or 'remote'" value={f.location} onChange={(e) => set("location")(e.target.value)} data-testid="talent-location-input" />
+          <label className="flex items-center gap-2 text-xs font-mono text-slate-300"><Switch checked={f.open} onCheckedChange={set("open")} data-testid="talent-open-toggle" />Open to work only</label>
+          {(f.q || f.rank || f.cert || f.skill || f.open || f.location) && <button className="text-xs font-mono text-slate-400 hover:text-cyan-300" onClick={() => setF({ q: "", rank: "", cert: "", skill: "", open: false, location: "" })} data-testid="talent-clear-filters">clear</button>}
         </Glass>
         <div className="text-xs font-mono text-slate-500 mt-6 mb-3 flex items-center gap-2" data-testid="talent-count"><Users className="h-3.5 w-3.5" />{d ? `${d.total} candidate${d.total === 1 ? "" : "s"}` : "searching..."}</div>
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4" data-testid="talent-results">{d?.results.map((c) => <Candidate key={c.username} c={c} />)}</div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Award, Download, ExternalLink, Check, Linkedin, UserRound, Copy } from "lucide-react";
+import { Award, Download, ExternalLink, Check, Linkedin, UserRound, Copy, Briefcase } from "lucide-react";
 import { Switch } from "../../components/ui/switch";
 import { toast } from "sonner";
 import { api, API, errMsg, fmtDate } from "../../lib/api";
@@ -32,6 +32,32 @@ function ProfileCard() {
   );
 }
 
+function JobPrefsCard() {
+  const { user, setUser } = useAuth();
+  const [f, setF] = useState({ open_to_work: !!user.open_to_work, location: user.location || "", work_mode: user.work_mode || "" });
+  const save = async (next = f) => {
+    try { const { data } = await api.patch("/me/job-prefs", next); setUser({ ...user, ...data }); toast.success(data.open_to_work ? "You're open to SOC roles — recruiters can contact you" : "Job preferences saved"); }
+    catch (e) { toast.error(errMsg(e)); }
+  };
+  return (
+    <Glass className="p-5 mb-6 space-y-4" data-testid="job-prefs-card">
+      <div className="flex flex-wrap items-center gap-4">
+        <Briefcase className="h-6 w-6 text-green-400" />
+        <div className="flex-1 min-w-[220px]"><div className="font-bold">Open to SOC roles</div>
+          <div className="text-xs text-slate-400">Recruiters on the talent page can filter for you and send a contact request. Your email stays hidden; requests arrive in your inbox.</div></div>
+        <Switch checked={f.open_to_work} onCheckedChange={(v) => { const n = { ...f, open_to_work: v }; setF(n); save(n); }} data-testid="job-open-toggle" />
+      </div>
+      {f.open_to_work && <div className="flex flex-wrap gap-2">
+        <input className="field max-w-xs" placeholder="Preferred location, e.g. Bengaluru" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} data-testid="job-location-input" />
+        <select className="field !w-40" value={f.work_mode} onChange={(e) => setF({ ...f, work_mode: e.target.value })} data-testid="job-mode-select">
+          <option value="">Any work mode</option>{["Remote", "Hybrid", "On-site"].map((m) => <option key={m}>{m}</option>)}</select>
+        <button className="ghost-btn" onClick={() => save()} data-testid="job-prefs-save">Save</button>
+      </div>}
+      {f.open_to_work && user.public_profile === false && <div className="text-xs text-yellow-300 font-mono">Your profile is private, so recruiters can't find you. Make it public above.</div>}
+    </Glass>
+  );
+}
+
 export function Certificates() {
   const [cs, setCs] = useState([]);
   useEffect(() => { api.get("/certificates/mine").then((r) => setCs(r.data)); }, []);
@@ -39,6 +65,7 @@ export function Certificates() {
     <div>
       <PageHeader eyebrow="// credentials" title="Certificates" sub="Complete every lesson in a path and pass its final exam (70%+) to earn a certificate." />
       <ProfileCard />
+      <JobPrefsCard />
       {cs.length ? <div className="grid md:grid-cols-2 gap-4">{cs.map((c) => (
         <Glass key={c.id} className="p-6" data-testid={`certificate-${c.id}`}>
           <Award className="h-7 w-7 text-green-400" /><div className="font-bold text-lg mt-3">{c.path_title}</div>
