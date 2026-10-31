@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "./common";
 
 export default function PublicNav() {
   const { user } = useAuth();
+  const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-0 z-30 bg-[#0B0F1A]/75 backdrop-blur-xl border-b border-cyan-500/10">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -20,8 +23,18 @@ export default function PublicNav() {
           {user ? <Link to="/app" className="glow-btn !py-2" data-testid="nav-dashboard-button">Dashboard</Link> : <>
             <Link to="/login" className="text-sm font-mono text-slate-300 hover:text-cyan-300" data-testid="nav-login-button">Log in</Link>
             <Link to="/register" className="glow-btn !py-2" data-testid="nav-signup-button">Sign up</Link></>}
+          <button className="md:hidden text-slate-300" onClick={() => setOpen(!open)} data-testid="nav-mobile-toggle" aria-label="Menu">{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
         </div>
       </div>
+      {open && (
+        <nav className="md:hidden border-t border-cyan-500/10 px-6 py-3 flex flex-col gap-3 font-mono text-sm text-slate-300" data-testid="nav-mobile-menu" onClick={() => setOpen(false)}>
+          <a href="/#features">Features</a>
+          <Link to="/courses" data-testid="nav-mobile-courses">Courses</Link>
+          <Link to="/catalog">Catalog</Link>
+          <Link to="/talent">Hire talent</Link>
+          <a href="/#pricing">Pricing</a>
+          <a href="/#faq">FAQ</a>
+        </nav>)}
     </header>
   );
 }

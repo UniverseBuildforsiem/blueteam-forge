@@ -37,6 +37,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Contact candidate: public form on /u/:username (open-to-work only) emails student, recruiter email shown in body, student email never exposed; limits 5/day per IP or sender, 1/day per sender+candidate
 - Skill radar on public profile (accuracy by topic; bars if <3 topics)
 
+- Landing feature showcase (2026-06): 10 tabbed features with mock live previews (Kali, SIEM, Drill, CTF, Labs, Tools, Skill radar, Certificates, Sessions, Talent), auto-rotates every 5s, pauses on hover
+- Self-paced courses (2026-06): 13 SOC Professionals courses (static data in frontend/src/lib/courses.js, scraped from classplus API) — landing shows 8 in a 4-column grid + /courses page with type filters & search; each card links to socprofessionals.com/courses/{id}
+- Mobile nav menu on public pages
+
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks
 - P1: Gate Pro-only content by plan; file uploads for lesson resources (object storage)
