@@ -11,6 +11,7 @@ export default function PublicNav() {
         <nav className="hidden md:flex items-center gap-8 text-sm text-slate-400 font-mono">
           <a href="/#features" className="hover:text-cyan-300 transition-colors">Features</a>
           <Link to="/catalog" data-testid="nav-catalog" className="hover:text-cyan-300 transition-colors">Catalog</Link>
+          <Link to="/talent" data-testid="nav-talent" className="hover:text-cyan-300 transition-colors">Hire talent</Link>
           <a href="/#pricing" className="hover:text-cyan-300 transition-colors">Pricing</a>
           <a href="/#faq" className="hover:text-cyan-300 transition-colors">FAQ</a>
         </nav>

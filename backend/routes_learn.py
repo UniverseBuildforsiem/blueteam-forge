@@ -36,9 +36,11 @@ async def public_announcements():
 
 @router.get("/public/verify/{cert_id}")
 async def verify(cert_id: str):
-    c = await db.certificates.find_one({"id": cert_id}, {"_id": 0, "user_id": 0})
+    c = await db.certificates.find_one({"id": cert_id}, {"_id": 0})
     if not c:
         raise HTTPException(404, "Certificate not found")
+    u = await db.users.find_one({"id": c.pop("user_id")}, {"_id": 0, "username": 1, "public_profile": 1, "status": 1})
+    c["username"] = u["username"] if u and u.get("public_profile") is not False and u.get("status") == "active" else None
     return c
 
 
@@ -279,8 +281,8 @@ async def compute_badges(u):
 
 @router.get("/leaderboard")
 async def leaderboard(user=Depends(get_current_user)):
-    us = await db.users.find({"role": "student", "status": "active"}, {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1}).sort("xp", -1).to_list(10)
-    return [{**u, "rank": rank_for(u.get("xp", 0))} for u in us]
+    us = await db.users.find({"role": "student", "status": "active"}, {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1, "public_profile": 1}).sort("xp", -1).to_list(10)
+    return [{**u, "rank": rank_for(u.get("xp", 0)), "public": u.pop("public_profile", True) is not False} for u in us]
 
 
 @router.get("/dashboard")

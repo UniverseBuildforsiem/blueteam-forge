@@ -44,6 +44,7 @@ async def startup():
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.login_attempts.create_index("identifier")
     await db.drill_submissions.create_index([("user_id", 1), ("date", 1)], unique=True)
+    await db.drill_freezes.create_index([("user_id", 1), ("date", 1)], unique=True)
     await db.drill_rescue.create_index([("user_id", 1), ("date", 1)], unique=True)
     await seed_user(os.environ["ADMIN_EMAIL"], os.environ["ADMIN_PASSWORD"], "Platform Admin", "admin", "admin")
     await seed_user("instructor@socforge.io", "Instructor@123", "Riya Sen", "riya", "instructor")

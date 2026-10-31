@@ -37,7 +37,7 @@ async def send_streak_rescue():
     from routes_practice import drill_streak
     today = now().date().isoformat()
     yesterday = (now().date() - timedelta(days=1)).isoformat()
-    alive = await db.drill_submissions.distinct("user_id", {"date": yesterday})
+    alive = set(await db.drill_submissions.distinct("user_id", {"date": yesterday})) | set(await db.drill_freezes.distinct("user_id", {"date": yesterday}))
     done_today = set(await db.drill_submissions.distinct("user_id", {"date": today}))
     sent = 0
     for uid in alive:

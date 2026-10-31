@@ -26,6 +26,9 @@ export default function PublicProfile() {
               <Stat label="Drill streak" value={<span className="flex items-center gap-2 text-orange-400"><Flame className="h-5 w-5" />{p.drill.current}d</span>} testId="profile-streak" />
               <Stat label="Longest / total drills" value={`${p.drill.longest}d / ${p.drill.total}`} />
             </div>
+            {p.skills?.length > 0 && <><h2 className="text-lg font-bold mt-12 mb-4">Verified skills</h2>
+              <div className="flex flex-wrap gap-2" data-testid="profile-skills">{p.skills.map((s) => <span key={s} className="px-3 py-1 text-sm font-mono border border-cyan-500/30 text-cyan-300">{s}</span>)}</div>
+              <p className="text-xs text-slate-500 mt-2 font-mono">70%+ accuracy on quizzes or triage verdicts in this area</p></>}
             <h2 className="text-lg font-bold mt-12 mb-4 flex items-center gap-2"><Zap className="h-5 w-5 text-green-400" />Badges</h2>
             {p.badges.length ? <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="profile-badges">
               {p.badges.map((b) => <Glass key={b.id} className="p-4 !border-green-400/40" data-testid={`profile-badge-${b.id}`}><Zap className="h-5 w-5 text-green-400" /><div className="font-mono text-sm mt-2">{b.name}</div><div className="text-xs text-slate-500">{b.description}</div></Glass>)}

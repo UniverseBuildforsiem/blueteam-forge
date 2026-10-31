@@ -95,7 +95,8 @@ async def scoreboard(user=Depends(get_current_user)):
     agg = await db.ctf_solves.aggregate([{"$group": {"_id": "$user_id", "name": {"$first": "$name"}, "username": {"$first": "$username"},
                                                      "points": {"$sum": "$points"}, "solves": {"$sum": 1}, "last": {"$max": "$created_at"}}},
                                          {"$sort": {"points": -1, "last": 1}}, {"$limit": 20}]).to_list(20)
-    return [{"user_id": a["_id"], "name": a["name"], "username": a["username"], "points": a["points"], "solves": a["solves"]} for a in agg]
+    priv = {u["id"] for u in await db.users.find({"id": {"$in": [a["_id"] for a in agg]}, "public_profile": False}, {"_id": 0, "id": 1}).to_list(50)}
+    return [{"user_id": a["_id"], "name": a["name"], "username": a["username"], "points": a["points"], "solves": a["solves"], "public": a["_id"] not in priv} for a in agg]
 
 
 # ---------- Scenario labs ----------
@@ -170,8 +171,11 @@ async def drill_today(user=Depends(get_current_user)):
     d = drill_for(now().date().isoformat())
     sub = await db.drill_submissions.find_one({"user_id": user["id"], "date": d["date"]}, NO_ID)
     streak = await drill_streak(user["id"])
+    fresh = await db.users.find_one({"id": user["id"]}, {"_id": 0, "streak_freezes": 1, "xp": 1})
+    frozen = [f["date"] for f in await db.drill_freezes.find({"user_id": user["id"]}, {"_id": 0, "date": 1}).sort("date", -1).to_list(5)]
     public = {k: v for k, v in d.items() if k not in ("verdict", "keywords")}
-    return {**public, "submission": sub, "drill_streak": streak, "streak_emails": user.get("streak_emails", True)}
+    return {**public, "submission": sub, "drill_streak": streak, "streak_emails": user.get("streak_emails", True),
+            "streak_freezes": fresh.get("streak_freezes", 0), "freeze_cost": FREEZE_COST, "freeze_max": FREEZE_MAX, "xp": fresh.get("xp", 0), "frozen_days": frozen}
 
 
 @router.post("/drill/today/submit")
@@ -199,9 +203,31 @@ async def drill_streak(uid):
     return (await streak_stats(uid))[0]
 
 
+FREEZE_COST, FREEZE_MAX = 100, 2
+
+
+async def apply_freeze(uid):
+    today = now().date()
+    y, y2 = (today - timedelta(days=1)).isoformat(), (today - timedelta(days=2)).isoformat()
+    if await db.drill_submissions.find_one({"user_id": uid, "date": y}) or await db.drill_freezes.find_one({"user_id": uid, "date": y}):
+        return
+    if not (await db.drill_submissions.find_one({"user_id": uid, "date": y2}) or await db.drill_freezes.find_one({"user_id": uid, "date": y2})):
+        return
+    r = await db.users.update_one({"id": uid, "streak_freezes": {"$gt": 0}}, {"$inc": {"streak_freezes": -1}})
+    if r.modified_count:
+        try:
+            await db.drill_freezes.insert_one({"user_id": uid, "date": y, "at": now_iso()})
+            await db.activity.insert_one({"id": new_id(), "user_id": uid, "text": f"Streak freeze used for {y}", "xp": 0, "created_at": now_iso()})
+        except DuplicateKeyError:
+            await db.users.update_one({"id": uid}, {"$inc": {"streak_freezes": 1}})
+
+
 async def streak_stats(uid):
-    dates = sorted({s["date"] for s in await db.drill_submissions.find({"user_id": uid}, {"_id": 0, "date": 1}).to_list(2000)})
-    days = set(dates)
+    await apply_freeze(uid)
+    real = {s["date"] for s in await db.drill_submissions.find({"user_id": uid}, {"_id": 0, "date": 1}).to_list(2000)}
+    frozen = {f["date"] for f in await db.drill_freezes.find({"user_id": uid}, {"_id": 0, "date": 1}).to_list(500)}
+    days = real | frozen
+    dates = sorted(days)
     day = now().date()
     if day.isoformat() not in days:
         day -= timedelta(days=1)
@@ -215,7 +241,20 @@ async def streak_stats(uid):
         run = run + 1 if prev and (d - prev).days == 1 else 1
         longest = max(longest, run)
         prev = d
-    return current, longest, len(dates)
+    return current, longest, len(real)
+
+
+@router.post("/drill/freeze/buy")
+async def buy_freeze(user=Depends(get_current_user)):
+    r = await db.users.update_one({"id": user["id"], "xp": {"$gte": FREEZE_COST}, "$or": [{"streak_freezes": {"$lt": FREEZE_MAX}}, {"streak_freezes": {"$exists": False}}]},
+                                  {"$inc": {"xp": -FREEZE_COST, "streak_freezes": 1}})
+    if not r.modified_count:
+        if (user.get("streak_freezes") or 0) >= FREEZE_MAX:
+            raise HTTPException(400, f"You can hold at most {FREEZE_MAX} streak freezes")
+        raise HTTPException(400, f"You need {FREEZE_COST} XP to buy a streak freeze")
+    await db.activity.insert_one({"id": new_id(), "user_id": user["id"], "text": "Bought a streak freeze", "xp": -FREEZE_COST, "created_at": now_iso()})
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "streak_freezes": 1, "xp": 1})
+    return {"streak_freezes": u["streak_freezes"], "xp": u["xp"]}
 
 
 def past_day(date: str):
@@ -233,11 +272,12 @@ async def drill_archive(user=Depends(get_current_user)):
     days = [(now().date() - timedelta(days=i)).isoformat() for i in range(1, 15)]
     subs = {s["date"]: s for s in await db.drill_submissions.find({"user_id": user["id"], "date": {"$in": days}}, NO_ID).to_list(20)}
     prac = {p["date"]: p for p in await db.drill_practice.find({"user_id": user["id"], "date": {"$in": days}}, NO_ID).to_list(20)}
+    frozen = {f["date"] for f in await db.drill_freezes.find({"user_id": user["id"], "date": {"$in": days}}, NO_ID).to_list(20)}
     out = []
     for day in days:
         d = drill_for(day)
         out.append({"date": day, "title": d["title"], "category": d["category"], "severity": d["severity"],
-                    "live_score": subs.get(day, {}).get("auto_score"), "practice_best": prac.get(day, {}).get("best")})
+                    "live_score": subs.get(day, {}).get("auto_score"), "frozen": day in frozen, "practice_best": prac.get(day, {}).get("best")})
     return out
 
 
@@ -245,8 +285,9 @@ async def drill_archive(user=Depends(get_current_user)):
 async def drill_leaderboard(user=Depends(get_current_user)):
     week = (now().date() - timedelta(days=6)).isoformat()
     agg = await db.drill_submissions.aggregate([{"$match": {"date": {"$gte": week}}}, {"$group": {"_id": "$user_id", "week": {"$sum": 1}, "xp": {"$sum": "$xp"}}}]).to_list(500)
-    users = {u["id"]: u for u in await db.users.find({"id": {"$in": [a["_id"] for a in agg]}}, {"_id": 0, "id": 1, "name": 1, "username": 1}).to_list(500)}
+    users = {u["id"]: u for u in await db.users.find({"id": {"$in": [a["_id"] for a in agg]}}, {"_id": 0, "id": 1, "name": 1, "username": 1, "public_profile": 1}).to_list(500)}
     rows = [{"user_id": a["_id"], "name": users.get(a["_id"], {}).get("name", "?"), "username": users.get(a["_id"], {}).get("username", ""),
+             "public": users.get(a["_id"], {}).get("public_profile") is not False,
              "streak": await drill_streak(a["_id"]), "week_drills": a["week"], "week_xp": a["xp"]} for a in agg if a["_id"] in users]
     rows.sort(key=lambda r: (-r["streak"], -r["week_drills"], -r["week_xp"]))
     return {"week_start": week, "rows": rows[:20]}

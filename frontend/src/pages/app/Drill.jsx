@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Flame, CalendarCheck, CheckCircle2, XCircle, ChevronLeft, RotateCcw, Trophy, History, Mail, Share2, Linkedin, Download, Copy } from "lucide-react";
+import { Flame, CalendarCheck, CheckCircle2, XCircle, ChevronLeft, RotateCcw, Trophy, History, Mail, Share2, Linkedin, Download, Copy, Snowflake } from "lucide-react";
+import { api, errMsg } from "../../lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Switch } from "../../components/ui/switch";
 import { useAuth } from "../../context/AuthContext";
-import { api } from "../../lib/api";
 import { Glass, PageHeader, SeverityBadge } from "../../components/common";
 import { Investigate } from "./Challenges";
 
@@ -46,7 +46,7 @@ function Archive() {
         <button key={d.date} onClick={() => open(d.date)} className="w-full text-left p-4 flex flex-wrap items-center gap-4 hover:bg-cyan-500/5 transition-colors" data-testid={`drill-archive-${d.date}`}>
           <span className="font-mono text-xs text-slate-500 w-24">{d.date}</span><SeverityBadge level={d.severity} />
           <span className="flex-1 text-sm">{d.title}<span className="text-xs text-slate-500"> · {d.category}</span></span>
-          <span className="font-mono text-xs text-slate-400">{d.live_score != null ? `live ${d.live_score}` : "missed"}{d.practice_best != null && ` · best ${d.practice_best}`}</span>
+          <span className="font-mono text-xs text-slate-400">{d.live_score != null ? `live ${d.live_score}` : d.frozen ? <span className="text-cyan-300">❄ frozen</span> : "missed"}{d.practice_best != null && ` · best ${d.practice_best}`}</span>
           <span className="ghost-btn !py-1 !text-xs"><RotateCcw className="h-3.5 w-3.5" />Replay</span>
         </button>))}
     </Glass>
@@ -63,7 +63,7 @@ function Leaderboard() {
       <div className="flex justify-between items-center mb-4"><h3 className="font-bold flex items-center gap-2"><Trophy className="h-4 w-4 text-yellow-300" />Longest streaks this week</h3><span className="text-xs font-mono text-slate-500">since {d.week_start}</span></div>
       {d.rows.length ? <table className="w-full text-sm"><thead><tr className="text-left text-xs font-mono text-slate-500 border-b border-cyan-500/15">{["#", "Analyst", "Streak", "Drills this week", "Drill XP"].map((h) => <th key={h} className="py-2 font-normal">{h}</th>)}</tr></thead>
         <tbody>{d.rows.map((r, i) => <tr key={r.user_id} className={`border-b border-white/5 ${r.user_id === user.id ? "bg-cyan-500/10" : ""}`} data-testid={`drill-lb-row-${r.username}`}>
-          <td className="py-2.5 font-mono text-slate-500">{i + 1}</td><td>{r.name}</td><td className="font-mono text-orange-400"><span className="inline-flex items-center gap-1"><Flame className="h-3.5 w-3.5" />{r.streak}</span></td>
+          <td className="py-2.5 font-mono text-slate-500">{i + 1}</td><td><ProfileLink username={r.username} isPublic={r.public} testId={`drill-lb-profile-${r.username}`}>{r.name}</ProfileLink></td><td className="font-mono text-orange-400"><span className="inline-flex items-center gap-1"><Flame className="h-3.5 w-3.5" />{r.streak}</span></td>
           <td className="font-mono">{r.week_drills}/7</td><td className="font-mono text-green-400">{r.week_xp}</td></tr>)}</tbody></table>
         : <div className="text-sm font-mono text-slate-500 py-6 text-center">// nobody has completed a drill this week — be first</div>}
     </Glass>
@@ -106,6 +106,28 @@ function ShareStreak() {
   );
 }
 
+function FreezeCard({ d, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const full = d.streak_freezes >= d.freeze_max;
+  const buy = async () => {
+    if (!window.confirm(`Spend ${d.freeze_cost} XP on a streak freeze?`)) return;
+    setBusy(true);
+    try { await api.post("/drill/freeze/buy"); toast.success("Streak freeze ready — it protects one missed day automatically"); onChange(); } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
+  };
+  return (
+    <Glass className="p-4 mb-4 flex flex-wrap items-center gap-4" data-testid="drill-freeze-card">
+      <Snowflake className="h-6 w-6 text-cyan-300" />
+      <div className="flex-1 min-w-[220px]">
+        <div className="font-bold text-sm">Streak freezes: <span className="font-mono text-cyan-300" data-testid="drill-freeze-count">{d.streak_freezes}/{d.freeze_max}</span></div>
+        <div className="text-xs text-slate-400">If you miss a day, a freeze is used automatically and your streak survives.{d.frozen_days?.length ? ` Last used: ${d.frozen_days[0]}.` : ""}</div>
+      </div>
+      <button className="ghost-btn !py-1.5 !text-xs disabled:opacity-40 disabled:cursor-not-allowed" disabled={busy || full || d.xp < d.freeze_cost} onClick={buy} data-testid="drill-freeze-buy">
+        {full ? "Max freezes held" : d.xp < d.freeze_cost ? `Need ${d.freeze_cost} XP` : `Buy for ${d.freeze_cost} XP`}
+      </button>
+    </Glass>
+  );
+}
+
 export default function Drill() {
   const [d, setD] = useState(null);
   const load = () => api.get("/drill/today").then((r) => setD(r.data));
@@ -116,6 +138,7 @@ export default function Drill() {
       <PageHeader eyebrow={`// daily alert drill · ${d.date}`} title="Daily Alert Drill"
         sub={`One fresh triage case every day. Finish it for a +${d.bonus_xp} XP bonus on top of your score, and keep your streak alive.`}
         right={<div className="flex flex-col items-end gap-2"><div className="flex items-center gap-2 font-mono text-orange-400 text-lg" data-testid="drill-streak"><Flame className="h-5 w-5" />{d.drill_streak} day drill streak</div><StreakEmailToggle on={d.streak_emails} /><ShareStreak /></div>} />
+      <FreezeCard d={d} onChange={load} />
       <Tabs defaultValue="today">
         <TabsList className="bg-black/40 mb-4"><TabsTrigger value="today" data-testid="drill-tab-today">Today</TabsTrigger><TabsTrigger value="archive" data-testid="drill-tab-archive"><History className="h-4 w-4 mr-1" />Archive</TabsTrigger><TabsTrigger value="leaderboard" data-testid="drill-tab-leaderboard"><Trophy className="h-4 w-4 mr-1" />Leaderboard</TabsTrigger></TabsList>
         <TabsContent value="today">

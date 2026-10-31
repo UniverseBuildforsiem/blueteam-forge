@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { BadgeCheck, XCircle, Download } from "lucide-react";
 import { api, API } from "../lib/api";
 import { Glass } from "../components/common";
@@ -22,7 +22,7 @@ export default function Verify() {
               <h1 className="text-2xl font-bold" data-testid="verify-status">{!c ? "Certificate not found" : valid ? "Valid certificate" : "Certificate revoked"}</h1>
             </div>
             {c && <div className="mt-6 space-y-2 font-mono text-sm">
-              <div><span className="text-slate-500">Holder: </span><span data-testid="verify-holder">{c.name}</span></div>
+              <div><span className="text-slate-500">Holder: </span><span data-testid="verify-holder">{c.username ? <Link to={`/u/${c.username}`} className="text-cyan-300 hover:underline" data-testid="verify-profile-link">{c.name}</Link> : c.name}</span></div>
               <div><span className="text-slate-500">Path: </span>{c.path_title}</div>
               <div><span className="text-slate-500">Score: </span>{c.score}%</div>
               <div><span className="text-slate-500">Issued: </span>{c.issued_at.slice(0, 10)}</div>

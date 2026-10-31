@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Flame, Trophy, Zap, CalendarClock, Award, Lock } from "lucide-react";
 import { api, fmtDate } from "../../lib/api";
-import { Glass, PageHeader, ProgressRing, Empty, Stat, SeverityBadge } from "../../components/common";
+import { Glass, PageHeader, ProgressRing, Empty, Stat, SeverityBadge, ProfileLink } from "../../components/common";
 
 const RANK_COLORS = { Recruit: "text-slate-300", Analyst: "text-cyan-300", Hunter: "text-orange-300", Elite: "neon-green" };
 
@@ -62,7 +62,7 @@ export default function Dashboard() {
           <ol className="space-y-2" data-testid="dashboard-leaderboard">
             {d.leaderboard.map((u, i) => (
               <li key={u.id} className={`flex items-center gap-3 text-sm px-2 py-1.5 ${u.id === d.user.id ? "bg-cyan-500/10" : ""}`}>
-                <span className="font-mono text-slate-500 w-5">{i + 1}</span><span className="flex-1 truncate">{u.name}</span>
+                <span className="font-mono text-slate-500 w-5">{i + 1}</span><ProfileLink username={u.username} isPublic={u.public} className="flex-1 truncate" testId={`leaderboard-profile-${u.username}`}>{u.name}</ProfileLink>
                 <span className="text-[10px] font-mono text-slate-400">{u.rank}</span><span className="font-mono text-green-400">{u.xp}</span>
               </li>))}
           </ol>

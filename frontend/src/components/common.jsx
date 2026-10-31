@@ -52,6 +52,10 @@ export const ProgressRing = ({ value = 0, size = 88, stroke = 7, color = "#00F0F
   );
 };
 
+export const ProfileLink = ({ username, isPublic = true, children, className = "", testId }) => (isPublic && username
+  ? <Link to={`/u/${username}`} data-testid={testId} className={`hover:text-cyan-300 hover:underline underline-offset-4 transition-colors ${className}`}>{children}</Link>
+  : <span className={className}>{children}</span>);
+
 export const Empty = ({ text }) => <div className="text-sm text-slate-500 font-mono py-8 text-center">// {text}</div>;
 
 export const Stat = ({ label, value, accent = "neon-text", testId }) => (
