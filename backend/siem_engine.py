@@ -11,7 +11,8 @@ ALIASES = {"eventid": "event_id", "eventcode": "event_id", "computer": "host", "
            "parentprocessname": "parent_process", "parentimage": "parent_process", "initiatingprocessfilename": "parent_process", "location": "country", "csuristem": "uri",
            "cs_uri_stem": "uri", "csuriquery": "uri_query", "cs_uri_query": "uri_query", "csmethod": "method", "scstatus": "status", "sc_status": "status", "csuseragent": "user_agent",
            "cs_user_agent": "user_agent", "requesturl": "url", "resulttype": "result_code", "sentbytes": "bytes_out", "bytes": "bytes_out", "appdisplayname": "app",
-           "servicename": "service", "ticketencryptiontype": "ticket_encryption", "scriptblocktext": "script_block", "operation": "operation", "timegenerated": "_time", "timestamp": "_time"}
+           "servicename": "service", "ticketencryptiontype": "ticket_encryption", "scriptblocktext": "script_block", "operation": "operation", "timegenerated": "_time", "timestamp": "_time",
+           "userid": "user", "logontype": "logon_type", "activity": "message"}
 KQL_TABLES = {"securityevent": "wineventlog", "event": "wineventlog", "sysmonevent": "sysmon", "deviceprocessevents": "sysmon", "deviceevents": "sysmon",
               "signinlogs": "azuread", "aadsignineventsbeta": "azuread", "officeactivity": "o365", "dnsevents": "dns", "commonsecuritylog": "firewall",
               "devicenetworkevents": "firewall", "w3ciislog": "web", "proxylogs": "proxy", "vpnlogs": "auth"}

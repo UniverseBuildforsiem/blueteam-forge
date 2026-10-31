@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ExternalLink, Newspaper, ShieldAlert, Crosshair, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, Newspaper, ShieldAlert, Crosshair, Search, Radar, Mail } from "lucide-react";
+import { toast } from "sonner";
 import PublicNav, { Footer } from "../components/PublicNav";
 import { Glass, SeverityBadge, Empty } from "../components/common";
+import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 
 const day = (iso) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -27,6 +29,33 @@ export function PostCard({ p }) {
   );
 }
 
+export const huntUrl = (lang, q) => `/app/siem?lang=${lang}&q=${encodeURIComponent(q)}`;
+
+function HuntPanel({ hunt }) {
+  return (
+    <Glass className="p-6 mt-4 border-cyan-500/30" data-testid="blog-hunt">
+      <div className="eyebrow mb-2 flex items-center gap-2 text-cyan-300"><Radar className="h-4 w-4" />practice from news</div>
+      <div className="font-bold">Hunt this in the SIEM: {hunt.title}</div>
+      <p className="text-sm text-slate-400 mt-1">Run a matching hunt against our practice logs and see what this threat looks like on a real shift.</p>
+      <pre className="mt-3 text-xs font-mono bg-black/50 border border-white/10 p-3 text-slate-200 whitespace-pre-wrap break-words" data-testid="blog-hunt-query">{hunt.spl}</pre>
+      <div className="flex flex-wrap gap-3 mt-4">
+        <Link to={huntUrl("spl", hunt.spl)} className="glow-btn" data-testid="blog-hunt-spl">Hunt with Splunk SPL <ArrowRight className="h-4 w-4" /></Link>
+        <Link to={huntUrl("kql", hunt.kql)} className="ghost-btn" data-testid="blog-hunt-kql">Hunt with Sentinel KQL</Link>
+      </div>
+    </Glass>);
+}
+
+function DigestToggle() {
+  const { user } = useAuth();
+  const [on, setOn] = useState(null);
+  useEffect(() => { if (user) api.get("/me/preferences").then((r) => setOn(r.data.digest_emails)).catch(() => {}); }, [user]);
+  if (!user || on === null) return null;
+  const flip = async () => { const { data } = await api.patch("/me/preferences", { digest_emails: !on }); setOn(data.digest_emails); toast.success(data.digest_emails ? "Weekly Threat Digest on" : "Weekly Threat Digest off"); };
+  return (
+    <button onClick={flip} className={`mt-6 inline-flex items-center gap-2 text-xs font-mono border px-3 py-2 rounded-sm transition-colors ${on ? "border-green-500/40 text-green-300" : "border-white/10 text-slate-400"}`} data-testid="blog-digest-toggle">
+      <Mail className="h-3.5 w-3.5" />Weekly Threat Digest every Monday: {on ? "ON" : "OFF"}</button>);
+}
+
 export function BlogList() {
   const [d, setD] = useState(null);
   const [cat, setCat] = useState("");
@@ -40,6 +69,7 @@ export function BlogList() {
         <div className="eyebrow mb-3">// security blog</div>
         <h1 className="text-4xl sm:text-5xl font-extrabold max-w-3xl">Today's threats, <span className="neon-text">turned into SOC action.</span></h1>
         <p className="text-slate-400 mt-4 max-w-2xl text-sm md:text-base">Fresh stories from The Hacker News and BleepingComputer every morning, summarised for analysts with the hunts, detections and fixes to run on your shift.</p>
+        <DigestToggle />
         <div className="flex flex-wrap items-center gap-2 mt-8" data-testid="blog-filters">
           <div className="flex items-center gap-2 bg-black/40 border border-white/10 px-3 rounded-sm"><Search className="h-4 w-4 text-slate-500" />
             <input value={q} onChange={(e) => { setQ(e.target.value); if (!e.target.value) load(cat, ""); }} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="Search posts" className="bg-transparent py-2 text-sm outline-none w-48" data-testid="blog-search" />
@@ -84,6 +114,7 @@ export function BlogPost() {
             <Block icon={Newspaper} title="key points" items={p.key_points} testId="blog-key-points" />
             <Block icon={Crosshair} title="soc action items" items={p.soc_actions} testId="blog-soc-actions" accent="text-green-400" />
           </div>
+          {p.hunt && <HuntPanel hunt={p.hunt} />}
           {(p.iocs?.length > 0 || p.mitre?.length > 0) && <Glass className="p-6 mt-4 grid md:grid-cols-2 gap-6" data-testid="blog-iocs">
             {p.iocs?.length > 0 && <div><div className="eyebrow mb-3">indicators & cves</div><div className="flex flex-wrap gap-2">{p.iocs.map((x) => <code key={x} className="text-xs font-mono bg-black/40 border border-red-500/20 text-red-300 px-2 py-1">{x}</code>)}</div></div>}
             {p.mitre?.length > 0 && <div><div className="eyebrow mb-3">mitre att&ck</div><div className="flex flex-wrap gap-2">{p.mitre.map((x) => <code key={x} className="text-xs font-mono bg-black/40 border border-cyan-500/20 text-cyan-300 px-2 py-1">{x}</code>)}</div></div>}

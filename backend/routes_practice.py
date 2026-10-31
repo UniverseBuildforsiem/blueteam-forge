@@ -379,6 +379,16 @@ async def drill_practice(date: str, body: TriageIn, user=Depends(get_current_use
 class PrefsIn(BaseModel):
     streak_emails: Optional[bool] = None
     course_emails: Optional[bool] = None
+    digest_emails: Optional[bool] = None
+
+
+def prefs_out(u):
+    return {k: u.get(k) is not False for k in ("streak_emails", "course_emails", "digest_emails")}
+
+
+@router.get("/me/preferences")
+async def get_prefs(user=Depends(get_current_user)):
+    return prefs_out(user)
 
 
 @router.patch("/me/preferences")
@@ -386,8 +396,8 @@ async def prefs(body: PrefsIn, user=Depends(get_current_user)):
     upd = body.model_dump(exclude_none=True)
     if upd:
         await db.users.update_one({"id": user["id"]}, {"$set": upd})
-    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "streak_emails": 1, "course_emails": 1})
-    return {"streak_emails": u.get("streak_emails") is not False, "course_emails": u.get("course_emails") is not False}
+    u = await db.users.find_one({"id": user["id"]}, {"_id": 0, "streak_emails": 1, "course_emails": 1, "digest_emails": 1})
+    return prefs_out(u)
 
 
 # ---------- SIEM ----------

@@ -16,7 +16,7 @@ export function ProtectedRoute({ roles, children }) {
   const { user } = useAuth();
   const loc = useLocation();
   if (user === null) return <div className="min-h-screen grid place-items-center font-mono text-cyan-400 cursor-blink">authenticating </div>;
-  if (!user) return <Navigate to="/login" state={{ from: loc.pathname }} replace />;
+  if (!user) return <Navigate to="/login" state={{ from: loc.pathname + loc.search }} replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/app" replace />;
   if (!user.onboarded && user.role === "student" && loc.pathname !== "/onboarding") return <Navigate to="/onboarding" replace />;
   return children;

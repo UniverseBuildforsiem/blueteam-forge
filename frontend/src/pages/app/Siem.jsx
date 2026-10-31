@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, Save, Trash2, BellRing, LayoutGrid, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
@@ -72,8 +73,9 @@ function Sidebar({ saved, run, setQ, setLang, loadSaved, res, addField }) {
 }
 
 function SearchTab() {
-  const [lang, setLang] = useState("spl");
-  const [q, setQ] = useState("");
+  const [sp, setSp] = useSearchParams();
+  const [lang, setLang] = useState(() => (sp.get("lang") === "kql" ? "kql" : "spl"));
+  const [q, setQ] = useState(() => sp.get("q") || "");
   const [range, setRange] = useState("all");
   const [custom, setCustom] = useState(() => ({ start: local(new Date(Date.now() - 864e5)), end: local(new Date()) }));
   const [res, setRes] = useState(null);
@@ -90,7 +92,7 @@ function SearchTab() {
     try { const { data } = await api.get("/siem/search", { params: { q: query, lang: l, ...window_() } }); setRes(data); setErr(""); } catch (e) { setErr(errMsg(e)); }
   };
   const loadSaved = () => api.get("/siem/saved").then((r) => setSaved(r.data));
-  useEffect(() => { run(""); loadSaved(); }, []); // eslint-disable-line
+  useEffect(() => { run(); loadSaved(); if (sp.get("q")) { toast.success("Hunt query loaded — results below"); setSp({}, { replace: true }); } }, []); // eslint-disable-line
   useEffect(() => { run(); }, [range, custom]); // eslint-disable-line
   const switchLang = (l) => { setLang(l); setQ(""); run("", l); };
   const save = async () => {

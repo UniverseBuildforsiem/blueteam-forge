@@ -30,3 +30,11 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/blog-sync"
     method: POST
     enabled: true
+  - name: weekly-digest
+    description: "Emails students the week's 5 most severe security stories with SOC action items every Monday 9am IST"
+    cron: "0 9 * * 1"
+    timezone: "Asia/Kolkata"
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    endpoint: "{{BASE_URL}}/api/cron/weekly-digest"
+    method: POST
+    enabled: true
