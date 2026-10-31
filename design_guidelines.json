@@ -1,0 +1,72 @@
+{
+  "theme": "dark",
+  "project_name": "SOCForge",
+  "typography": {
+    "headings": "JetBrains Mono (REQUIRED for all headers to enforce cyber aesthetic)",
+    "body": "Inter, sans-serif",
+    "terminal": "Fira Code or JetBrains Mono"
+  },
+  "colors": {
+    "background": "#0B0F1A",
+    "foreground": "#F8FAFC",
+    "primary": "#00F0FF",
+    "secondary": "#00FF66",
+    "card_bg": "rgba(11, 15, 26, 0.7)",
+    "card_border": "rgba(0, 240, 255, 0.15)",
+    "severity": {
+      "critical": "#FF3B30",
+      "high": "#FF9500",
+      "medium": "#FFCC00",
+      "low": "#34C759"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Use backdrop-blur-xl with bg-slate-900/60 and thin border-cyan-500/20 for UI cards.",
+    "glow_effects": "Use drop-shadow-[0_0_8px_rgba(0,240,255,0.6)] on primary buttons, active terminal states, and neon accents.",
+    "grid_background": "Add a subtle repeating-linear-gradient grid overlay (opacity 5-10%) to simulate a SOC matrix monitor.",
+    "terminal_ui": "Use strict monospace text, border-l-2 border-cyan-500/50, and blinking cursors for SIEM/Kali simulators.",
+    "surfaces": "Avoid muddy gray. Use dark navy (#0B0F1A) or black with 'Tracing Beam' glowing borders for high-conversion sections."
+  },
+  "layouts": {
+    "landing": "Asymmetrical, high visual tension. Use large spacing (py-24). Never center everything.",
+    "dashboard": "Dense, high-data bento-grid (gap-4). Every pixel matters. Use h-full to stretch cards.",
+    "terminal_sim": "Full-width or split-pane view, border-collapse styles. Rigid and technical."
+  },
+  "components": {
+    "buttons": "Sharp edges (rounded-none) or very small radius (rounded-sm). Glow on hover.",
+    "badges": "Severity colors (Critical/High/Medium/Low). Text must pass 4.5:1 contrast.",
+    "cards": "Cardless or glassmorphism. Never pure white. Do not overuse standard Shadcn Card unless customized for cyber theme."
+  },
+  "media": {
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MTN8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRpZ2l0YWwlMjBtYXRyaXglMjBkYXJrfGVufDB8fHx8MTc5MzQxMDE2OHww&ixlib=rb-4.1.0&q=85",
+        "category": "background",
+        "description": "Matrix digital code. Use with low opacity as a section background or terminal overlay."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwyfHxjeWJlciUyMHNlY3VyaXR5JTIwZGFya3xlbnwwfHx8fDE3OTM0MTAxNjh8MA&ixlib=rb-4.1.0&q=85",
+        "category": "hero_or_labs",
+        "description": "SOC Analyst working in the dark. Perfect for learning paths or scenario labs preview."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1614064548237-096f735f344f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwzfHxjeWJlciUyMHNlY3VyaXR5JTIwZGFya3xlbnwwfHx8fDE3OTM0MTAxNjh8MA&ixlib=rb-4.1.0&q=85",
+        "category": "features",
+        "description": "Padlock with neon light trails. Good for cryptography or security feature highlights."
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Update index.css to enforce the dark theme navy base (#0B0F1A) and neon accents globally.",
+    "Install and integrate 'JetBrains Mono' for all Headings, 'Inter' for body.",
+    "Use 'lucide-react' for all icons.",
+    "Animate the SIEM alert feed and terminal typing with 'framer-motion'.",
+    "Never use pure white backgrounds.",
+    "Never use fully transparent backgrounds for headers/dropdowns. Use backdrop-blur with a semi-transparent dark bg.",
+    "Add 'data-testid' attributes to ALL interactive elements (buttons, links, terminal inputs, alert rows)."
+  ],
+  "accessibility": {
+    "contrast": "Ensure neon text on dark background meets 4.5:1 ratio (APCA). Use text shadows if necessary.",
+    "motion": "Respect prefers-reduced-motion for terminal blinking and scanlines."
+  }
+}

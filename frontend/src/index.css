@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 225 41% 7%;
+        --foreground: 210 40% 98%;
+        --card: 225 38% 9%;
+        --card-foreground: 210 40% 98%;
+        --popover: 225 38% 9%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 184 100% 50%;
+        --primary-foreground: 225 41% 7%;
+        --secondary: 222 30% 15%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 222 30% 14%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 144 100% 50%;
+        --accent-foreground: 225 41% 7%;
+        --destructive: 3 100% 59%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 190 60% 30% / 0.25;
+        --input: 190 60% 30% / 0.35;
+        --ring: 184 100% 50%;
+        --chart-1: 184 100% 50%;
+        --chart-2: 144 100% 50%;
+        --chart-3: 35 100% 50%;
+        --chart-4: 48 100% 50%;
+        --chart-5: 3 100% 59%;
+        --radius: 0.25rem;
+        --cyan: #00F0FF;
+        --green: #00FF66;
+        --navy: #0B0F1A;
+    }
+}
+
+@layer base {
+    * { @apply border-border; }
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'IBM Plex Sans', sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4, .font-mono, code, pre { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    ::selection { background: rgba(0, 240, 255, 0.35); color: #fff; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.2); }
+    ::-webkit-scrollbar-track { background: transparent; }
+}
+
+@layer components {
+    .grid-bg {
+        background-image: linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+        background-size: 40px 40px;
+    }
+    .glass { @apply bg-slate-900/60 backdrop-blur-xl border border-cyan-500/20; }
+    .glow-btn {
+        @apply bg-[#00F0FF] text-[#0B0F1A] font-mono font-bold rounded-sm px-5 py-2.5 inline-flex items-center gap-2;
+        transition: box-shadow .2s, transform .2s, background-color .2s;
+    }
+    .glow-btn:hover { box-shadow: 0 0 22px rgba(0, 240, 255, .6); transform: translateY(-1px); }
+    .glow-btn:disabled { opacity: .5; pointer-events: none; }
+    .ghost-btn {
+        @apply border border-cyan-500/40 text-cyan-300 font-mono rounded-sm px-4 py-2 inline-flex items-center gap-2;
+        transition: background-color .2s, border-color .2s, color .2s;
+    }
+    .ghost-btn:hover { @apply bg-cyan-500/10 border-cyan-400 text-cyan-200; }
+    .neon-text { color: var(--cyan); text-shadow: 0 0 12px rgba(0, 240, 255, .45); }
+    .neon-green { color: var(--green); text-shadow: 0 0 12px rgba(0, 255, 102, .4); }
+    .eyebrow { @apply font-mono text-xs uppercase tracking-[0.25em] text-cyan-400/80; }
+    .field { @apply w-full bg-black/40 border border-cyan-500/20 rounded-sm px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none; transition: border-color .2s, box-shadow .2s; }
+    .field:focus { @apply border-cyan-400; box-shadow: 0 0 0 3px rgba(0, 240, 255, .12); }
+    .scanlines::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+    }
+    .cursor-blink::after { content: "▋"; color: var(--green); animation: blink 1s steps(1) infinite; }
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .6s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+    .rise, .cursor-blink::after { animation: none; }
+}
