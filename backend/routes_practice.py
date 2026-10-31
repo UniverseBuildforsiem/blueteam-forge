@@ -5,7 +5,7 @@ from collections import Counter
 from email.parser import Parser
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
-from core import db, now_iso, new_id, get_current_user, award
+from core import db, now_iso, new_id, get_current_user, award, rank_for
 from seed_data import gen_logs, INTEL, SANDBOX, THREAT_FEED
 
 router = APIRouter(prefix="/api")
@@ -96,8 +96,9 @@ async def scoreboard(user=Depends(get_current_user)):
     agg = await db.ctf_solves.aggregate([{"$group": {"_id": "$user_id", "name": {"$first": "$name"}, "username": {"$first": "$username"},
                                                      "points": {"$sum": "$points"}, "solves": {"$sum": 1}, "last": {"$max": "$created_at"}}},
                                          {"$sort": {"points": -1, "last": 1}}, {"$limit": 20}]).to_list(20)
-    priv = {u["id"] for u in await db.users.find({"id": {"$in": [a["_id"] for a in agg]}, "public_profile": False}, {"_id": 0, "id": 1}).to_list(50)}
-    return [{"user_id": a["_id"], "name": a["name"], "username": a["username"], "points": a["points"], "solves": a["solves"], "public": a["_id"] not in priv} for a in agg]
+    us = {u["id"]: u for u in await db.users.find({"id": {"$in": [a["_id"] for a in agg]}}, {"_id": 0, "id": 1, "public_profile": 1, "xp": 1}).to_list(50)}
+    return [{"user_id": a["_id"], "name": a["name"], "username": a["username"], "points": a["points"], "solves": a["solves"],
+             "public": us.get(a["_id"], {}).get("public_profile") is not False, "rank": rank_for(us.get(a["_id"], {}).get("xp", 0))} for a in agg]
 
 
 # ---------- Scenario labs ----------
@@ -289,8 +290,9 @@ async def drill_archive(user=Depends(get_current_user)):
 async def drill_leaderboard(user=Depends(get_current_user)):
     week = (now().date() - timedelta(days=6)).isoformat()
     agg = await db.drill_submissions.aggregate([{"$match": {"date": {"$gte": week}}}, {"$group": {"_id": "$user_id", "week": {"$sum": 1}, "xp": {"$sum": "$xp"}}}]).to_list(500)
-    users = {u["id"]: u for u in await db.users.find({"id": {"$in": [a["_id"] for a in agg]}}, {"_id": 0, "id": 1, "name": 1, "username": 1, "public_profile": 1}).to_list(500)}
+    users = {u["id"]: u for u in await db.users.find({"id": {"$in": [a["_id"] for a in agg]}}, {"_id": 0, "id": 1, "name": 1, "username": 1, "public_profile": 1, "xp": 1}).to_list(500)}
     rows = [{"user_id": a["_id"], "name": users.get(a["_id"], {}).get("name", "?"), "username": users.get(a["_id"], {}).get("username", ""),
+             "rank": rank_for(users.get(a["_id"], {}).get("xp", 0)),
              "public": users.get(a["_id"], {}).get("public_profile") is not False,
              "streak": await drill_streak(a["_id"]), "week_drills": a["week"], "week_xp": a["xp"]} for a in agg if a["_id"] in users]
     rows.sort(key=lambda r: (-r["streak"], -r["week_drills"], -r["week_xp"]))

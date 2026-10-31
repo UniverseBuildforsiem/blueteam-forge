@@ -6,6 +6,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { api, errMsg } from "../lib/api";
 import { Glass, Stat } from "../components/common";
+import { RankAvatar } from "../components/RankAvatar";
 import { BadgeTile } from "../components/BadgeTile";
 import PublicNav, { Footer } from "../components/PublicNav";
 
@@ -68,9 +69,14 @@ export default function PublicProfile() {
           <Glass className="p-8" data-testid="profile-not-found"><h1 className="text-2xl font-bold">Profile not found</h1><p className="text-slate-400 mt-2 text-sm">This analyst profile doesn't exist or is private.</p></Glass>
         ) : (
           <div className="rise" data-testid="public-profile">
-            <div className="eyebrow mb-3">// analyst profile · @{p.username}</div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold" data-testid="profile-name">{p.name}</h1>
-            <p className="text-slate-400 mt-3 font-mono text-sm">{p.rank} · {p.goal ? `${p.goal} track · ` : ""}joined {p.joined}</p>
+            <div className="flex items-center gap-5 sm:gap-7">
+              <RankAvatar rank={p.rank} size="lg" testId="profile-avatar" />
+              <div className="min-w-0">
+                <div className="eyebrow mb-3">// analyst profile · @{p.username}</div>
+                <h1 className="text-4xl sm:text-5xl font-extrabold" data-testid="profile-name">{p.name}</h1>
+                <p className="text-slate-400 mt-3 font-mono text-sm">{p.rank} · {p.goal ? `${p.goal} track · ` : ""}joined {p.joined}</p>
+              </div>
+            </div>
             {p.open_to_work && <div className="mt-5 flex flex-wrap items-center gap-3" data-testid="profile-open-to-work">
               <span className="inline-flex items-center gap-2 px-3 py-1 border border-green-400/50 bg-green-500/10 text-green-300 text-sm font-mono"><Briefcase className="h-4 w-4" />Open to SOC roles</span>
               {(p.location || p.work_mode) && <span className="text-sm text-slate-400 flex items-center gap-1"><MapPin className="h-4 w-4" />{[p.location, p.work_mode].filter(Boolean).join(" · ")}</span>}

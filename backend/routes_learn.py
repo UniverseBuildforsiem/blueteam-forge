@@ -260,6 +260,28 @@ BADGES = [("first-blood", "First Blood", "Solve your first CTF"), ("triage-pro",
           ("quiz-master", "Quiz Master", "Score 100% on a quiz"), ("pathfinder", "Pathfinder", "Earn a certificate"),
           ("on-fire", "On Fire", "3-day streak"), ("lab-rat", "Lab Rat", "Finish a scenario lab"),
           ("drill-7", "Week Watch", "7-day daily drill streak"), ("drill-30", "Night Shift", "30-day daily drill streak")]
+BADGE_LEVEL = {"first-blood": ("Recruit", "first-blood.jpg"), "on-fire": ("Recruit", "on-fire.jpg"),
+               "triage-pro": ("Analyst", "triage-pro.jpg"), "quiz-master": ("Analyst", "quiz-master.jpg"),
+               "lab-rat": ("Hunter", "lab-rat.jpg"), "drill-7": ("Hunter", "drill-7.jpg"),
+               "pathfinder": ("Elite", "pathfinder.jpg"), "drill-30": ("Elite", "drill-30.jpg")}
+REVEAL_LEVELS = ("Elite", "Hunter")
+
+
+def pending_level_up(user, badges):
+    seen = set(user.get("levelups_seen") or [])
+    for lvl in REVEAL_LEVELS:
+        b = next((b for b in badges if b["earned"] and BADGE_LEVEL.get(b["id"], ("",))[0] == lvl), None)
+        if b and lvl not in seen:
+            return {"level": lvl, "badge_id": b["id"], "badge_name": b["name"], "description": b["description"]}
+    return None
+
+
+@router.post("/me/level-up/{level}/seen")
+async def level_up_seen(level: str, user=Depends(get_current_user)):
+    if level not in REVEAL_LEVELS:
+        raise HTTPException(400, "Unknown level")
+    await db.users.update_one({"id": user["id"]}, {"$addToSet": {"levelups_seen": level}})
+    return {"ok": True}
 
 
 async def compute_badges(u):
@@ -303,12 +325,13 @@ async def dashboard(user=Depends(get_current_user)):
     from routes_courses import courses_progress
     bonus = await courses_progress(user)
     user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password_hash": 0})
+    badges = await compute_badges(user)
     paths = await list_paths(user)
     xp = user.get("xp", 0)
     nxt = next((t for t in (500, 1500, 3000) if xp < t), None)
     upcoming = [s for s in await list_sessions(user) if not s["is_past"]][:3]
     return {"user": user, "xp": xp, "rank": rank_for(xp), "next_rank_xp": nxt, "streak": user.get("streak", 0), "course_bonus": bonus["awarded"], "bonus_xp": bonus["bonus_xp"],
-            "badges": await compute_badges(user), "paths": paths, "current_path": next((p for p in paths if p["id"] == user.get("current_path")), paths[0] if paths else None),
+            "badges": badges, "level_up": pending_level_up(user, badges), "paths": paths, "current_path": next((p for p in paths if p["id"] == user.get("current_path")), paths[0] if paths else None),
             "upcoming_sessions": upcoming, "activity": await db.activity.find({"user_id": user["id"]}, NO_ID).sort("created_at", -1).to_list(8),
             "leaderboard": await leaderboard(user),
             "counts": {"ctf": await db.ctf_solves.count_documents({"user_id": user["id"]}), "challenges": await db.challenge_submissions.count_documents({"user_id": user["id"]}),

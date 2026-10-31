@@ -122,7 +122,23 @@ def wrap(d, text, fnt, width):
     return lines + [cur] if cur else lines
 
 
-def render_badge(name, badge, full_title, date, handle=None):
+LEVEL_COLOR = {"Recruit": (226, 232, 240), "Analyst": CYAN, "Hunter": (251, 146, 60), "Elite": (239, 68, 68)}
+BADGE_DIR = Path(__file__).parent / "assets" / "badges"
+
+
+def paste_character(img, art, color, cx=960, cy=320, r=170):
+    ch = Image.open(BADGE_DIR / art).convert("RGB")
+    side = min(ch.size)
+    ch = ch.crop(((ch.width - side) // 2, (ch.height - side) // 2, (ch.width + side) // 2, (ch.height + side) // 2)).resize((2 * r, 2 * r))
+    mask = Image.new("L", (2 * r, 2 * r), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, 2 * r - 1, 2 * r - 1], fill=255)
+    img.paste(ch, (cx - r, cy - r), mask)
+    d = ImageDraw.Draw(img)
+    d.ellipse([cx - r - 8, cy - r - 8, cx + r + 8, cy + r + 8], outline=color, width=8)
+    d.ellipse([cx - r - 20, cy - r - 20, cx + r + 20, cy + r + 20], outline=(30, 41, 59), width=2)
+
+
+def render_badge(name, badge, subtitle, stat, level, art, handle=None, kind="badge"):
     w, h = 1200, 627
     img = Image.new("RGB", (w, h), NAVY)
     d = ImageDraw.Draw(img)
@@ -130,57 +146,97 @@ def render_badge(name, badge, full_title, date, handle=None):
         d.line([(x, 0), (x, h)], fill=(15, 24, 38))
     for y in range(0, h, 40):
         d.line([(0, y), (w, y)], fill=(15, 24, 38))
-    d.rectangle([24, 24, w - 24, h - 24], outline=CYAN, width=3)
+    color = LEVEL_COLOR[level]
+    d.rectangle([24, 24, w - 24, h - 24], outline=color, width=3)
     draw_logo(d)
-    d.text((w - 64, 66), "course badge", font=font("LiberationSans-Regular.ttf", 22), fill=MUTED, anchor="ra")
-    cx, cy, r = 980, 330, 120
-    hexagon = [(cx + r * c, cy + r * s) for c, s in ((0, -1), (0.87, -0.5), (0.87, 0.5), (0, 1), (-0.87, 0.5), (-0.87, -0.5))]
-    d.polygon(hexagon, outline=GREEN, width=6)
-    d.polygon([(cx + 0.72 * (x - cx), cy + 0.72 * (y - cy)) for x, y in hexagon], outline=CYAN, width=3)
-    d.line([(cx - 40, cy + 4), (cx - 10, cy + 36), (cx + 46, cy - 30)], fill=GREEN, width=12)
-    d.text((64, 140), "BADGE EARNED", font=font("LiberationMono-Bold.ttf", 22), fill=CYAN)
+    paste_character(img, art, color)
+    d = ImageDraw.Draw(img)
+    d.text((960, 530), f"{level.upper()} LEVEL", font=font("LiberationMono-Bold.ttf", 22), fill=color, anchor="ma")
+    d.text((64, 140), f"{kind.upper()} EARNED", font=font("LiberationMono-Bold.ttf", 22), fill=CYAN)
     big = font("LiberationSans-Bold.ttf", 64)
     y = 180
-    for line in wrap(d, badge, big, 720)[:2]:
+    for line in wrap(d, badge, big, 680)[:2]:
         d.text((64, y), line, font=big, fill=(248, 250, 252))
         y += 76
     small = font("LiberationSans-Regular.ttf", 24)
-    for line in wrap(d, f"Completed '{full_title}' on SOC Professionals", small, 720)[:2]:
+    for line in wrap(d, subtitle, small, 680)[:2]:
         d.text((64, y + 12), line, font=small, fill=MUTED)
         y += 32
     d.text((64, 478), "ANALYST", font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
-    d.text((64, 504), name[:28], font=font("LiberationMono-Bold.ttf", 34), fill=(248, 250, 252))
-    d.text((560, 478), "WATCHED", font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
-    d.text((560, 504), date, font=font("LiberationMono-Bold.ttf", 34), fill=GREEN)
+    d.text((64, 504), name[:22], font=font("LiberationMono-Bold.ttf", 34), fill=(248, 250, 252))
+    d.text((520, 478), stat[0], font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
+    d.text((520, 504), stat[1], font=font("LiberationMono-Bold.ttf", 34), fill=GREEN)
     if handle:
-        d.text((w - 64, 560), f"socpro academy · /u/{handle}", font=font("LiberationMono-Bold.ttf", 20), fill=CYAN, anchor="ra")
+        d.text((64, 560), f"socpro academy · /u/{handle}", font=font("LiberationMono-Bold.ttf", 20), fill=CYAN)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
     return buf
 
 
+def og_page(title, desc, path, home):
+    title, desc, home = escape(title), escape(desc), escape(home)
+    url = f"{api_base()}{escape(path)}"
+    return f"""<!doctype html><html><head><meta charset="utf-8"><title>{title}</title>
+<meta property="og:type" content="website"><meta property="og:title" content="{title}"><meta property="og:description" content="{desc}">
+<meta property="og:image" content="{url}.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="627">
+<meta property="og:url" content="{url}"><meta name="twitter:card" content="summary_large_image">
+<meta http-equiv="refresh" content="0; url={home}"></head>
+<body style="background:#0B0F1A;color:#fff;font-family:monospace"><a href="{home}" style="color:#00F0FF">{title}</a></body></html>"""
+
+
+def home_for(u, fallback="/"):
+    base = os.environ["FRONTEND_URL"].rstrip("/")
+    return f"{base}/u/{u['username']}" if u.get("public_profile") is not False else f"{base}{fallback}"
+
+
 @router.get("/public/course-badge/{token}/{cid}.png")
 async def course_badge_png(token: str, cid: int):
     u, done, badge = await badge_data(token, cid)
     handle = u["username"] if u.get("public_profile") is not False else None
-    return StreamingResponse(render_badge(u["name"], badge, done["title"], done["at"][:10], handle), media_type="image/png", headers={"Cache-Control": "public, max-age=600"})
+    png = render_badge(u["name"], badge, f"Completed '{done['title']}' on SOC Professionals", ("WATCHED", done["at"][:10]), "Recruit", "course.jpg", handle, "course badge")
+    return StreamingResponse(png, media_type="image/png", headers={"Cache-Control": "public, max-age=600"})
 
 
 @router.get("/public/course-badge/{token}/{cid}", response_class=HTMLResponse)
 async def course_badge_page(token: str, cid: int):
     u, done, badge = await badge_data(token, cid)
-    title = escape(f"{u['name']} earned the {badge} course badge on SOCProfessionals Academy")
-    desc = escape(f"Completed '{done['title']}' on SOC Professionals and practised it in SOCProfessionals Academy labs.")
-    img = f"{api_base()}/public/course-badge/{escape(token)}/{cid}.png"
-    base = os.environ["FRONTEND_URL"].rstrip("/")
-    home = escape(f"{base}/u/{u['username']}" if u.get("public_profile") is not False else f"{base}/courses")
-    return f"""<!doctype html><html><head><meta charset="utf-8"><title>{title}</title>
-<meta property="og:type" content="website"><meta property="og:title" content="{title}"><meta property="og:description" content="{desc}">
-<meta property="og:image" content="{img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="627">
-<meta property="og:url" content="{api_base()}/public/course-badge/{escape(token)}/{cid}"><meta name="twitter:card" content="summary_large_image">
-<meta http-equiv="refresh" content="0; url={home}"></head>
-<body style="background:#0B0F1A;color:#fff;font-family:monospace"><a href="{home}" style="color:#00F0FF">{title}</a></body></html>"""
+    return og_page(f"{u['name']} earned the {badge} course badge on SOCProfessionals Academy",
+                   f"Completed '{done['title']}' on SOC Professionals and practised it in SOCProfessionals Academy labs.",
+                   f"/public/course-badge/{token}/{cid}", home_for(u, "/courses"))
+
+
+async def std_badge(token, bid):
+    from routes_learn import compute_badges, BADGE_LEVEL
+    u = await db.users.find_one({"share_token": token}, {"_id": 0, "password_hash": 0})
+    b = u and bid in BADGE_LEVEL and next((x for x in await compute_badges(u) if x["id"] == bid and x["earned"]), None)
+    if not b:
+        raise HTTPException(404, "Badge not found")
+    return u, b, BADGE_LEVEL[bid]
+
+
+@router.post("/me/badges/{bid}/share-card")
+async def badge_share_card(bid: str, user=Depends(get_current_user)):
+    from routes_learn import compute_badges, BADGE_LEVEL
+    if bid not in BADGE_LEVEL or not any(b["id"] == bid and b["earned"] for b in await compute_badges(user)):
+        raise HTTPException(404, "Earn this badge first")
+    share_url = f"{api_base()}/public/badge/{await ensure_token(user)}/{bid}"
+    return {"share_url": share_url, "image_url": f"{share_url}.png"}
+
+
+@router.get("/public/badge/{token}/{bid}.png")
+async def badge_png(token: str, bid: str):
+    u, b, (level, art) = await std_badge(token, bid)
+    handle = u["username"] if u.get("public_profile") is not False else None
+    png = render_badge(u["name"], b["name"], b["description"], ("RANK", rank_for(u.get("xp", 0))), level, art, handle)
+    return StreamingResponse(png, media_type="image/png", headers={"Cache-Control": "public, max-age=600"})
+
+
+@router.get("/public/badge/{token}/{bid}", response_class=HTMLResponse)
+async def badge_page(token: str, bid: str):
+    u, b, (level, _) = await std_badge(token, bid)
+    return og_page(f"{u['name']} earned the {b['name']} badge ({level} level) on SOCProfessionals Academy",
+                   f"{b['description']}. Hands-on SOC analyst training with real alert triage.", f"/public/badge/{token}/{bid}", home_for(u))
 
 
 async def skill_scores(uid):

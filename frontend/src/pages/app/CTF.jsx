@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { api, errMsg } from "../../lib/api";
 import { Glass, PageHeader, ProfileLink } from "../../components/common";
+import { RankAvatar } from "../../components/RankAvatar";
 
 const CATS = ["Log Analysis", "Forensics", "Network", "Malware", "Web"];
 
@@ -43,7 +44,7 @@ export default function CTF() {
         <Glass className="p-5 h-fit">
           <h3 className="font-bold flex items-center gap-2 mb-4"><Trophy className="h-4 w-4 text-yellow-300" />Live scoreboard</h3>
           <ol className="space-y-1.5" data-testid="ctf-scoreboard">
-            {score.length ? score.map((s, i) => <li key={s.user_id} className="flex items-center gap-3 text-sm"><span className="font-mono text-slate-500 w-5">{i + 1}</span><ProfileLink username={s.username} isPublic={s.public} className="flex-1 truncate" testId={`ctf-profile-${s.username}`}>{s.name}</ProfileLink><span className="text-xs text-slate-500">{s.solves}⚑</span><span className="font-mono text-green-400">{s.points}</span></li>)
+            {score.length ? score.map((s, i) => <li key={s.user_id} className="flex items-center gap-3 text-sm"><span className="font-mono text-slate-500 w-5">{i + 1}</span><RankAvatar rank={s.rank} size="xs" testId={`ctf-avatar-${s.username}`} /><ProfileLink username={s.username} isPublic={s.public} className="flex-1 truncate" testId={`ctf-profile-${s.username}`}>{s.name}</ProfileLink><span className="text-xs text-slate-500">{s.solves}⚑</span><span className="font-mono text-green-400">{s.points}</span></li>)
               : <li className="text-xs text-slate-500 font-mono">// no flags captured yet</li>}
           </ol>
         </Glass>

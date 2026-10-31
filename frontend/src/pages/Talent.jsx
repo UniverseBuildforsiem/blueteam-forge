@@ -5,6 +5,7 @@ import { Switch } from "../components/ui/switch";
 import { api } from "../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Glass } from "../components/common";
+import { RankAvatar } from "../components/RankAvatar";
 import PublicNav, { Footer } from "../components/PublicNav";
 
 const RANK_COLOR = { Recruit: "text-slate-300", Analyst: "text-cyan-300", Hunter: "text-orange-300", Elite: "neon-green" };
@@ -22,7 +23,7 @@ const Pick = ({ label, value, set, options, testId }) => (
 function Candidate({ c }) {
   return (
     <Link to={`/u/${c.username}`} className="glass rounded-sm p-5 flex flex-col hover:!border-cyan-400/60 transition-colors" data-testid={`talent-card-${c.username}`}>
-      <div className="flex justify-between items-start"><div><div className="font-bold text-lg">{c.name}</div><div className="text-xs font-mono text-slate-500">@{c.username}{c.goal ? ` · ${c.goal}` : ""}</div></div>
+      <div className="flex justify-between items-start gap-3"><RankAvatar rank={c.rank} size="md" testId={`talent-avatar-${c.username}`} /><div className="flex-1 min-w-0"><div className="font-bold text-lg truncate">{c.name}</div><div className="text-xs font-mono text-slate-500">@{c.username}{c.goal ? ` · ${c.goal}` : ""}</div></div>
         <span className={`font-mono text-sm ${RANK_COLOR[c.rank]}`}>{c.rank}</span></div>
       <div className="flex gap-4 mt-3 text-xs font-mono text-slate-400"><span className="text-green-400">{c.xp} XP</span><span className="flex items-center gap-1 text-orange-400"><Flame className="h-3 w-3" />{c.drill.longest}d best</span><span>{c.badge_count} badges</span></div>
       {c.open_to_work && <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" data-testid={`talent-open-${c.username}`}><span className="inline-flex items-center gap-1 px-2 py-0.5 border border-green-400/50 bg-green-500/10 text-green-300 font-mono"><Briefcase className="h-3 w-3" />Open to work</span>
