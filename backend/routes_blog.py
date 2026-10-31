@@ -6,7 +6,7 @@ import json
 import os
 import re
 import xml.etree.ElementTree as ET
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 import httpx
 from fastapi import APIRouter, Request, BackgroundTasks, Depends, HTTPException
@@ -51,7 +51,7 @@ async def fetch_items(client, name, urls):
                 pub = it.findtext("pubDate")
                 items.append({"title": title, "link": (it.findtext("link") or "").strip(), "snippet": strip(it.findtext("description"))[:1500],
                               "image": enc.get("url") if enc is not None else None,
-                              "published_at": parsedate_to_datetime(pub).isoformat() if pub else now_iso()})
+                              "published_at": parsedate_to_datetime(pub).astimezone(timezone.utc).isoformat() if pub else now_iso()})
             if items:
                 return items
         except Exception as e:
@@ -271,5 +271,7 @@ async def ensure_blog():
     await db.blog_posts.create_index("key", unique=True)
     await db.blog_posts.create_index("slug")
     await db.digest_sends.create_index([("user_id", 1), ("week", 1)], unique=True)
+    async for p in db.blog_posts.find({"published_at": {"$not": {"$regex": r"\+00:00$"}}}, {"_id": 0, "key": 1, "published_at": 1}):
+        await db.blog_posts.update_one({"key": p["key"]}, {"$set": {"published_at": datetime.fromisoformat(p["published_at"]).astimezone(timezone.utc).isoformat()}})
     if not await db.blog_posts.count_documents({}):
         run_bg()

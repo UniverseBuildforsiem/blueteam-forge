@@ -1,0 +1,33 @@
+{
+  "summary": "Tested Weekly Threat Digest (preview, cron auth/idempotency/per-week dedupe, admin test send, HMAC unsubscribe, prefs GET/PATCH, opt-out exclusion) and Practice-From-News hunts (blog hunts for all 10 categories x SPL/KQL, 12 SOPs x 3 queries x 2 langs = 72 SOP hunts, all return hits). UI: digest toggle, blog hunt buttons logged-in and anonymous (login redirect keeps the query), and all 6 SOP-phishing hunt links work, plus SIEM default search. 17/18 new backend tests pass and 31/31 iteration-18 regression tests pass. One real bug: the digest sorts newest-first using strings, which breaks when timestamps have different timezone offsets.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/public/blog-digest/preview (top_posts in routes_blog.py)", "issue": "The newest-first tiebreak sorts the published_at ISO strings as plain text. Feed timestamps have mixed offsets (+05:30 from The Hacker News, +00:00 from BleepingComputer), so the order can be wrong. Reproduced: the preview returns 'wordpress-core-upgrade...' (2026-10-30T19:38:14+05:30 = 14:08Z) as #5 instead of 'fake-claude-code-extension...' (2026-10-30T14:36:54+00:00 = 14:36Z, newer). The 7-day filter ($gte on the since string) has the same issue near the cutoff."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/sops/:id code blocks", "issues": ["'hunt in SIEM' runs a simulator-adjusted query that differs from the code shown in the block. The only explanation is the hover title tooltip, so users may be confused when a different query appears in the SIEM. Consider a short visible note such as 'opens simulator version'."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_digest_hunts.py", "/app/test_reports/pytest/pytest_iter19.xml"],
+  "action_items": [
+    "routes_blog.top_posts: sort by real time, e.g. key=lambda p: datetime.fromisoformat(p['published_at']).astimezone(timezone.utc), or normalise published_at to UTC when storing in sync_blog (and migrate existing docs) so the string comparisons and $gte filters are correct."
+  ],
+  "critical_code_review_comments": [
+    "top_posts/list_posts: published_at strings are stored with mixed tz offsets, so every string-based sort or filter (also .sort('published_at', -1) in list_posts) can be slightly wrong. Store UTC.",
+    "send_digest inserts into digest_sends before sending the email, so a failed send (e.g. provider 422) is still counted as sent for that week. This is acceptable because it avoids duplicates, but failures are never retried.",
+    "top_posts loads up to 500 docs and sorts in Python. Fine at the current scale.",
+    "The review request named slug 'blueteam-forge--92zrolfq', which is the preview hostname, not a post slug. I tested every real post slug instead."
+  ],
+  "updated_files": ["/app/backend/tests/test_digest_hunts.py"],
+  "success_rate": {"backend": "94% (17/18 new, 31/31 regression)", "frontend": "100%"},
+  "seed_data_creation": "Cron runs created db.digest_sends for 11 students (week 2026-W44) plus TEST_-prefixed cron_runs ids. The student's digest_emails is restored to true (verified in DB).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest tests/test_digest_hunts.py (xdist is configured in pytest.ini). test_preview_matches_true_order fails until the tz sort is fixed. Seeded @socprofessionals.academy emails return 422 from the provider, which is expected. Do not call /api/cron/blog-sync. Student id b9cafa42b8ca.",
+  "rca of the issue": "Python sorts ISO strings as text. '2026-10-30T19:38:14+05:30' > '2026-10-30T14:36:54+00:00' as text, but in UTC it is earlier (14:08Z vs 14:36Z). Fix: parse to aware datetimes or normalise to UTC when saving."
+}

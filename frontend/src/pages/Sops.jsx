@@ -143,7 +143,8 @@ export function SopDetail() {
                 <div className="font-mono text-sm"><span className="text-green-400">0{i + 1}</span> <span className="font-bold">{p.phase}</span></div>
                 <ol className="mt-3 space-y-2">{p.actions.map((a, j) => <li key={j} className="text-sm text-slate-300 flex gap-3"><CheckCircle2 className="h-4 w-4 text-cyan-400/60 shrink-0 mt-0.5" />{a}</li>)}</ol>
               </Glass>))}</div>
-            <div className="eyebrow mt-12 mb-4">detection & hunting queries</div>
+            <div className="eyebrow mt-12 mb-1">detection & hunting queries</div>
+            <p className="text-xs text-slate-500 mb-4" data-testid="sop-hunt-note">"Hunt in SIEM" opens a version of each query adjusted to run on our practice logs, so you see real hits.</p>
             <div className="space-y-6" data-testid="sop-queries">{s.queries.map((q, i) => (
               <div key={q.name}><div className="font-bold text-sm">{q.name}</div><div className="text-xs text-slate-500 mb-2">{q.purpose}</div>
                 <div className="grid lg:grid-cols-2 gap-3"><CodeBlock label="SPL" code={q.spl} hunt={q.hunt?.spl} testId={`sop-spl-${i}`} /><CodeBlock label="KQL" code={q.kql} hunt={q.hunt?.kql} testId={`sop-kql-${i}`} /></div></div>))}</div>

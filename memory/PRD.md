@@ -87,3 +87,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 ## Backlog
 - P1: Instructor panel improvements (author labs/SOPs), Admin panel (users, analytics)
 - P2: Blog email digest, more SOPs, SIEM eval/bin commands
+
+## 2026-06 Weekly Threat Digest + Practice From News (DONE — iteration_19)
+- Weekly digest: cron `weekly-digest` Monday 09:00 IST → POST /api/cron/weekly-digest; top 5 most severe posts of last 7 days (severity, then newest; published_at normalised to UTC), 3 SOC actions each, to all active students with `digest_emails != False`; per-week dedupe in `digest_sends`; HMAC unsubscribe /api/public/unsubscribe/digest; toggle on /blog (GET/PATCH /api/me/preferences). Admin test: POST /api/admin/blog/digest-test. Preview: GET /api/public/blog-digest/preview.
+- Hunt buttons: blog posts get a category-matched practice hunt (HUNTS in routes_blog.py, SPL+KQL); SOP queries have simulator-adjusted `hunt` versions (SOP_HUNTS in sop_data.py, all 72 return hits). Links open /app/siem?lang=&q= (prefilled + auto-run; login redirect keeps query).
+- Note: seed accounts use @socprofessionals.academy, which the email provider rejects as undeliverable; real addresses work.
