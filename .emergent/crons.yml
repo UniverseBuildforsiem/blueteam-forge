@@ -6,3 +6,11 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/session-reminders"
     method: POST
     enabled: true
+  - name: streak-rescue
+    description: "Evening email to students whose daily-drill streak will break if they skip today's drill"
+    cron: "0 19 * * *"
+    timezone: "Asia/Kolkata"
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    endpoint: "{{BASE_URL}}/api/cron/streak-rescue"
+    method: POST
+    enabled: true

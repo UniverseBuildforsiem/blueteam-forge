@@ -25,6 +25,7 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Mission briefing dialog before the clicked case opens
 - Daily Alert Drill (/app/drill): deterministic daily case from templates, +50 XP bonus, drill streak, dashboard banner
 - Session reminders: platform cron (.emergent/crons.yml, every 15 min) -> POST /api/cron/session-reminders emails RSVP'd students for sessions starting within the hour (once per RSVP)
+- Drill archive (last 14 days, practice replays, no XP), weekly drill streak leaderboard, evening streak-rescue email (cron 19:00 Asia/Kolkata -> /api/cron/streak-rescue, once per user/day, opt-out toggle on Drill page)
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

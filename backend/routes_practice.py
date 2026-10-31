@@ -159,7 +159,7 @@ async def lab_report(lid: str, body: ReportIn, user=Depends(get_current_user)):
 
 
 # ---------- Daily alert drill ----------
-from datetime import timedelta
+from datetime import datetime, timedelta
 from core import now
 from drills import drill_for
 from pymongo.errors import DuplicateKeyError
@@ -169,13 +169,9 @@ from pymongo.errors import DuplicateKeyError
 async def drill_today(user=Depends(get_current_user)):
     d = drill_for(now().date().isoformat())
     sub = await db.drill_submissions.find_one({"user_id": user["id"], "date": d["date"]}, NO_ID)
-    streak = 0
-    day = now().date() - (timedelta(0) if sub else timedelta(days=1))
-    while await db.drill_submissions.find_one({"user_id": user["id"], "date": day.isoformat()}):
-        streak += 1
-        day -= timedelta(days=1)
+    streak = await drill_streak(user["id"])
     public = {k: v for k, v in d.items() if k not in ("verdict", "keywords")}
-    return {**public, "submission": sub, "drill_streak": streak}
+    return {**public, "submission": sub, "drill_streak": streak, "streak_emails": user.get("streak_emails", True)}
 
 
 @router.post("/drill/today/submit")
@@ -197,6 +193,85 @@ async def drill_submit(body: TriageIn, user=Depends(get_current_user)):
         raise HTTPException(400, "You already completed today's drill. Come back tomorrow!")
     await award(user["id"], xp, f"Daily drill '{d['title']}' ({score}/100, +{d['bonus_xp']} bonus)")
     return sub
+
+
+async def drill_streak(uid):
+    days = {s["date"] for s in await db.drill_submissions.find({"user_id": uid}, {"_id": 0, "date": 1}).sort("date", -1).to_list(400)}
+    day = now().date()
+    if day.isoformat() not in days:
+        day -= timedelta(days=1)
+    streak = 0
+    while day.isoformat() in days:
+        streak += 1
+        day -= timedelta(days=1)
+    return streak
+
+
+def past_day(date: str):
+    try:
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(400, "Invalid date")
+    if not (now().date() - timedelta(days=30) <= d < now().date()):
+        raise HTTPException(404, "Archived drill not available")
+    return d.isoformat()
+
+
+@router.get("/drill/archive")
+async def drill_archive(user=Depends(get_current_user)):
+    days = [(now().date() - timedelta(days=i)).isoformat() for i in range(1, 15)]
+    subs = {s["date"]: s for s in await db.drill_submissions.find({"user_id": user["id"], "date": {"$in": days}}, NO_ID).to_list(20)}
+    prac = {p["date"]: p for p in await db.drill_practice.find({"user_id": user["id"], "date": {"$in": days}}, NO_ID).to_list(20)}
+    out = []
+    for day in days:
+        d = drill_for(day)
+        out.append({"date": day, "title": d["title"], "category": d["category"], "severity": d["severity"],
+                    "live_score": subs.get(day, {}).get("auto_score"), "practice_best": prac.get(day, {}).get("best")})
+    return out
+
+
+@router.get("/drill/leaderboard")
+async def drill_leaderboard(user=Depends(get_current_user)):
+    week = (now().date() - timedelta(days=6)).isoformat()
+    agg = await db.drill_submissions.aggregate([{"$match": {"date": {"$gte": week}}}, {"$group": {"_id": "$user_id", "week": {"$sum": 1}, "xp": {"$sum": "$xp"}}}]).to_list(500)
+    users = {u["id"]: u for u in await db.users.find({"id": {"$in": [a["_id"] for a in agg]}}, {"_id": 0, "id": 1, "name": 1, "username": 1}).to_list(500)}
+    rows = [{"user_id": a["_id"], "name": users.get(a["_id"], {}).get("name", "?"), "username": users.get(a["_id"], {}).get("username", ""),
+             "streak": await drill_streak(a["_id"]), "week_drills": a["week"], "week_xp": a["xp"]} for a in agg if a["_id"] in users]
+    rows.sort(key=lambda r: (-r["streak"], -r["week_drills"], -r["week_xp"]))
+    return {"week_start": week, "rows": rows[:20]}
+
+
+@router.get("/drill/day/{date}")
+async def drill_day(date: str, user=Depends(get_current_user)):
+    day = past_day(date)
+    d = drill_for(day)
+    prac = await db.drill_practice.find_one({"user_id": user["id"], "date": day}, NO_ID)
+    return {**{k: v for k, v in d.items() if k not in ("verdict", "keywords")}, "practice": prac}
+
+
+@router.post("/drill/day/{date}/practice")
+async def drill_practice(date: str, body: TriageIn, user=Depends(get_current_user)):
+    day = past_day(date)
+    d = drill_for(day)
+    low = body.report.lower()
+    hits = [k for k in d["keywords"] if k.lower() in low]
+    vc = body.verdict == d["verdict"]
+    score = (60 if vc else 0) + round(40 * len(hits) / len(d["keywords"]))
+    prev = await db.drill_practice.find_one({"user_id": user["id"], "date": day}, NO_ID) or {}
+    await db.drill_practice.update_one({"user_id": user["id"], "date": day},
+                                       {"$set": {"last": score, "best": max(score, prev.get("best", 0)), "updated_at": now_iso()}, "$inc": {"attempts": 1}}, upsert=True)
+    return {"verdict": body.verdict, "verdict_correct": vc, "auto_score": score, "keywords_hit": hits, "xp": 0, "practice": True,
+            "expected_verdict": d["verdict"], "missed_keywords": [k for k in d["keywords"] if k not in hits]}
+
+
+class PrefsIn(BaseModel):
+    streak_emails: bool
+
+
+@router.patch("/me/preferences")
+async def prefs(body: PrefsIn, user=Depends(get_current_user)):
+    await db.users.update_one({"id": user["id"]}, {"$set": {"streak_emails": body.streak_emails}})
+    return {"streak_emails": body.streak_emails}
 
 
 # ---------- SIEM ----------
