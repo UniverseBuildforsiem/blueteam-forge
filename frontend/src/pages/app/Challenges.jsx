@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Siren, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/ui/sheet";
@@ -42,8 +43,14 @@ function Investigate({ c, onDone }) {
 export default function Challenges() {
   const [cs, setCs] = useState([]);
   const [open, setOpen] = useState(null);
-  const load = () => api.get("/challenges").then((r) => { setCs(r.data); setOpen((o) => (o ? r.data.find((x) => x.id === o.id) : o)); });
-  useEffect(() => { load(); }, []);
+  const [sp, setSp] = useSearchParams();
+  const load = () => api.get("/challenges").then((r) => {
+    setCs(r.data);
+    const want = sp.get("case");
+    setOpen((o) => (o ? r.data.find((x) => x.id === o.id) : want ? r.data.find((x) => x.id === want) || null : o));
+    if (want) setSp({}, { replace: true });
+  });
+  useEffect(() => { load(); }, []); // eslint-disable-line
   return (
     <div>
       <PageHeader eyebrow="// alert queue" title="SOC Challenges" sub="Investigate each alert, decide True or False Positive, and write a short report. Auto-graded on verdict and evidence coverage." />

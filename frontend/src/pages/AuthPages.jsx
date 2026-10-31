@@ -28,6 +28,12 @@ const F = ({ label, ...p }) => (
 
 const ErrorLine = ({ e }) => e ? <div data-testid="auth-error" className="text-sm text-red-400 font-mono mb-4">! {e}</div> : null;
 
+export const takePendingCase = () => {
+  const c = localStorage.getItem("pending_case");
+  localStorage.removeItem("pending_case");
+  return c ? `/app/challenges?case=${c}` : null;
+};
+
 export function Login() {
   const { setUser } = useAuth();
   const nav = useNavigate();
@@ -42,7 +48,8 @@ export function Login() {
     try {
       const { data } = await api.post("/auth/login", f);
       setUser(data);
-      nav(data.role === "admin" ? "/admin" : data.role === "instructor" ? "/instructor" : loc.state?.from || "/app");
+      const pending = data.onboarded ? takePendingCase() : null;
+      nav(pending || (data.role === "admin" ? "/admin" : data.role === "instructor" ? "/instructor" : loc.state?.from || "/app"));
     } catch (x) { setErr(errMsg(x)); } finally { setBusy(false); }
   };
   return (

@@ -5,6 +5,7 @@ import { api, errMsg } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "../components/common";
 import { toast } from "sonner";
+import { takePendingCase } from "./AuthPages";
 
 const GOALS = [
   ["SOC L1", Shield, "Land your first analyst role: triage, phishing, auth alerts."],
@@ -18,7 +19,7 @@ export default function Onboarding() {
   const nav = useNavigate();
   const [goal, setGoal] = useState(null);
   const save = async () => {
-    try { const { data } = await api.post("/auth/onboarding", { goal }); setUser(data); nav("/app"); } catch (e) { toast.error(errMsg(e)); }
+    try { const { data } = await api.post("/auth/onboarding", { goal }); setUser(data); nav(takePendingCase() || "/app"); } catch (e) { toast.error(errMsg(e)); }
   };
   return (
     <div className="min-h-screen grid-bg px-6 py-12">
