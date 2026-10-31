@@ -39,7 +39,8 @@ async def submit_challenge(cid: str, body: TriageIn, user=Depends(get_current_us
     prev = await db.challenge_submissions.find_one({"user_id": user["id"], "challenge_id": cid}, NO_ID)
     sub = {"id": prev["id"] if prev else new_id(), "user_id": user["id"], "user_name": user["name"], "challenge_id": cid, "challenge_title": c["title"],
            "category": c["category"], "verdict": body.verdict, "verdict_correct": vc, "report": body.report, "auto_score": score,
-           "keywords_hit": hits, "status": "auto-graded", "instructor_grade": None, "feedback": "", "created_at": now_iso()}
+           "keywords_hit": hits, "status": "resubmitted" if prev else "auto-graded", "instructor_grade": (prev or {}).get("instructor_grade"),
+           "feedback": (prev or {}).get("feedback", ""), "created_at": now_iso()}
     await db.challenge_submissions.replace_one({"user_id": user["id"], "challenge_id": cid}, dict(sub), upsert=True)
     if not prev:
         await award(user["id"], round(c["points"] * score / 100), f"Triaged alert '{c['title']}' ({score}/100)")
@@ -195,7 +196,10 @@ async def siem_search(q: str = "", start: str = "", end: str = "", user=Depends(
 async def siem_alerts(user=Depends(get_current_user)):
     out = []
     for a in await db.siem_alerts.find({}, NO_ID).to_list(100):
-        toks = shlex.split(a["query"])
+        try:
+            toks = shlex.split(a["query"])
+        except ValueError:
+            toks = a["query"].split()
         n = len([e for e in LOGS if all(match(e, t) for t in toks)])
         out.append({**a, "matches": n, "triggered": n >= a["threshold"]})
     return out

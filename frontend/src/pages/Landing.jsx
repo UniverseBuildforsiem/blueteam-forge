@@ -21,7 +21,7 @@ function AlertFeed() {
   const [items, setItems] = useState(FEED.slice(0, 4).map((f, i) => ({ f, k: i })));
   useEffect(() => {
     let n = 4;
-    const t = setInterval(() => { setItems((s) => [{ f: FEED[n % FEED.length], k: n }, ...s].slice(0, 5)); n++; }, 2200);
+    const t = setInterval(() => { setItems((s) => [{ f: FEED[n % FEED.length], k: n }, ...s].slice(0, 50)); n++; }, 2200);
     return () => clearInterval(t);
   }, []);
   return (
@@ -30,7 +30,7 @@ function AlertFeed() {
         <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" /> LIVE ALERT QUEUE</span>
         <span>siem://socforge/queue</span>
       </div>
-      <div className="p-3 space-y-2 min-h-[330px]">
+      <div className="p-3 space-y-2 min-h-[330px] max-h-[516px] overflow-y-auto" data-testid="hero-alert-feed-list">
         <AnimatePresence initial={false}>
           {items.map(({ f: [sev, id, title, host], k }) => (
             <motion.div key={k} layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}

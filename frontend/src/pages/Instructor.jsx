@@ -79,7 +79,9 @@ function Attendance() {
   const [att, setAtt] = useState([]);
   useEffect(() => { api.get("/manage/sessions").then((r) => setSs(r.data)); }, []);
   const open = async (s) => { setSel(s); setAtt((await api.get(`/instructor/sessions/${s.id}/attendees`)).data); };
-  const mark = async (u, v) => { await api.post(`/instructor/sessions/${sel.id}/attendance`, { user_id: u, attended: v }); open(sel); };
+  const mark = async (u, v) => {
+    try { await api.post(`/instructor/sessions/${sel.id}/attendance`, { user_id: u, attended: v }); toast.success(v ? "Marked present" : "Marked absent"); open(sel); } catch (e) { toast.error(errMsg(e)); }
+  };
   return (
     <div className="grid lg:grid-cols-[340px_1fr] gap-4">
       <div className="space-y-2">{ss.map((s) => <button key={s.id} onClick={() => open(s)} className={`w-full text-left glass rounded-sm p-3 ${sel?.id === s.id ? "!border-cyan-400" : ""}`} data-testid={`attendance-session-${s.id}`}><div className="text-sm">{s.title}</div><div className="text-xs font-mono text-slate-500">{fmtDate(s.start)} · cap {s.capacity}</div></button>)}</div>

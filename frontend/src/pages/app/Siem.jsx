@@ -38,6 +38,8 @@ function SearchTab() {
   const [range, setRange] = useState("all");
   const [res, setRes] = useState(null);
   const [saved, setSaved] = useState([]);
+  const [naming, setNaming] = useState(false);
+  const [sname, setSname] = useState("");
   const run = async (query = q) => {
     const d = RANGES[range];
     const start = d ? new Date(Date.now() - d * 864e5).toISOString() : "";
@@ -47,11 +49,15 @@ function SearchTab() {
   useEffect(() => { run(""); loadSaved(); }, []); // eslint-disable-line
   useEffect(() => { run(); }, [range]); // eslint-disable-line
   const save = async () => {
-    const name = window.prompt("Name this search");
-    if (!name) return;
-    await api.post("/siem/saved", { name, query: q }); toast.success("Search saved"); loadSaved();
+    if (!sname.trim()) return;
+    await api.post("/siem/saved", { name: sname.trim(), query: q }); toast.success("Search saved"); setNaming(false); setSname(""); loadSaved();
   };
-  const addField = (f, v) => { const nq = `${q} ${f}=${v.includes(" ") ? `"${v}"` : v}`.trim(); setQ(nq); run(nq); };
+  const addField = (f, v) => {
+    const [main, ...pipe] = q.split("|");
+    const term = `${f}=${v.includes(" ") ? `"${v}"` : v}`;
+    const nq = [`${main.trim()} ${term}`.trim(), ...pipe.map((x) => x.trim())].join(" | ");
+    setQ(nq); run(nq);
+  };
   return (
     <div className="space-y-4">
       <Glass className="p-3 flex flex-wrap gap-2">
@@ -62,7 +68,9 @@ function SearchTab() {
         <Select value={range} onValueChange={setRange}><SelectTrigger className="w-32 font-mono" data-testid="siem-time-range"><SelectValue /></SelectTrigger>
           <SelectContent>{Object.keys(RANGES).map((r) => <SelectItem key={r} value={r}>{r === "all" ? "All time" : `Last ${r}`}</SelectItem>)}</SelectContent></Select>
         <button className="glow-btn" onClick={() => run()} data-testid="siem-search-button">Search</button>
-        <button className="ghost-btn" onClick={save} data-testid="siem-save-button"><Save className="h-4 w-4" /></button>
+        <button className="ghost-btn" onClick={() => setNaming(!naming)} data-testid="siem-save-button"><Save className="h-4 w-4" /></button>
+        {naming && <div className="w-full flex gap-2"><input autoFocus className="field font-mono" placeholder="Name this search" value={sname} onChange={(e) => setSname(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} data-testid="siem-save-name-input" />
+          <button className="glow-btn" onClick={save} disabled={!sname.trim()} data-testid="siem-save-confirm">Save</button></div>}
       </Glass>
       <div className="grid lg:grid-cols-[240px_1fr] gap-4">
         <div className="space-y-4">

@@ -30,6 +30,37 @@ async def guard(kind: str, user=Depends(get_current_user)):
 
 
 # ---------- Generic content CRUD (instructor/admin) ----------
+REQUIRED = {"paths": ["title", "description", "level", "modules"], "quizzes": ["title", "questions"], "ctfs": ["title", "category", "points", "flag", "description", "hints"],
+            "labs": ["title", "description", "difficulty", "tasks", "kali"], "sessions": ["title", "start", "join_link", "capacity", "instructor"],
+            "challenges": ["title", "category", "severity", "points", "verdict", "alert", "evidence", "keywords"], "categories": ["name"], "announcements": ["title"]}
+
+
+def validate(col, doc):
+    missing = [k for k in REQUIRED[col] if doc.get(k) in (None, "")]
+    if missing:
+        raise HTTPException(422, f"Missing required fields: {', '.join(missing)}")
+    try:
+        if col == "paths":
+            for m in doc["modules"]:
+                m.setdefault("id", new_id())
+                for l in m["lessons"]:
+                    assert l.get("id") and l.get("title")
+                    l.setdefault("content", ""); l.setdefault("video_url", ""); l.setdefault("resources", []); l.setdefault("minutes", 10)
+        if col == "quizzes":
+            doc.setdefault("pass_mark", 70); doc.setdefault("time_limit_sec", 0); doc.setdefault("topic", "General")
+            for q in doc["questions"]:
+                assert q.get("id") and q.get("text") and q["type"] in ("mcq", "multi", "tf") and q["options"] and q["answer"]
+                q.setdefault("topic", doc["topic"]); q.setdefault("explanation", "")
+        if col == "labs":
+            for t in doc["tasks"]:
+                assert t.get("id") and t.get("question") and t.get("answer")
+        if col == "ctfs":
+            for h in doc["hints"]:
+                assert "text" in h and int(h["cost"]) >= 0
+    except (AssertionError, KeyError, TypeError, ValueError):
+        raise HTTPException(422, f"Invalid {col} structure: check modules/lessons, questions, tasks or hints")
+
+
 @router.get("/manage/{kind}")
 async def m_list(g=Depends(guard)):
     col, _ = g
@@ -40,6 +71,7 @@ async def m_list(g=Depends(guard)):
 async def m_create(doc: dict, g=Depends(guard)):
     col, user = g
     doc.pop("_id", None)
+    validate(col, doc)
     doc["id"] = doc.get("id") or new_id()
     if await db[col].find_one({"id": doc["id"]}):
         raise HTTPException(400, "ID already exists")
@@ -54,6 +86,7 @@ async def m_create(doc: dict, g=Depends(guard)):
 async def m_update(iid: str, doc: dict, g=Depends(guard)):
     col, user = g
     doc.pop("_id", None)
+    validate(col, doc)
     doc["id"] = iid
     r = await db[col].replace_one({"id": iid}, dict(doc))
     if not r.matched_count:
@@ -149,7 +182,9 @@ async def update_user(uid: str, body: UserUpdate, user=Depends(admin_only)):
     if uid == user["id"]:
         raise HTTPException(400, "You cannot change your own role or status")
     upd = {k: v for k, v in body.model_dump().items() if v}
-    await db.users.update_one({"id": uid}, {"$set": upd})
+    r = await db.users.update_one({"id": uid}, {"$set": upd})
+    if not r.matched_count:
+        raise HTTPException(404, "User not found")
     await audit(user, f"update user {upd}", uid)
     return {"ok": True}
 

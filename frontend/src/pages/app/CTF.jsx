@@ -50,7 +50,7 @@ export default function CTF() {
       </div>
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
         <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-xl">
-          {open && <><DialogHeader><DialogTitle className="font-mono flex items-center gap-2"><Flag className="h-5 w-5 text-cyan-400" />{open.title} <span className="text-green-400 text-sm">· {open.points} pts</span></DialogTitle></DialogHeader>
+          {open && <><DialogHeader><DialogTitle className="font-mono flex items-center gap-2"><Flag className="h-5 w-5 text-cyan-400" />{open.title} <span className="text-green-400 text-sm" data-testid="ctf-dialog-points">· {open.points - open.hints.filter((h) => h.text).reduce((a, h) => a + h.cost, 0)} pts</span></DialogTitle></DialogHeader>
             <pre className="whitespace-pre-wrap text-sm text-slate-300 bg-black/40 p-4 border border-white/5 font-mono max-h-64 overflow-y-auto" data-testid="ctf-description">{open.description}</pre>
             <div className="space-y-2">{open.hints.map((h) => h.text ? <div key={h.idx} className="text-xs font-mono text-yellow-300">hint: {h.text}</div>
               : <button key={h.idx} onClick={() => hint(h.idx)} className="ghost-btn !text-xs" data-testid={`ctf-hint-${h.idx}`}><Lightbulb className="h-3.5 w-3.5" />Unlock hint (-{h.cost} pts)</button>)}</div>

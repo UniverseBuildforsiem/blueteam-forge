@@ -104,7 +104,7 @@ export function QuizPlayer() {
         <div className="flex justify-between mt-6">
           <button className="ghost-btn" disabled={i === 0} onClick={() => setI(i - 1)} data-testid="quiz-prev-button">Prev</button>
           <div className="flex gap-2">
-            {!f && <button className="ghost-btn" disabled={!sel.length} onClick={check} data-testid="quiz-check-button">Check answer</button>}
+            {!f && !q.path_id && <button className="ghost-btn" disabled={!sel.length} onClick={check} data-testid="quiz-check-button">Check answer</button>}
             {i < q.questions.length - 1 ? <button className="glow-btn" onClick={() => setI(i + 1)} data-testid="quiz-next-button">Next</button>
               : <button className="glow-btn" onClick={submit} data-testid="quiz-submit-button">Submit quiz</button>}
           </div>

@@ -49,6 +49,9 @@ async def register(body: RegisterIn, response: Response):
     email = body.email.strip().lower()
     if not EMAIL_RE.match(email):
         raise HTTPException(400, "Invalid email format")
+    settings = await db.settings.find_one({"id": "platform"}, {"_id": 0, "allow_signups": 1}) or {}
+    if settings.get("allow_signups") is False:
+        raise HTTPException(403, "New signups are currently closed")
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Email already registered")
     if await db.users.find_one({"username": body.username.lower()}):
@@ -64,13 +67,15 @@ async def register(body: RegisterIn, response: Response):
 @router.post("/login")
 async def login(body: LoginIn, request: Request, response: Response):
     email = body.email.strip().lower()
-    ident = f"{request.client.host if request.client else 'x'}:{email}"
-    att = await db.login_attempts.find_one({"identifier": ident})
-    if att and att.get("count", 0) >= 5 and att.get("locked_until", "") > now_iso():
+    ident = f"login:{email}"
+    att = await db.login_attempts.find_one({"identifier": ident}) or {}
+    locked = att.get("locked_until") or ""
+    if locked and locked > now_iso():
         raise HTTPException(429, "Too many failed attempts. Try again in 15 minutes.")
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(body.password, user["password_hash"]):
-        await db.login_attempts.update_one({"identifier": ident}, {"$inc": {"count": 1}, "$set": {"locked_until": (now() + timedelta(minutes=15)).isoformat()}}, upsert=True)
+        count = 1 if locked else att.get("count", 0) + 1
+        await db.login_attempts.update_one({"identifier": ident}, {"$set": {"count": count, "locked_until": (now() + timedelta(minutes=15)).isoformat() if count >= 5 else ""}}, upsert=True)
         raise HTTPException(401, "Invalid email or password")
     if user.get("status") == "suspended":
         raise HTTPException(403, "Account suspended. Contact support.")

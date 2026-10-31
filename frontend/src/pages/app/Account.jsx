@@ -67,8 +67,8 @@ export function Billing() {
             <div className="font-mono font-bold">{p.name}</div><div className="text-3xl font-mono neon-text mt-2">₹{p.amount.toLocaleString("en-IN")}</div>
             <ul className="mt-4 space-y-1 text-sm text-slate-300">{["All paths & labs", "Live sessions + recordings", "Priority grading"].map((f) => <li key={f} className="flex gap-2"><Check className="h-4 w-4 text-green-400" />{f}</li>)}</ul>
             {user.plan === "pro" ? <div className="mt-6 text-green-400 font-mono text-sm">✓ Active</div> : <div className="mt-6 space-y-2">
-              <button className="glow-btn w-full justify-center" disabled={!cfg.razorpay} onClick={() => payRazorpay(k)} data-testid={`billing-razorpay-${k}`}>Pay with Razorpay</button>
-              <button className="ghost-btn w-full justify-center" disabled={!cfg.cashfree} onClick={() => payCashfree(k)} data-testid={`billing-cashfree-${k}`}>Pay with Cashfree</button></div>}
+              <button className="glow-btn w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none" disabled={!cfg.razorpay} onClick={() => payRazorpay(k)} data-testid={`billing-razorpay-${k}`}>Pay with Razorpay</button>
+              <button className="ghost-btn w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed" disabled={!cfg.cashfree} onClick={() => payCashfree(k)} data-testid={`billing-cashfree-${k}`}>Pay with Cashfree</button></div>}
           </Glass>))}
       </div>
       {user.plan !== "pro" && cfg.cashfree && <input className="field mt-4 max-w-xs" placeholder="Mobile (for Cashfree)" value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="billing-phone-input" />}

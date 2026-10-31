@@ -71,6 +71,7 @@
     .neon-green { color: var(--green); text-shadow: 0 0 12px rgba(0, 255, 102, .4); }
     .eyebrow { @apply font-mono text-xs uppercase tracking-[0.25em] text-cyan-400/80; }
     .field { @apply w-full bg-black/40 border border-cyan-500/20 rounded-sm px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none; transition: border-color .2s, box-shadow .2s; }
+    select.field option { background: #0B0F1A; color: #E2E8F0; }
     .field:focus { @apply border-cyan-400; box-shadow: 0 0 0 3px rgba(0, 240, 255, .12); }
     .scanlines::after {
         content: ""; position: absolute; inset: 0; pointer-events: none;

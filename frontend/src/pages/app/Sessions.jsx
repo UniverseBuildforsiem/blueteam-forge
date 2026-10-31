@@ -31,7 +31,7 @@ export default function Sessions() {
   const load = () => api.get("/sessions").then((r) => setSs(r.data));
   useEffect(() => { load(); }, []);
   const rsvp = async (s) => {
-    try { const { data } = await api.post(`/sessions/${s.id}/rsvp`); toast.success(data.registered ? "Registered — reminder email sent" : "RSVP cancelled"); load(); } catch (e) { toast.error(errMsg(e)); }
+    try { const { data } = await api.post(`/sessions/${s.id}/rsvp`); toast.success(data.registered ? "Registered — a reminder is on its way to your inbox" : "RSVP cancelled"); load(); } catch (e) { toast.error(errMsg(e)); }
   };
   const days = useMemo(() => ss.map((s) => new Date(s.start)), [ss]);
   const filt = (arr) => (day ? arr.filter((s) => new Date(s.start).toDateString() === day.toDateString()) : arr);

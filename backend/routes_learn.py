@@ -36,7 +36,7 @@ async def public_announcements():
 
 @router.get("/public/verify/{cert_id}")
 async def verify(cert_id: str):
-    c = await db.certificates.find_one({"id": cert_id}, NO_ID)
+    c = await db.certificates.find_one({"id": cert_id}, {"_id": 0, "user_id": 0})
     if not c:
         raise HTTPException(404, "Certificate not found")
     return c
@@ -98,7 +98,7 @@ async def list_paths(user=Depends(get_current_user)):
 @router.get("/paths/{pid}")
 async def get_path(pid: str, user=Depends(get_current_user)):
     p = await db.paths.find_one({"id": pid}, NO_ID)
-    if not p:
+    if not p or (not p.get("published") and user["role"] == "student"):
         raise HTTPException(404, "Path not found")
     done = await completed_set(user["id"])
     final = await db.quizzes.find_one({"path_id": pid}, {"_id": 0, "id": 1, "title": 1, "pass_mark": 1})
@@ -148,7 +148,7 @@ async def list_quizzes(user=Depends(get_current_user)):
 @router.get("/quizzes/{qid}")
 async def get_quiz(qid: str, user=Depends(get_current_user)):
     q = await db.quizzes.find_one({"id": qid}, NO_ID)
-    if not q:
+    if not q or (not q.get("published") and user["role"] == "student"):
         raise HTTPException(404, "Quiz not found")
     return {**q, "questions": [strip_q(x) for x in q["questions"]]}
 
@@ -166,6 +166,8 @@ class SubmitIn(BaseModel):
 @router.post("/quizzes/{qid}/check")
 async def check_question(qid: str, body: CheckIn, user=Depends(get_current_user)):
     q = await db.quizzes.find_one({"id": qid}, NO_ID)
+    if q and q.get("path_id"):
+        raise HTTPException(403, "Instant feedback is disabled for final exams")
     qu = next((x for x in (q or {}).get("questions", []) if x["id"] == body.question_id), None)
     if not qu:
         raise HTTPException(404, "Question not found")
@@ -181,8 +183,9 @@ async def submit_quiz(qid: str, body: SubmitIn, user=Depends(get_current_user)):
     for qu in q["questions"]:
         ok = sorted(body.answers.get(qu["id"], [])) == sorted(qu["answer"])
         correct += ok
-        topics[qu["topic"]][0] += ok
-        topics[qu["topic"]][1] += 1
+        topic = qu.get("topic") or q.get("topic") or "General"
+        topics[topic][0] += ok
+        topics[topic][1] += 1
         results.append({"question_id": qu["id"], "correct": ok, "answer": qu["answer"], "explanation": qu["explanation"]})
     total = len(q["questions"])
     score = round(100 * correct / total) if total else 0

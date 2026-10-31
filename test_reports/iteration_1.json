@@ -1,0 +1,59 @@
+{
+  "summary": "First full E2E run of SOCForge (backend pytest 30 tests + Playwright UI on desktop 1920x1080). Every requested flow works end to end: register->onboarding->dashboard, role redirects and protection, forgot/reset password, public landing/catalog, lesson complete (+10 XP, % updates), quiz check/submit/retry, final exam->certificate->/verify->PDF, sessions RSVP toggle/join link/recording, triage challenge auto-grade, CTF wrong/correct flag + scoreboard + hint cost, lab-phish-ransom terminal commands + 5 tasks + final report, SIEM stats/fields/save/alerts/dashboards, tools (intel, header analyzer, decoder, sandbox, feed, cases with timeline), instructor (quiz + path builder, students, analytics, grading, attendance), admin (role change, suspend/approve, publish toggle, categories, announcements, cert revoke/restore, audit logs, settings), billing not-configured notice with disabled buttons and 503 from payment endpoints. Found 1 HIGH security bug (brute-force lockout does not work behind the ingress), 2 medium integrity/access issues and several minor bugs.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/auth/login", "issue": "Brute-force lockout does not work. The identifier is request.client.host + email, but request.client.host is the ingress pod IP, and that IP changes between requests (seen in DB: '10.201.1.194:lock_x' count 3 and '10.201.4.160:lock_x' count 3). After 6+ failed attempts the API still returns 401, never 429. Fix: take the client IP from the first entry of X-Forwarded-For, or key the lockout on email only. Also, once locked_until expires, count stays >=5, so a single new failure locks the account again.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/quizzes/{qid}/check", "issue": "Returns the correct answer and explanation for any question, including timed final exams that have a path_id. A student can call /check on every final-exam question, then /submit a 100% score and get a certificate. Disable /check (or hide the answer) for final exams, i.e. quizzes with a path_id."},
+      {"endpoint": "GET /api/paths/{pid}, GET /api/quizzes/{qid}", "issue": "Does not check published status. A student can open a DRAFT path or quiz, including all lesson content, by going to its URL directly (verified with a draft path created in the builder)."},
+      {"endpoint": "GET /api/public/verify/{id}", "issue": "The public endpoint exposes the internal user_id. Return only name, path, score, issued date, status and id."},
+      {"endpoint": "PUT /api/admin/settings", "issue": "Settings are saved but never enforced: register ignores allow_signups, and the quiz pass mark ignores the default pass_mark."},
+      {"endpoint": "PATCH /api/admin/users/{uid}", "issue": "Returns 200 when the user id does not exist (no matched_count check). Should return 404."},
+      {"endpoint": "POST /api/manage/{kind}", "issue": "Accepts any dict with no schema validation. A path doc without modules/lessons keys, or a quiz question without a topic, would cause KeyError 500s on /api/paths, the dashboard and quiz submit for every user."},
+      {"endpoint": "POST /api/challenges/{cid}/submit", "issue": "Resubmitting replaces the document and wipes instructor_grade, feedback and status=reviewed."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Siem.jsx addField", "issue": "Clicking a field value when the query has a pipe appends the filter after the pipe, e.g. 'event_id=4625 | stats count by src_ip host=VPN-GW-01'. The filter lands in the stats clause and is silently ignored. Insert it before the '|' instead.", "selector": "[data-testid='siem-fields'] button", "priority": "MEDIUM"},
+      {"component": "Terminal.jsx", "issue": "The shell is created with useMemo(() => createShell(lab), [lab]). The lab object is re-fetched after each task answer or report, which creates a new shell and resets the cwd (prompt goes from ~/evidence back to ~) and any shell state. Memoize on lab.id.", "selector": "[data-testid='kali-input']", "priority": "MEDIUM"},
+      {"component": "CTF dialog", "issue": "After unlocking a hint the dialog still shows the full points ('100 pts') instead of the reduced value (80).", "selector": "[data-testid='ctf-hint-0']", "priority": "LOW"},
+      {"component": "Instructor Attendance", "issue": "Toggling the attendance checkbox shows no success or error toast, and API errors are not handled.", "selector": "[data-testid^='attendance-check-']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Billing", "issues": ["The disabled 'Pay with Razorpay' buttons still look fully enabled (solid teal). Add disabled styling such as opacity or cursor-not-allowed."]},
+      {"screen": "SIEM save search", "issues": ["Uses the native window.prompt to name the search. Use a shadcn Dialog to match the theme."]},
+      {"screen": "Tools / Cases / Admin users", "issues": ["Native <select> elements show the default OS dropdown (white/grey options) on the dark theme. Consider the shadcn Select."]},
+      {"screen": "Sessions toast", "issues": ["The RSVP toast always says 'reminder email sent', even when the email send fails (failures are only logged)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_socforge_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "HIGH: Fix the login lockout identifier. Use the first X-Forwarded-For IP or the email alone; request.client.host varies across ingress pods.",
+    "Block /api/quizzes/{qid}/check from revealing answers for final exams (quizzes with a path_id).",
+    "Enforce published=true (or a staff role) in GET /api/paths/{pid} and GET /api/quizzes/{qid}.",
+    "Siem.jsx addField: insert field=value before the pipe section.",
+    "Terminal.jsx: memoize the shell on lab.id, not on the lab object.",
+    "Remove user_id from the public verify response.",
+    "Enforce settings.allow_signups in register; return 404 from admin user PATCH for unknown ids; validate the manage/{kind} payloads.",
+    "Minor UI: reduced CTF points after a hint, disabled styling on billing buttons, attendance toast."
+  ],
+  "critical_code_review_comments": [
+    "routes_auth.login: the lockout is keyed on a proxy IP, so it is ineffective. Also, the count is never reset after the lock expires.",
+    "routes_learn.check_question leaks answers; get_path/get_quiz skip the published check.",
+    "routes_manage generic CRUD accepts raw dicts (no Pydantic). One malformed path can 500 the dashboard and paths list for all users.",
+    "siem_alerts calls shlex.split(a['query']) with no try/except, so a malformed alert query created by staff would 500 the whole alerts endpoint.",
+    "list_sessions makes N+1 count_documents calls (rsvp_count per session) and ctf_board does the same for solves. Fine at seed scale.",
+    "Email: the Emergent email integration works (202 Accepted). The 422s in the logs are only for @example.com test recipients (undeliverable_recipient)."
+  ],
+  "updated_files": ["/app/backend/tests/test_socforge_api.py"],
+  "success_rate": {"backend": "97% (29/30; only lockout fails)", "frontend": "~95% (all requested flows pass; 2 medium UI bugs)"},
+  "test_credentials": "Used /app/memory/test_credentials.md (admin/instructor/student). All valid.",
+  "seed_data_creation": "Test users (*_RID@example.com) were created and then deleted from Mongo along with their progress, certificates, cases and RSVPs. TEST paths, quizzes, categories and announcements were also deleted. Seeded accounts were not modified, except that admin settings were re-saved with the same values.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && REACT_APP_BACKEND_URL=... python -m pytest tests/test_socforge_api.py -n 0 (pytest.ini enables xdist with loadscope; cross-class state such as cert_id/sub_id needs -n 0). The test file has a teardown that deletes its own users. Reset tokens are in db.password_reset_tokens. The container clock is Oct 2026. Native selects need select_option in Playwright. The decoder recipe defaults to 'From Base64', so do not click it again.",
+  "rca of the issue": "Lockout: backend.out.log shows requests arriving from both 10.201.4.160 and 10.201.1.194 (ingress pods). login_attempts docs were split across both identifiers (3+3), so neither reached 5. SIEM field filter: Siem.jsx line 54 builds `${q} ${f}=${v}`, which appends after the '| stats' clause. Terminal reset: Terminal.jsx useMemo dependency [lab]; LabRunner reloads the lab after each task or report, so a new object is created and the shell is rebuilt."
+}
