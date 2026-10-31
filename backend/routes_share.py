@@ -162,7 +162,7 @@ def render_badge(name, badge, subtitle, stat, level, art, handle=None, kind="bad
     for line in wrap(d, subtitle, small, 680)[:2]:
         d.text((64, y + 12), line, font=small, fill=MUTED)
         y += 32
-    d.text((64, 478), "ANALYST", font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
+    d.text((64, 478), "STUDENT", font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
     d.text((64, 504), name[:22], font=font("LiberationMono-Bold.ttf", 34), fill=(248, 250, 252))
     d.text((520, 478), stat[0], font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
     d.text((520, 504), stat[1], font=font("LiberationMono-Bold.ttf", 34), fill=GREEN)

@@ -1,0 +1,30 @@
+{
+  "summary": "Tested the level-up reveal, badge share cards and rank avatars on both backend and frontend. Backend: 14/14 pytest pass. Covered: dashboard level_up, the seen endpoint (400 for non Hunter/Elite levels, 401 without auth, idempotent), the badge share-card (200 for earned badges; 404 for unearned, unknown or course ids), the public PNG (1200x627) and HTML (og tags, meta refresh to /u/demo, 404 for a bad token), the course badge card, rank on the leaderboard, CTF scoreboard and drill leaderboard, talent rank matching the XP thresholds, and the level images. Frontend: the reveal shows Hunter / Lab Rat / lab-rat.jpg. Continue closes it and it does not come back after reload. Dashboard badge-share-first-blood and badge-share-lab-rat open the dialog with the correct card (character in an orange Hunter ring). Avatars on the leaderboard, CTF, talent and profile match the rank images. The My Courses share card shows course.jpg. One bug: the share dialog opened from the level-up overlay is invisible because it renders BEHIND the overlay.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LevelUpReveal -> ShareCardButton dialog", "issue": "The level-up overlay uses z-[60] but the shadcn Dialog overlay and content use z-50. Clicking level-up-share does open share-card-dialog (it is in the DOM, the image loads at 1200px, and it can be clicked because Radix sets pointer-events), but it is drawn underneath the blurred full-screen overlay. The user sees nothing happen. Confirmed by screenshot after clicking Share: only the reveal is visible.", "selector": "[data-testid='level-up-share'] -> [data-testid='share-card-dialog']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Badge share PNG (render_badge)", "issues": ["The label above the student's name is hard-coded as 'ANALYST' while the stat beside it reads 'RANK Recruit'. Students may read this as conflicting levels. Consider 'NAME' or 'STUDENT'."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_levelup_badge_cards.py", "/app/test_reports/pytest/pytest_iter12.xml"],
+  "action_items": [
+    "Fix the stacking of the share dialog inside LevelUpReveal. Either pass className='z-[70]' to DialogContent and also raise DialogOverlay (e.g. add an overlayClassName prop in ui/dialog.jsx), or lower the reveal to z-40 / close the reveal before opening the dialog. Then check that level-up-share shows share-card-dialog visibly on top.",
+    "Optional: rename the 'ANALYST' label on render_badge cards."
+  ],
+  "critical_code_review_comments": [
+    "LevelUpReveal close() calls onDone() immediately without waiting for the POST /seen call, and swallows any error. If that request fails, the reveal will show again on the next visit. Acceptable, but worth noting.",
+    "AnimatePresence wraps an always-mounted child, so the exit animation never runs. The parent unmounts the whole component instead; AnimatePresence should sit in Dashboard around the conditional.",
+    "badge_share_card and std_badge call compute_badges, which runs about 8 DB counts per request. This is fine at the current scale, but the public PNG endpoint is unauthenticated (it is cached for 600s)."
+  ],
+  "updated_files": ["/app/backend/tests/test_levelup_badge_cards.py"],
+  "success_rate": {"backend": "100%", "frontend": "90% (only the level-up share dialog is hidden)"},
+  "seed_data_creation": "None new. levelups_seen was unset again for the demo student after testing, so the Hunter reveal is pending again for retest.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Demo has first-blood, lab-rat and course-585979 earned, with 409 XP (Recruit). To retest the reveal, unset users.levelups_seen for the demo user. The drill leaderboard is empty (no drill submissions), so the drill-lb-avatar UI was not visually verified; the API rank field was verified. The share dialog opened from the dashboard and from My Courses works fine; only the one opened from the reveal is hidden.",
+  "rca of the issue": "ShareCardButton renders a Radix Dialog portal (overlay and content z-50) while LevelUpReveal is fixed at z-[60]. Both are children of body, so the higher z-index of the reveal paints over the dialog."
+}

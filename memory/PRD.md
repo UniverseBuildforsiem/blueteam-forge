@@ -51,6 +51,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - My courses page /app/courses: watched courses, badge, bonus status, matching items done/to finish, share
 - Rebrand (2026-06): SOCForge -> SOCProfessionals Academy everywhere (UI, emails, cards, PDF); logins now @socprofessionals.academy (startup `rebrand` migration in server.py); badge email with card image + LinkedIn button after course bonus (respects course_emails)
 - Badge levels: 4 levels Recruit/Analyst (3D kid style), Hunter (cyber boy), Elite (hooded skull) from user-supplied art; unique AI character per badge in frontend/public/badges; mapping in frontend/src/lib/badges.js; BadgeTile used on dashboard + public profile; landing BadgeShowcase section
+- Level-up reveal (2026-06): first Hunter/Elite badge -> full-screen character reveal on dashboard (dashboard.level_up, POST /api/me/level-up/{level}/seen, users.levelups_seen)
+- Character share cards for all 8 badges: POST /api/me/badges/{id}/share-card -> /api/public/badge/{token}/{id}(.png); course cards + badge email card now include character (backend/assets/badges, BADGE_LEVEL in routes_learn.py)
+- Rank avatars (XP rank -> level character) on dashboard/CTF/drill leaderboards, talent search, public profile (RankAvatar component)
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

@@ -9,7 +9,7 @@ export default function LevelUpReveal({ lu, onDone }) {
   const l = LEVELS[lu.level];
   return (
     <AnimatePresence>
-      <motion.div className="fixed inset-0 z-[60] bg-[#05070D]/95 backdrop-blur-xl grid place-items-center p-6 overflow-hidden" data-testid="level-up-reveal"
+      <motion.div className="fixed inset-0 z-[45] bg-[#05070D]/95 backdrop-blur-xl grid place-items-center p-6 overflow-hidden" data-testid="level-up-reveal"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         <button onClick={close} className="absolute top-6 right-6 text-slate-400 hover:text-white" data-testid="level-up-close" aria-label="Close"><X className="h-6 w-6" /></button>
         <div className="flex flex-col items-center text-center max-w-xl">
