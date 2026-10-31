@@ -18,9 +18,44 @@ LOGS = gen_logs()
 async def list_challenges(user=Depends(get_current_user)):
     cs = await db.challenges.find({"published": {"$ne": False}}, {"_id": 0, "verdict": 0, "keywords": 0}).to_list(200)
     subs = {s["challenge_id"]: s for s in await db.challenge_submissions.find({"user_id": user["id"]}, NO_ID).to_list(500)}
+    unlocked = {(h["challenge_id"], h["idx"]) for h in await db.challenge_hints.find({"user_id": user["id"]}, NO_ID).to_list(1000)}
+    full = {c["id"]: c for c in await db.challenges.find({}, {"_id": 0, "id": 1, "evidence": 1, "keywords": 1}).to_list(500)}
     for c in cs:
         c["submission"] = subs.get(c["id"])
+        texts = challenge_hint_texts(full[c["id"]])
+        c["hints"] = [{"idx": i, "cost": HINT_COST, "text": t if (c["id"], i) in unlocked else None} for i, t in enumerate(texts)]
     return cs
+
+
+HINT_COST = 25
+
+
+def challenge_hint_texts(c):
+    kws = c.get("keywords", [])
+    ev = c.get("evidence", [])
+    best = max(range(len(ev)), key=lambda i: sum(k.lower() in ev[i].lower() for k in kws)) if ev else 0
+    kw = next((k for k in kws if ev and k.lower() in ev[best].lower()), kws[0] if kws else "")
+    first = f"Key evidence is line #{best + 1}" + (f" — pay close attention to '{kw}'." if kw else ".")
+    second = "A strong report mentions: " + ", ".join(kws[: max(1, len(kws) // 2)]) + "."
+    return [first, second]
+
+
+@router.post("/challenges/{cid}/hint/{idx}")
+async def challenge_hint(cid: str, idx: int, user=Depends(get_current_user)):
+    c = await db.challenges.find_one({"id": cid}, NO_ID)
+    texts = challenge_hint_texts(c) if c else []
+    if idx < 0 or idx >= len(texts):
+        raise HTTPException(404, "Hint not found")
+    if await db.challenge_hints.find_one({"user_id": user["id"], "challenge_id": cid, "idx": idx}):
+        return {"text": texts[idx], "already": True}
+    if idx > 0 and not await db.challenge_hints.find_one({"user_id": user["id"], "challenge_id": cid, "idx": idx - 1}):
+        raise HTTPException(400, "Unlock the previous hint first")
+    res = await db.users.update_one({"id": user["id"], "xp": {"$gte": HINT_COST}}, {"$inc": {"xp": -HINT_COST}})
+    if not res.modified_count:
+        raise HTTPException(400, f"You need at least {HINT_COST} points to unlock a hint")
+    await db.challenge_hints.insert_one({"user_id": user["id"], "challenge_id": cid, "idx": idx, "cost": HINT_COST, "created_at": now_iso()})
+    await db.activity.insert_one({"id": new_id(), "user_id": user["id"], "text": f"Unlocked hint {idx + 1} on '{c['title']}'", "xp": -HINT_COST, "created_at": now_iso()})
+    return {"text": texts[idx]}
 
 
 class TriageIn(BaseModel):

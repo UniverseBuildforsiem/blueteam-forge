@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Siren, CheckCircle2, XCircle, Crosshair, ArrowRight } from "lucide-react";
+import { Siren, CheckCircle2, XCircle, Crosshair, ArrowRight, Lightbulb, Lock } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/ui/sheet";
@@ -21,7 +22,8 @@ export function Investigate({ c, onDone, submitUrl }) {
         {Object.entries(c.alert).map(([k, v]) => <div key={k}><span className="text-cyan-400">{k}:</span> <span className="text-slate-200 break-all">{v}</span></div>)}
       </div>
       <div><div className="eyebrow mb-2">evidence</div>
-        <div className="space-y-1.5">{c.evidence.map((e, i) => <div key={i} className="font-mono text-xs bg-black/30 border-l-2 border-green-500/40 px-3 py-2 text-slate-300 break-words">{e}</div>)}</div></div>
+        <div className="space-y-1.5">{c.evidence.map((e, i) => <div key={i} className="font-mono text-xs bg-black/30 border-l-2 border-green-500/40 px-3 py-2 text-slate-300 break-words"><span className="text-slate-500 mr-2">#{i + 1}</span>{e}</div>)}</div></div>
+      {c.hints && <Hints c={c} onDone={onDone} />}
       <div><div className="eyebrow mb-2">verdict</div>
         <div className="flex gap-2">
           {[["TP", "True Positive"], ["FP", "False Positive"]].map(([v, l]) => <button key={v} onClick={() => setVerdict(v)} data-testid={`challenge-verdict-${v}`}
@@ -39,6 +41,25 @@ export function Investigate({ c, onDone, submitUrl }) {
       {c.submission?.status === "reviewed" && <div className="text-sm text-cyan-300 font-mono">Instructor grade: {c.submission.instructor_grade}/100 — {c.submission.feedback}</div>}
     </div>
   );
+}
+
+function Hints({ c, onDone }) {
+  const { user, refresh } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const unlock = async (i) => {
+    setBusy(true);
+    try { await api.post(`/challenges/${c.id}/hint/${i}`); toast.success(`Hint unlocked (-${c.hints[i].cost} pts)`); onDone(); refresh(); } catch (e) { toast.error(errMsg(e)); }
+    setBusy(false);
+  };
+  const next = c.hints.findIndex((h) => !h.text);
+  return (
+    <div data-testid="challenge-hints"><div className="eyebrow mb-2 flex items-center justify-between">hints<span className="text-slate-500 normal-case" data-testid="challenge-hint-balance">balance: {user?.xp ?? 0} pts</span></div>
+      <div className="space-y-1.5">{c.hints.map((h) => h.text
+        ? <div key={h.idx} className="font-mono text-xs bg-yellow-500/5 border-l-2 border-yellow-400/60 px-3 py-2 text-yellow-200" data-testid={`challenge-hint-text-${h.idx}`}><Lightbulb className="inline h-3.5 w-3.5 mr-1.5" />{h.text}</div>
+        : h.idx === next
+          ? <button key={h.idx} disabled={busy} onClick={() => unlock(h.idx)} className="ghost-btn !text-xs" data-testid={`challenge-hint-unlock-${h.idx}`}><Lightbulb className="h-3.5 w-3.5" />Unlock hint {h.idx + 1} (-{h.cost} pts)</button>
+          : <div key={h.idx} className="font-mono text-xs text-slate-500 flex items-center gap-1.5 px-1" data-testid={`challenge-hint-locked-${h.idx}`}><Lock className="h-3.5 w-3.5" />Hint {h.idx + 1} — unlock hint {h.idx} first</div>)}</div>
+    </div>);
 }
 
 const STEPS = ["Read the alert: rule, host, user and time", "Work through every evidence line and note the IOCs", "Decide: True Positive or False Positive", "Write a short report: what happened, impact, next actions"];

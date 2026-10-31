@@ -74,3 +74,6 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks
 - P1: Gate Pro-only content by plan; file uploads for lesson resources (object storage)
 - P2: WebSocket push instead of polling; more labs/datasets; rich-text editor
+
+## 2026-06 Challenge Hint Unlocks (DONE)
+- Every SOC challenge has 2 hints (key evidence line, then report keywords), unlocked in order for a flat 25 points each (XP deducted immediately, needs >=25). Stored in `challenge_hints`; never charged twice. Endpoint: POST /api/challenges/{id}/hint/{idx}.
