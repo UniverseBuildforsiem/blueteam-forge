@@ -71,6 +71,9 @@ async def startup():
     await seed_collection("paths", S.PATHS)
     await seed_collection("quizzes", S.QUIZZES)
     await seed_collection("challenges", S.CHALLENGES)
+    for c in S.CHALLENGES:
+        await db.challenges.update_one({"id": c["id"], "$or": [{"difficulty": {"$exists": False}}, {"alert.rule": {"$ne": c["alert"]["rule"]}}]},
+                                       {"$set": {"difficulty": c["difficulty"], "alert.rule": c["alert"]["rule"]}})
     await seed_collection("ctfs", S.CTFS)
     await seed_collection("labs", S.LABS)
     await seed_collection("sessions", S.sessions_seed())

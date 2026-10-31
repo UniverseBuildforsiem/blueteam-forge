@@ -67,6 +67,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Ebook receipt email from activate() (routes_book.send_book_receipt)
 - Sample viewer: page images GET /api/me/book/sample/{n}.jpg + "Keep reading, unlock the other 158 pages" nudge at page 10 or 3 min
 - NOTE: demo student has a TEST db.purchases row (test:true) for the ebook — remove before go-live if desired
+- Course cards show real store content counts (content.videos/tests/files from classplus resources); store lists no hours so none shown
+- SOC Challenges: 65 total (5 original + 60 AI-generated in backend/assets/challenges.json via scripts/generate_challenges.py, 12 categories, Easy/Medium/Hard, 15 FP); table filters (search, category, difficulty, open/attempted)
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

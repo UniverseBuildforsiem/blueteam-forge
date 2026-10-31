@@ -9,7 +9,7 @@
   "verdict": "TP",
   "description": "A user reported a fake 'mailbox storage full' email. The link leads to a page imitating the corporate Microsoft 365 login. Secure email gateway logs show 3 users clicked it.",
   "alert": {
-   "rule": "SOC201 - User Reported Phishing Email",
+   "rule": "SOC300 - User Reported Phishing Email",
    "time": "2026-06-02 09:18",
    "host": "MAIL-GW-01",
    "user": "p.nowak",
@@ -42,7 +42,7 @@
   "verdict": "FP",
   "description": "The email security tool flagged several users clicking a known-bad-looking URL from an external sender. Header and ticket details need checking before escalation.",
   "alert": {
-   "rule": "SOC204 - Suspicious URL Click Detected",
+   "rule": "SOC301 - Suspicious URL Click Detected",
    "time": "2026-06-04 13:27",
    "host": "WS-HR-022",
    "user": "k.fischer",
@@ -75,7 +75,7 @@
   "verdict": "TP",
   "description": "EDR detected Word launching PowerShell with an encoded command shortly after a user opened an emailed invoice attachment.",
   "alert": {
-   "rule": "SOC212 - Office Application Spawning Script Interpreter",
+   "rule": "SOC302 - Office Application Spawning Script Interpreter",
    "time": "2026-06-08 10:14",
    "host": "WS-ACC-007",
    "user": "r.alvarez",
@@ -108,7 +108,7 @@
   "verdict": "TP",
   "description": "An email impersonating the CFO from a lookalike domain asked payroll to change bank details. The Reply-To address did not match the sender.",
   "alert": {
-   "rule": "SOC215 - Lookalike Domain Sender Detected",
+   "rule": "SOC303 - Lookalike Domain Sender Detected",
    "time": "2026-06-09 15:42",
    "host": "MAIL-GW-01",
    "user": "payroll@northwind-corp.example",
@@ -141,7 +141,7 @@
   "verdict": "TP",
   "description": "A user visited a fake Microsoft sign-in page. Minutes later, a sign-in from a different location succeeded without a new MFA prompt, and a hidden inbox rule was created.",
   "alert": {
-   "rule": "SOC231 - Suspicious Sign-in After Phishing Click",
+   "rule": "SOC304 - Suspicious Sign-in After Phishing Click",
    "time": "2026-06-11 09:21",
    "host": "AZURE-ENTRA-TENANT",
    "user": "l.fernandez@northwind-corp.example",
@@ -175,7 +175,7 @@
   "verdict": "TP",
   "description": "Linux bastion host logged hundreds of failed SSH password attempts from a single external IP, followed by a successful root login.",
   "alert": {
-   "rule": "SOC201 - SSH Brute Force Detected",
+   "rule": "SOC305 - SSH Brute Force Detected",
    "time": "2026-06-04 03:12",
    "host": "bastion-lnx-02",
    "user": "root",
@@ -208,7 +208,7 @@
   "verdict": "FP",
   "description": "A service account triggered a brute force alert with 85 failed logons in 10 minutes, all from one internal server.",
   "alert": {
-   "rule": "SOC202 - Multiple Failed Logons Single Account",
+   "rule": "SOC306 - Multiple Failed Logons Single Account",
    "time": "2026-06-08 01:20",
    "host": "DC-01",
    "user": "svc-backup",
@@ -241,7 +241,7 @@
   "verdict": "TP",
   "description": "Identity provider logged one password attempt each against 140 distinct accounts from one IP in 20 minutes, with a single success.",
   "alert": {
-   "rule": "SOC203 - Password Spray Detected (Cloud IdP)",
+   "rule": "SOC307 - Password Spray Detected (Cloud IdP)",
    "time": "2026-06-11 09:47",
    "host": "AZURE-AD-SIGNIN",
    "user": "multiple (140 accounts)",
@@ -274,7 +274,7 @@
   "verdict": "FP",
   "description": "Dozens of servers reported failed SMB and RDP logons from one internal IP in a short window, which resembles a brute force sweep.",
   "alert": {
-   "rule": "SOC204 - Failed Logons Across Multiple Hosts",
+   "rule": "SOC308 - Failed Logons Across Multiple Hosts",
    "time": "2026-06-15 22:08",
    "host": "multiple (38 servers)",
    "user": "svc-nessus-scan",
@@ -307,7 +307,7 @@
   "verdict": "TP",
   "description": "A low-and-slow login campaign from many residential IPs against the remote access portal was followed by an MFA-approved login and suspicious mailbox activity for a finance user.",
   "alert": {
-   "rule": "SOC205 - Credential Stuffing / Anomalous Success After Failures",
+   "rule": "SOC309 - Credential Stuffing / Anomalous Success After Failures",
    "time": "2026-06-22 14:36",
    "host": "SSLVPN-GW-02",
    "user": "r.holloway",
@@ -341,7 +341,7 @@
   "verdict": "TP",
   "description": "EDR flagged WINWORD.EXE spawning PowerShell with an encoded command shortly after a user opened an emailed attachment.",
   "alert": {
-   "rule": "SOC301 - Suspicious Office Child Process",
+   "rule": "SOC310 - Suspicious Office Child Process",
    "time": "2026-06-02 09:14",
    "host": "WKS-FIN-017",
    "user": "m.fischer",
@@ -374,7 +374,7 @@
   "verdict": "FP",
   "description": "AV quarantined a file flagged as a Mimikatz variant on a host in the security team's isolated lab subnet.",
   "alert": {
-   "rule": "SOC318 - Credential Dumping Tool Detected",
+   "rule": "SOC311 - Credential Dumping Tool Detected",
    "time": "2026-06-04 14:32",
    "host": "LAB-RT-03",
    "user": "r.okafor",
@@ -407,7 +407,7 @@
   "verdict": "TP",
   "description": "File integrity monitoring detected thousands of files renamed with a new extension on a shared file server within minutes, plus ransom note creation.",
   "alert": {
-   "rule": "SOC327 - Mass File Modification / Ransomware Behavior",
+   "rule": "SOC312 - Mass File Modification / Ransomware Behavior",
    "time": "2026-06-08 03:07",
    "host": "FS-SHARE-02",
    "user": "svc_backup",
@@ -440,7 +440,7 @@
   "verdict": "TP",
   "description": "NDR flagged highly regular outbound HTTPS connections from a workstation to a newly registered domain following a fake browser update download.",
   "alert": {
-   "rule": "SOC335 - C2 Beaconing Pattern Detected",
+   "rule": "SOC313 - C2 Beaconing Pattern Detected",
    "time": "2026-06-10 16:48",
    "host": "WKS-MKT-029",
    "user": "l.moretti",
@@ -473,7 +473,7 @@
   "verdict": "TP",
   "description": "Low-signal alerts across a server correlated into a likely fileless malware chain using WMI event subscription, mshta, and in-memory shellcode, with credential access and lateral movement.",
   "alert": {
-   "rule": "SOC342 - WMI Event Subscription Persistence",
+   "rule": "SOC314 - WMI Event Subscription Persistence",
    "time": "2026-06-15 21:36",
    "host": "SRV-APP-11",
    "user": "svc_deploy",
@@ -508,7 +508,7 @@
   "verdict": "TP",
   "description": "EDR flagged vssadmin deleting all shadow copies on a departmental file server, followed by mass file renames. No change ticket exists for this activity.",
   "alert": {
-   "rule": "SOC401 - Volume Shadow Copy Deletion",
+   "rule": "SOC315 - Volume Shadow Copy Deletion",
    "time": "2026-06-04 03:12",
    "host": "FS-FIN-01",
    "user": "svc_scan",
@@ -542,7 +542,7 @@
   "verdict": "FP",
   "description": "A shadow copy deletion alert fired on an application server during the nightly backup window. The parent process needs to be verified.",
   "alert": {
-   "rule": "SOC402 - Shadow Copy Deletion Detected",
+   "rule": "SOC316 - Shadow Copy Deletion Detected",
    "time": "2026-06-05 01:47",
    "host": "APP-ERP-03",
    "user": "svc_veeam",
@@ -576,7 +576,7 @@
   "verdict": "TP",
   "description": "A domain admin account used PsExec to copy and run the same unsigned executable on 14 servers in 3 minutes, shortly after an unusual logon from a workstation.",
   "alert": {
-   "rule": "SOC418 - Remote Service Execution Across Multiple Hosts",
+   "rule": "SOC317 - Remote Service Execution Across Multiple Hosts",
    "time": "2026-06-09 22:36",
    "host": "WS-HR-07",
    "user": "adm_jlopez",
@@ -611,7 +611,7 @@
   "verdict": "FP",
   "description": "The EDR raised a ransomware behavior alert on a Windows workstation with rapid file modifications and high entropy writes. Check whether this is part of an authorized exercise.",
   "alert": {
-   "rule": "SOC425 - Ransomware Behavior: Rapid High-Entropy File Writes",
+   "rule": "SOC318 - Ransomware Behavior: Rapid High-Entropy File Writes",
    "time": "2026-06-11 14:08",
    "host": "WS-SEC-LAB-02",
    "user": "p.nguyen",
@@ -645,7 +645,7 @@
   "verdict": "TP",
   "description": "A large outbound transfer alert from an engineering file server linked to multiple earlier low-severity alerts for the same service account. The pattern is consistent with pre-ransomware staging and data theft.",
   "alert": {
-   "rule": "SOC447 - Abnormal Outbound Data Volume to Rare Destination",
+   "rule": "SOC319 - Abnormal Outbound Data Volume to Rare Destination",
    "time": "2026-06-17 04:22",
    "host": "FS-ENG-02",
    "user": "svc_backup",
@@ -681,7 +681,7 @@
   "verdict": "TP",
   "description": "EDR and Windows logs show a remote service named PSEXESVC installed on a file server from a user workstation outside any change window, followed by execution of a renamed binary.",
   "alert": {
-   "rule": "SOC201 - Remote Service Creation via PsExec",
+   "rule": "SOC320 - Remote Service Creation via PsExec",
    "time": "2026-06-04 14:12",
    "host": "FS-FINANCE-02",
    "user": "CORP\\j.marlowe",
@@ -714,7 +714,7 @@
   "verdict": "FP",
   "description": "Detection fired on one account making RDP connections to 12 servers in 30 minutes. The source is the documented admin jump host and the activity matches an approved patch change.",
   "alert": {
-   "rule": "SOC207 - Anomalous Multi-Host RDP Activity",
+   "rule": "SOC321 - Anomalous Multi-Host RDP Activity",
    "time": "2026-06-06 22:18",
    "host": "JUMP-ADM-01",
    "user": "CORP\\svc-patchadm",
@@ -747,7 +747,7 @@
   "verdict": "TP",
   "description": "A domain admin account performed NTLM network logons to several servers within minutes from a workstation, with no preceding Kerberos ticket requests, consistent with pass-the-hash.",
   "alert": {
-   "rule": "SOC215 - Suspected Pass-the-Hash Activity",
+   "rule": "SOC322 - Suspected Pass-the-Hash Activity",
    "time": "2026-06-09 03:27",
    "host": "SRV-APP-07",
    "user": "CORP\\adm-tcho",
@@ -781,7 +781,7 @@
   "verdict": "FP",
   "description": "Multiple hosts reported ADMIN$ and C$ access from a single internal IP using a service account. Investigation shows the source is the authenticated vulnerability scanner running its scheduled scan.",
   "alert": {
-   "rule": "SOC219 - Admin Share Access from Single Source",
+   "rule": "SOC323 - Admin Share Access from Single Source",
    "time": "2026-06-11 01:05",
    "host": "SRV-WEB-04",
    "user": "CORP\\svc-nessus",
@@ -814,7 +814,7 @@
   "verdict": "TP",
   "description": "A chain of WMI-based remote executions hopped from a compromised web server through an application server to a domain controller, ending with a staged archive of NTDS data and outbound transfer.",
   "alert": {
-   "rule": "SOC233 - Remote WMI Process Creation Chain",
+   "rule": "SOC324 - Remote WMI Process Creation Chain",
    "time": "2026-06-15 04:51",
    "host": "SRV-DC-01",
    "user": "CORP\\svc-backup",
@@ -850,7 +850,7 @@
   "verdict": "TP",
   "description": "WAF flagged repeated SQL injection payloads against the login endpoint of the public customer portal. The source then received a much larger response than normal.",
   "alert": {
-   "rule": "SOC231 - SQL Injection Pattern Detected",
+   "rule": "SOC325 - SQL Injection Pattern Detected",
    "time": "2026-06-04 13:12",
    "host": "WEB-PORTAL-01",
    "user": "anonymous",
@@ -883,7 +883,7 @@
   "verdict": "FP",
   "description": "WAF raised a burst of XSS, SQLi and path traversal signatures against the intranet HR app from a single internal IP shortly after midnight.",
   "alert": {
-   "rule": "SOC236 - Multiple Web Attack Signatures from Single Source",
+   "rule": "SOC326 - Multiple Web Attack Signatures from Single Source",
    "time": "2026-06-07 00:18",
    "host": "WEB-HR-APP-01",
    "user": "anonymous",
@@ -916,7 +916,7 @@
   "verdict": "TP",
   "description": "EDR detected IIS worker process spawning a command shell on the marketing web server shortly after an unusual file upload.",
   "alert": {
-   "rule": "SOC244 - Suspicious Child Process of Web Server",
+   "rule": "SOC327 - Suspicious Child Process of Web Server",
    "time": "2026-06-10 21:37",
    "host": "WEB-MKT-02",
    "user": "IIS APPPOOL\\MarketingSite",
@@ -949,7 +949,7 @@
   "verdict": "TP",
   "description": "App logs show a URL-fetch feature requesting the cloud instance metadata service. Minutes later, cloud audit logs show the instance role used from an unfamiliar external IP.",
   "alert": {
-   "rule": "SOC258 - SSRF Attempt to Metadata Endpoint",
+   "rule": "SOC328 - SSRF Attempt to Metadata Endpoint",
    "time": "2026-06-15 09:52",
    "host": "APP-PREVIEW-03",
    "user": "svc-preview",
@@ -982,7 +982,7 @@
   "verdict": "TP",
   "description": "A burst of JNDI lookup strings in HTTP headers hit a Java-based internal API gateway exposed through the reverse proxy. Host telemetry then shows the Java process spawning shells and modifying scheduled tasks.",
   "alert": {
-   "rule": "SOC271 - Log4j JNDI Lookup in HTTP Request",
+   "rule": "SOC329 - Log4j JNDI Lookup in HTTP Request",
    "time": "2026-06-22 03:14",
    "host": "API-GW-JAVA-02",
    "user": "svc-apigw",
@@ -1016,7 +1016,7 @@
   "verdict": "TP",
   "description": "CloudTrail detected a bucket ACL change granting AllUsers read access on a bucket holding customer data exports, made by a user who does not normally manage storage.",
   "alert": {
-   "rule": "SOC201 - S3 Bucket Made Public",
+   "rule": "SOC330 - S3 Bucket Made Public",
    "time": "2026-06-02 14:12",
    "host": "aws-prod-account-4471",
    "user": "svc-reporting",
@@ -1050,7 +1050,7 @@
   "verdict": "FP",
   "description": "AWS root account console login triggered a critical-account alert. The login coincides with a scheduled and documented quarterly break-glass test.",
   "alert": {
-   "rule": "SOC202 - AWS Root Account Console Login",
+   "rule": "SOC331 - AWS Root Account Console Login",
    "time": "2026-06-05 09:03",
    "host": "aws-prod-account-4471",
    "user": "root",
@@ -1084,7 +1084,7 @@
   "verdict": "TP",
   "description": "An IAM access key belonging to a developer was used from a Tor exit node to enumerate resources and create new access keys, shortly after the key appeared in a public repository.",
   "alert": {
-   "rule": "SOC203 - IAM Credential Used from Anonymizing Network",
+   "rule": "SOC332 - IAM Credential Used from Anonymizing Network",
    "time": "2026-06-09 03:27",
    "host": "aws-dev-account-2210",
    "user": "d.okafor",
@@ -1119,7 +1119,7 @@
   "verdict": "TP",
   "description": "Azure Activity Logs show dozens of GPU-enabled VMs created in a region the company does not use, followed by outbound traffic to a mining pool.",
   "alert": {
-   "rule": "SOC204 - Anomalous Compute Resource Creation",
+   "rule": "SOC333 - Anomalous Compute Resource Creation",
    "time": "2026-06-12 22:46",
    "host": "az-sub-prod-eu-03",
    "user": "m.chen@acme-corp.example",
@@ -1155,7 +1155,7 @@
   "verdict": "TP",
   "description": "A compromised web pod in EKS queried the node's instance metadata service, then stolen node role credentials were used from an external IP to assume a role in the data account and read secrets.",
   "alert": {
-   "rule": "SOC205 - Instance Role Credentials Used Outside VPC",
+   "rule": "SOC334 - Instance Role Credentials Used Outside VPC",
    "time": "2026-06-18 01:19",
    "host": "eks-node-prod-07",
    "user": "arn:aws:sts::778812340011:assumed-role/eks-node-role/i-0a1b2c3d4e5f60789",
@@ -1192,7 +1192,7 @@
   "verdict": "TP",
   "description": "UEBA flagged a sales engineer who downloaded 1,840 files from the Customer-Contracts SharePoint library in 20 minutes. HR records show the user submitted a resignation notice two days earlier.",
   "alert": {
-   "rule": "SOC801 - Abnormal Bulk Download from Document Library",
+   "rule": "SOC335 - Abnormal Bulk Download from Document Library",
    "time": "2026-06-08 17:52",
    "host": "LT-SALES-044",
    "user": "m.hartley",
@@ -1225,7 +1225,7 @@
   "verdict": "FP",
   "description": "DLP alerted on 38 GB copied to an external drive from a workstation by an IT technician. The activity matches an approved hardware refresh change.",
   "alert": {
-   "rule": "SOC815 - Large Data Transfer to Removable Media",
+   "rule": "SOC336 - Large Data Transfer to Removable Media",
    "time": "2026-06-10 10:14",
    "host": "WS-FIN-031",
    "user": "t.nguyen",
@@ -1258,7 +1258,7 @@
   "verdict": "TP",
   "description": "Exchange Online audit logs show a new inbox rule that silently forwards mail with financial keywords to an external personal address. The rule was created from the user's usual workstation, not from an unfamiliar location.",
   "alert": {
-   "rule": "SOC832 - External Auto-Forward Inbox Rule Created",
+   "rule": "SOC337 - External Auto-Forward Inbox Rule Created",
    "time": "2026-06-12 13:07",
    "host": "EXCH-ONLINE",
    "user": "d.okafor",
@@ -1291,7 +1291,7 @@
   "verdict": "TP",
   "description": "A database administrator ran a full export of the customer PII table at 02:00 with no change ticket, then uploaded a large file to an unsanctioned file-sharing domain.",
   "alert": {
-   "rule": "SOC847 - Sensitive Database Export Followed by External Upload",
+   "rule": "SOC338 - Sensitive Database Export Followed by External Upload",
    "time": "2026-06-14 02:23",
    "host": "DB-PROD-07",
    "user": "r.castellano",
@@ -1324,7 +1324,7 @@
   "verdict": "TP",
   "description": "A senior sysadmin who was recently told they would be laid off used a shared backup service account to access executive file shares. They then cleared event logs and set up persistence. Each action alone looks like routine admin work, but together they indicate sabotage and exfiltration preparation.",
   "alert": {
-   "rule": "SOC866 - Security Log Cleared on Server After Privileged Activity",
+   "rule": "SOC339 - Security Log Cleared on Server After Privileged Activity",
    "time": "2026-06-18 23:41",
    "host": "FS-EXEC-02",
    "user": "svc_backup",
@@ -1358,7 +1358,7 @@
   "verdict": "TP",
   "description": "DLP and proxy telemetry flagged a 2.3 GB upload to an unsanctioned file-sharing site from a finance workstation shortly after the user's resignation was filed.",
   "alert": {
-   "rule": "SOC201 - Large Outbound Transfer to Unsanctioned Cloud Storage",
+   "rule": "SOC340 - Large Outbound Transfer to Unsanctioned Cloud Storage",
    "time": "2026-06-08 17:52",
    "host": "WKS-FIN-023",
    "user": "j.moretti",
@@ -1391,7 +1391,7 @@
   "verdict": "FP",
   "description": "Volume-based rule fired for 410 GB sent from a backup server to an external address during the weekend. Analyst must decide whether this is exfiltration or expected activity.",
   "alert": {
-   "rule": "SOC207 - Abnormal Outbound Data Volume",
+   "rule": "SOC341 - Abnormal Outbound Data Volume",
    "time": "2026-06-14 02:18",
    "host": "BKP-SRV-02",
    "user": "svc_backup",
@@ -1424,7 +1424,7 @@
   "verdict": "TP",
   "description": "A database server generated thousands of long, high-entropy DNS queries to a single rarely seen domain, consistent with data encoded in subdomains.",
   "alert": {
-   "rule": "SOC215 - Anomalous DNS Query Length and Volume",
+   "rule": "SOC342 - Anomalous DNS Query Length and Volume",
    "time": "2026-06-10 03:26",
    "host": "DB-PRD-07",
    "user": "svc_sql",
@@ -1457,7 +1457,7 @@
   "verdict": "TP",
   "description": "A new inbox rule silently forwarding mail to an external address was created minutes after a sign-in from an unfamiliar location for a procurement manager.",
   "alert": {
-   "rule": "SOC223 - Suspicious Inbox Forwarding Rule Created",
+   "rule": "SOC343 - Suspicious Inbox Forwarding Rule Created",
    "time": "2026-06-17 09:47",
    "host": "EXO-TENANT-01",
    "user": "r.okafor",
@@ -1490,7 +1490,7 @@
   "verdict": "TP",
   "description": "Correlation rule linked archive creation on an engineering file server to recurring off-hours outbound transfers over three nights, performed with a service account and a binary masquerading as a Windows component.",
   "alert": {
-   "rule": "SOC240 - Archive Staging Followed by Repeated Outbound Transfer",
+   "rule": "SOC344 - Archive Staging Followed by Repeated Outbound Transfer",
    "time": "2026-06-22 01:34",
    "host": "FS-ENG-01",
    "user": "svc_deploy",
@@ -1524,7 +1524,7 @@
   "verdict": "TP",
   "description": "A new account was created and added to Domain Admins at 03:12, outside business hours. The change was made by a helpdesk service account and has no matching change ticket.",
   "alert": {
-   "rule": "SOC201 - User Added to Privileged Domain Group",
+   "rule": "SOC345 - User Added to Privileged Domain Group",
    "time": "2026-06-08 03:12",
    "host": "DC01-CORP",
    "user": "svc_helpdesk",
@@ -1557,7 +1557,7 @@
   "verdict": "FP",
   "description": "A user was added to the local Administrators group on a finance workstation. The change was made by an IT admin through the approved PAM tool during a scheduled change window.",
   "alert": {
-   "rule": "SOC202 - Local Administrators Group Membership Changed",
+   "rule": "SOC346 - Local Administrators Group Membership Changed",
    "time": "2026-06-09 10:34",
    "host": "WKS-FIN-023",
    "user": "adm.rlopez",
@@ -1590,7 +1590,7 @@
   "verdict": "TP",
   "description": "EDR flagged a high-integrity PowerShell process spawned by fodhelper.exe on an HR workstation, shortly after a registry change under the ms-settings class key.",
   "alert": {
-   "rule": "SOC214 - UAC Bypass Technique Detected",
+   "rule": "SOC347 - UAC Bypass Technique Detected",
    "time": "2026-06-10 14:52",
    "host": "WKS-HR-117",
    "user": "m.chavez",
@@ -1623,7 +1623,7 @@
   "verdict": "TP",
   "description": "A process spawned by w3wp.exe on a public web server is running as NT AUTHORITY\\SYSTEM after a suspicious binary was dropped in a temp directory.",
   "alert": {
-   "rule": "SOC221 - Service Account Token Impersonation to SYSTEM",
+   "rule": "SOC348 - Service Account Token Impersonation to SYSTEM",
    "time": "2026-06-12 21:18",
    "host": "WEB-IIS-02",
    "user": "IIS APPPOOL\\CorpPortal",
@@ -1656,7 +1656,7 @@
   "verdict": "TP",
   "description": "A standard user requested a certificate with an administrator UPN in the SAN, then used it to obtain a Kerberos TGT as the administrator. Directory replication requests followed from the same workstation.",
   "alert": {
-   "rule": "SOC237 - Certificate Issued with Mismatched Subject Alternative Name",
+   "rule": "SOC349 - Certificate Issued with Mismatched Subject Alternative Name",
    "time": "2026-06-15 14:21",
    "host": "CA01-CORP",
    "user": "d.okafor",
@@ -1690,7 +1690,7 @@
   "verdict": "TP",
   "description": "A finance workstation made HTTP requests every 60 seconds to a domain that matches the threat intel C2 feed. The requests came from a binary running out of a user-writable folder.",
   "alert": {
-   "rule": "SOC301 - Threat Intel C2 Domain Match",
+   "rule": "SOC350 - Threat Intel C2 Domain Match",
    "time": "2026-06-04 10:17",
    "host": "WKS-FIN-014",
    "user": "j.morales",
@@ -1723,7 +1723,7 @@
   "verdict": "FP",
   "description": "The beaconing detector flagged a server connecting to a rarely seen external domain at exact 60-second intervals. Check whether the process and destination are legitimate.",
   "alert": {
-   "rule": "SOC305 - Beaconing Behavior Detected",
+   "rule": "SOC351 - Beaconing Behavior Detected",
    "time": "2026-06-05 14:32",
    "host": "SRV-MON-02",
    "user": "SYSTEM",
@@ -1756,7 +1756,7 @@
   "verdict": "TP",
   "description": "An engineering workstation generated thousands of long TXT queries to a newly registered domain. The queries went straight to an external resolver instead of the internal DNS servers.",
   "alert": {
-   "rule": "SOC312 - DNS Tunneling Suspected",
+   "rule": "SOC352 - DNS Tunneling Suspected",
    "time": "2026-06-08 22:48",
    "host": "WKS-ENG-207",
    "user": "r.chen",
@@ -1789,7 +1789,7 @@
   "verdict": "TP",
   "description": "An IIS web server made outbound HTTPS requests to a public messaging API. This traffic has no business justification, and the IIS worker process was seen spawning a shell.",
   "alert": {
-   "rule": "SOC318 - Suspicious Outbound to Messaging API from Server",
+   "rule": "SOC353 - Suspicious Outbound to Messaging API from Server",
    "time": "2026-06-12 22:06",
    "host": "SRV-WEB-05",
    "user": "svc_iis",
@@ -1822,7 +1822,7 @@
   "verdict": "TP",
   "description": "An ML-based detector flagged a 30-minute jittered HTTPS beacon from an application server. The SNI points to a benign CDN hostname, but TLS-inspected traffic shows a different Host header. A suspicious scheduled task and lateral movement activity were also found.",
   "alert": {
-   "rule": "SOC330 - Anomalous Long-Interval Beaconing (ML)",
+   "rule": "SOC354 - Anomalous Long-Interval Beaconing (ML)",
    "time": "2026-06-16 03:25",
    "host": "SRV-APP-11",
    "user": "svc_backup",
@@ -1856,7 +1856,7 @@
   "verdict": "TP",
   "description": "EDR flagged a new HKCU Run key value on a finance workstation. The value launches an encoded, hidden PowerShell command from a user-writable folder.",
   "alert": {
-   "rule": "SOC221 - Suspicious Registry Run Key Modification",
+   "rule": "SOC355 - Suspicious Registry Run Key Modification",
    "time": "2026-06-02 09:17",
    "host": "WKS-FIN-014",
    "user": "j.alvarez",
@@ -1889,7 +1889,7 @@
   "verdict": "FP",
   "description": "A scheduled task was created on an HR laptop by SYSTEM and triggered the persistence rule. The task name resembles a software update job.",
   "alert": {
-   "rule": "SOC224 - Scheduled Task Created via Non-Interactive Session",
+   "rule": "SOC356 - Scheduled Task Created via Non-Interactive Session",
    "time": "2026-06-04 13:05",
    "host": "LT-HR-032",
    "user": "SYSTEM",
@@ -1922,7 +1922,7 @@
   "verdict": "TP",
   "description": "Sysmon detected a permanent WMI event subscription on an application server. It binds a timer-based filter to a command-line consumer that runs PowerShell.",
   "alert": {
-   "rule": "SOC236 - WMI Permanent Event Subscription Created",
+   "rule": "SOC357 - WMI Permanent Event Subscription Created",
    "time": "2026-06-08 22:48",
    "host": "SRV-APP-07",
    "user": "svc_backup",
@@ -1956,7 +1956,7 @@
   "verdict": "TP",
   "description": "A new auto-start service was installed on a file server with a binary in a non-standard location. The service name imitates a security product.",
   "alert": {
-   "rule": "SOC229 - New Service Installed with Suspicious Path",
+   "rule": "SOC358 - New Service Installed with Suspicious Path",
    "time": "2026-06-10 03:22",
    "host": "SRV-FILE-02",
    "user": "CORP\\adm.rsmith",
@@ -1990,7 +1990,7 @@
   "verdict": "TP",
   "description": "Entra ID audit logs show a new client secret on an existing enterprise application that holds mail permissions. The change was made by a helpdesk admin whose session was flagged as risky earlier in the day. The attacker is likely using a hijacked session token to keep access that survives a password reset.",
   "alert": {
-   "rule": "SOC251 - Credential Added to Application or Service Principal",
+   "rule": "SOC359 - Credential Added to Application or Service Principal",
    "time": "2026-06-15 16:34",
    "host": "Entra-ID-Tenant-contoso-test",
    "user": "t.nakamura@contoso.example",

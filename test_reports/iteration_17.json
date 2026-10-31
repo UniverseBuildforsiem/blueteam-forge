@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 17: tested course content counts (backend + landing/courses cards + dialog) and the 60 new SOC challenges (API, table, difficulty column, combined filters, count, submit/grading, deep-link regression). Everything requested works. Backend 6/6 pytest pass. Frontend: all checks pass.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "startup seed_collection('challenges')", "issue": "seed_collection only inserts challenges whose id is missing, and seed_data.py setdefault('difficulty') only changes the in-memory seed. If a database (e.g. production) already has the 5 original challenges without a difficulty field, they never get one. Their Difficulty cell is then blank and choosing any difficulty filter hides them. The preview DB already has difficulty on all 65, so I couldn't reproduce this here; it comes from reading the code. Fix: add a startup step that sets difficulty on challenges missing it, e.g. update_many({id, difficulty:{$exists:false}}, {$set:{difficulty}})."},
+      {"endpoint": "assets/challenges.json", "issue": "Rule IDs are reused across unrelated alerts: SOC201 appears 6 times (e.g. 'User Reported Phishing Email' and 'SSH Brute Force Detected'), and SOC204, SOC215, SOC202 3 times each. This is cosmetic, but searching by rule returns mixed categories."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/app/challenges", "issues": ["The 'Solved' status filter and the 'N solved' count include any submission, even wrong-verdict 0/100 attempts. 'Attempted' would be a more accurate label, or count only verdict_correct submissions."]},
+      {"screen": "/courses header copy", "issues": ["The subtitle still says 'Click a course to see the matching labs and drills'. This is correct for the dialog, so just noting it."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_course_content_challenges.py", "/app/test_reports/pytest/pytest_iter17.xml"],
+  "action_items": [
+    "Add a startup step that backfills difficulty on existing challenge docs that lack it, so production DBs created before this change show and filter the 5 original challenges",
+    "Optional: give each of the 60 new challenges a unique rule ID",
+    "Optional: rename the 'Solved' filter to 'Attempted', or count only correct verdicts"
+  ],
+  "critical_code_review_comments": [
+    "routes_practice list_challenges uses to_list(200). That is fine for 65 challenges but will silently cut off past 200.",
+    "Verdict split is 45 TP / 15 FP, which is reasonable. Several FP keyword lists include the phrase 'false positive', which rewards writing the verdict in the report. That is acceptable.",
+    "contentLabel correctly returns an empty string when all counts are 0, and the dialog then falls back to c.type."
+  ],
+  "updated_files": ["/app/backend/tests/test_course_content_challenges.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Demo student submitted challenge ch-02-2 (wrong verdict, 0/100) through the UI, plus one ch-02-x submission and a wrong-verdict submission on ch-01-2 through pytest (reports prefixed TEST_).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Course content counts verified against all 13 store IDs. Landing grid shows 8 cards and /courses shows 13. /app/challenges shows 65 rows, 12 categories plus 'All', and the Easy/Medium/Hard column. Filters combine correctly (Ransomware 6, Ransomware+Hard 2; Open + Solved = 65). The deep link ?case=ch-phish-01 opens the briefing and then the investigation."
+}

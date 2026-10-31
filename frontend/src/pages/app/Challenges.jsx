@@ -81,7 +81,7 @@ export default function Challenges() {
   const [f, setF] = useState({ q: "", cat: "All", diff: "All", status: "All" });
   const cats = ["All", ...Array.from(new Set(cs.map((c) => c.category)))];
   const shown = cs.filter((c) => (f.cat === "All" || c.category === f.cat) && (f.diff === "All" || c.difficulty === f.diff)
-    && (f.status === "All" || (f.status === "Solved" ? !!c.submission : !c.submission))
+    && (f.status === "All" || (f.status === "Attempted" ? !!c.submission : !c.submission))
     && `${c.title} ${c.alert.rule} ${c.alert.host}`.toLowerCase().includes(f.q.toLowerCase()));
   const sel = (k, opts) => (
     <select value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} className="bg-black/40 border border-white/10 text-sm font-mono px-2 py-1.5 rounded-sm focus:border-cyan-400 outline-none" data-testid={`challenge-filter-${k}`}>
@@ -92,8 +92,8 @@ export default function Challenges() {
       <PageHeader eyebrow="// alert queue" title="SOC Challenges" sub="Investigate each alert, decide True or False Positive, and write a short report. Auto-graded on verdict and evidence coverage." />
       <div className="flex flex-wrap items-center gap-2 mb-4" data-testid="challenge-filters">
         <input value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} placeholder="Search alerts, rules, hosts" className="field !w-64" data-testid="challenge-search" />
-        {sel("cat", cats)}{sel("diff", ["All", "Easy", "Medium", "Hard"])}{sel("status", ["All", "Open", "Solved"])}
-        <span className="ml-auto text-xs font-mono text-slate-400" data-testid="challenge-count">{shown.length} of {cs.length} alerts · {cs.filter((c) => c.submission).length} solved</span>
+        {sel("cat", cats)}{sel("diff", ["All", "Easy", "Medium", "Hard"])}{sel("status", ["All", "Open", "Attempted"])}
+        <span className="ml-auto text-xs font-mono text-slate-400" data-testid="challenge-count">{shown.length} of {cs.length} alerts · {cs.filter((c) => c.submission?.verdict_correct).length} solved correctly</span>
       </div>
       <Glass className="overflow-x-auto">
         <table className="w-full text-sm" data-testid="challenges-table">
