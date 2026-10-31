@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { GraduationCap, CheckCircle2, Circle, Wrench, Share2, Linkedin, Download, Copy, Zap, ArrowUpRight } from "lucide-react";
+import { CheckCircle2, Circle, Wrench, Share2, Linkedin, Download, Copy, Zap, ArrowUpRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { api, fmtDate } from "../../lib/api";
 import { Glass, PageHeader, Empty } from "../../components/common";
@@ -50,7 +50,7 @@ function CourseRow({ r, bonus }) {
     <Glass className="p-5 grid lg:grid-cols-[1fr_1.2fr] gap-6" data-testid={`mycourse-${c.id}`}>
       <div>
         <div className="flex items-start gap-4">
-          <div className="h-14 w-14 shrink-0 grid place-items-center border-2 border-green-400/60 bg-green-500/10 rotate-45"><GraduationCap className="h-6 w-6 text-cyan-300 -rotate-45" /></div>
+          <img src="/badges/course.jpg" alt={r.badge_name} className="h-16 w-16 shrink-0 rounded-full object-cover border-2 border-slate-300/60" />
           <div>
             <div className="eyebrow">badge · watched {fmtDate(r.watched_at)}</div>
             <h3 className="font-bold text-lg mt-1" data-testid={`mycourse-badge-${c.id}`}>{r.badge_name}</h3>

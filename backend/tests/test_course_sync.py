@@ -79,7 +79,7 @@ class TestRecommended:
         assert requests.get(f"{BASE_URL}/api/courses/recommended").status_code == 401
 
     def test_student(self):
-        s = login("student@socforge.io", "Student@123")
+        s = login("student@socprofessionals.academy", "Student@123")
         r = s.get(f"{BASE_URL}/api/courses/recommended")
         assert r.status_code == 200
         d = r.json()

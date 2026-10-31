@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 10: tested the SOCProfessionals Academy rebrand and the badge email (backend and frontend). Backend: new pytest file with 15 passing tests and 1 skipped (no certificates in the DB). Earlier suites (bonus/share, alerts/badges, main API) were updated to the new emails and pass: 44 passed, 1 skipped. Badge email checked end to end. A fresh student at delivered+badge...@resend.dev marked course 585979 watched, then solved ctf-net-2. The progress call then returned awarded=1 and the backend log shows 'POST .../email/send 202 Accepted'. No second email on a repeat progress or dashboard call. No email when course_emails is false. A captured in-process run of send_badge_email confirmed the email contents: badge PNG img, LinkedIn share-offsite with the encoded share url, 'Share on LinkedIn', the unsubscribe link and the brand. It also passes the _assert_safe_email check. The unsubscribe link sets course_emails to false. Frontend: the browser tab title and the brand logo (SOC / Professionals / ACADEMY) are correct. No SOCForge text on /, /courses, /catalog, /talent, /login, /register, /app, /app/drill, /app/courses, /app/certificates, /app/billing, /app/kali, /app/ctf. The Kali prompt is analyst@socpro-kali. The dashboard switch reads 'Email me about new courses & badges'. Regressions pass: course grid (13 cards), course popup, My courses and the share dialog (LinkedIn link and a 1200px image). ONE BUG: /u/demo still shows 'Join SOCForge'.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "logger name", "issue": "Not user-visible. Earlier startup logs used the logger name 'socforge'; it is now 'socpro'. Fine."}
+  ]},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PublicProfile CTA", "issue": "Button text still reads 'Join SOCForge' (frontend/src/pages/PublicProfile.jsx line 99)", "selector": "[data-testid='profile-cta-signup']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "index.html", "issues": ["meta description is still 'A product of emergent.sh'. Consider a SOCProfessionals Academy description for SEO."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_rebrand_badge_email.py", "/app/test_reports/pytest/iter10_rebrand.xml", "/app/test_reports/pytest/iter10_regression.xml"],
+  "action_items": [
+    "Change 'Join SOCForge' to 'Join SOCProfessionals Academy' in PublicProfile.jsx (profile-cta-signup)",
+    "Optional: update the meta description in public/index.html"
+  ],
+  "critical_code_review_comments": [
+    "In core.send_email, _assert_safe_email runs outside the try. If it raises inside the asyncio.create_task badge email, the error only shows as 'Task exception was never retrieved' and is not logged as a warning. Consider wrapping it in try/except or logging it.",
+    "asyncio.create_task in courses_progress keeps no reference to the task, so it can be garbage-collected before it finishes (rare). Consider BackgroundTasks or keeping a reference in a set.",
+    "rebrand() skips a @socforge.io user if the target email already exists. That user keeps the old email (none exist now)."
+  ],
+  "updated_files": ["/app/backend/tests/test_rebrand_badge_email.py", "/app/backend/tests/*.py (replaced @socforge.io with @socprofessionals.academy)"],
+  "success_rate": {"backend": "100%", "frontend": "95%"},
+  "seed_data_creation": "Test students delivered+badge/off/unsub*@resend.dev are created and cleaned up by the module fixture. The in-process HTML test may give the seeded demo student a share_token (harmless).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "test_socforge_api.py needs REACT_APP_BACKEND_URL exported or it fails at collection. Other files fall back to frontend/.env. No certificates exist in the DB, so the PDF test is skipped; the PDF header '> SOCPROFESSIONALS ACADEMY' was confirmed by code review. The certificates page had no certificates, so the LinkedIn organizationName link was confirmed by code review only (Account.jsx)."
+}

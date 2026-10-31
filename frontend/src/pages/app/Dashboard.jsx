@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Flame, Trophy, Zap, CalendarClock, Award, Lock, GraduationCap } from "lucide-react";
+import { Flame, Trophy, Zap, CalendarClock, Award } from "lucide-react";
+import { BadgeTile } from "../../components/BadgeTile";
 import { api, fmtDate } from "../../lib/api";
 import RecommendedCourse from "../../components/RecommendedCourse";
 import { toast } from "sonner";
@@ -75,12 +76,8 @@ export default function Dashboard() {
         </Glass>
         <Glass className="p-6">
           <h3 className="font-bold flex items-center gap-2 mb-4"><Award className="h-4 w-4 text-cyan-300" />Badges</h3>
-          <div className="grid grid-cols-3 gap-3">
-            {d.badges.map((b) => (
-              <div key={b.id} title={b.description} data-testid={`badge-${b.id}`} className={`p-3 text-center border rounded-sm ${b.earned ? "border-green-400/50 bg-green-500/10" : "border-white/5 opacity-50"}`}>
-                {b.earned ? (b.kind === "course" ? <GraduationCap className="h-5 w-5 mx-auto text-cyan-300" /> : <Zap className="h-5 w-5 mx-auto text-green-400" />) : <Lock className="h-5 w-5 mx-auto text-slate-500" />}
-                <div className="text-[10px] font-mono mt-2 leading-tight">{b.name}</div>
-              </div>))}
+          <div className="grid grid-cols-3 gap-2">
+            {d.badges.map((b) => <BadgeTile key={b.id} b={b} size="sm" testId={`badge-${b.id}`} />)}
           </div>
         </Glass>
         <Glass className="p-6">

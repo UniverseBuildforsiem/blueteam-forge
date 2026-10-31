@@ -16,7 +16,7 @@ CRON = ENV["WEBHOOK_CRON_SECRET"].strip('"')
 JWT = ENV["JWT_SECRET"].strip('"')
 db = MongoClient(ENV["MONGO_URL"].strip('"'))[ENV["DB_NAME"].strip('"')]
 
-STUDENT = {"email": "student@socforge.io", "password": "Student@123"}
+STUDENT = {"email": "student@socprofessionals.academy", "password": "Student@123"}
 TEST_CID = 584863
 
 

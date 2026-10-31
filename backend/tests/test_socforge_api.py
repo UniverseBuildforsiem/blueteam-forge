@@ -32,17 +32,17 @@ def cleanup():
 
 @pytest.fixture(scope="session")
 def admin():
-    return login("admin@socforge.io", "Admin@123")
+    return login("admin@socprofessionals.academy", "Admin@123")
 
 
 @pytest.fixture(scope="session")
 def instructor():
-    return login("instructor@socforge.io", "Instructor@123")
+    return login("instructor@socprofessionals.academy", "Instructor@123")
 
 
 @pytest.fixture(scope="session")
 def student():
-    return login("student@socforge.io", "Student@123")
+    return login("student@socprofessionals.academy", "Student@123")
 
 
 @pytest.fixture(scope="session")
@@ -62,26 +62,26 @@ class TestAuth:
         assert requests.get(f"{API}/").json()["status"] == "ok"
 
     def test_login_cookies_httponly(self):
-        r = requests.post(f"{API}/auth/login", json={"email": "student@socforge.io", "password": "Student@123"})
+        r = requests.post(f"{API}/auth/login", json={"email": "student@socprofessionals.academy", "password": "Student@123"})
         assert r.status_code == 200
         sc = r.headers.get("set-cookie", "")
         assert "access_token" in sc and "HttpOnly" in sc
         assert "password_hash" not in r.json()
 
     def test_bcrypt_hash(self):
-        u = MONGO.users.find_one({"email": "admin@socforge.io"})
+        u = MONGO.users.find_one({"email": "admin@socprofessionals.academy"})
         assert u["password_hash"].startswith("$2b$")
 
     def test_bearer_accepted(self):
-        r = requests.post(f"{API}/auth/login", json={"email": "student@socforge.io", "password": "Student@123"})
+        r = requests.post(f"{API}/auth/login", json={"email": "student@socprofessionals.academy", "password": "Student@123"})
         tok = r.cookies.get("access_token")
         me = requests.get(f"{API}/auth/me", headers={"Authorization": f"Bearer {tok}"})
-        assert me.status_code == 200 and me.json()["email"] == "student@socforge.io"
+        assert me.status_code == 200 and me.json()["email"] == "student@socprofessionals.academy"
 
     def test_register_validation(self):
         r = requests.post(f"{API}/auth/register", json={"name": "X Y", "email": "bad-email", "username": "abc_x", "password": "Passw0rd!"})
         assert r.status_code == 400
-        r = requests.post(f"{API}/auth/register", json={"name": "X Y", "email": "student@socforge.io", "username": f"u{RID}", "password": "Passw0rd!"})
+        r = requests.post(f"{API}/auth/register", json={"name": "X Y", "email": "student@socprofessionals.academy", "username": f"u{RID}", "password": "Passw0rd!"})
         assert r.status_code == 400
 
     def test_register_onboarding(self, newuser):

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Award, Flame, Zap, BadgeCheck, ExternalLink, Briefcase, MapPin, Send, GraduationCap } from "lucide-react";
+import { Award, Flame, Zap, BadgeCheck, ExternalLink, Briefcase, MapPin, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { api, errMsg } from "../lib/api";
 import { Glass, Stat } from "../components/common";
+import { BadgeTile } from "../components/BadgeTile";
 import PublicNav, { Footer } from "../components/PublicNav";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$/;
@@ -87,8 +88,8 @@ export default function PublicProfile() {
               <p className="text-xs text-slate-500 mt-2 font-mono">70%+ accuracy on quizzes or triage verdicts in this area</p></>}
             <SkillChart data={p.skill_scores} />
             <h2 className="text-lg font-bold mt-12 mb-4 flex items-center gap-2"><Zap className="h-5 w-5 text-green-400" />Badges</h2>
-            {p.badges.length ? <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="profile-badges">
-              {p.badges.map((b) => <Glass key={b.id} className="p-4 !border-green-400/40" data-testid={`profile-badge-${b.id}`}>{b.kind === "course" ? <GraduationCap className="h-5 w-5 text-cyan-300" /> : <Zap className="h-5 w-5 text-green-400" />}<div className="font-mono text-sm mt-2">{b.name}</div><div className="text-xs text-slate-500">{b.description}</div></Glass>)}
+            {p.badges.length ? <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3" data-testid="profile-badges">
+              {p.badges.map((b) => <BadgeTile key={b.id} b={b} testId={`profile-badge-${b.id}`} />)}
             </div> : <p className="text-sm font-mono text-slate-500">// no badges yet</p>}
             <h2 className="text-lg font-bold mt-12 mb-4 flex items-center gap-2"><Award className="h-5 w-5 text-cyan-400" />Certificates</h2>
             {p.certificates.length ? <div className="grid md:grid-cols-2 gap-3" data-testid="profile-certificates">
@@ -96,7 +97,7 @@ export default function PublicProfile() {
                 <div className="flex-1"><div className="font-bold">{c.path_title}</div><div className="text-xs font-mono text-slate-500">{c.id} · {c.score}% · {c.issued_at.slice(0, 10)}</div></div>
                 <Link to={`/verify/${c.id}`} className="ghost-btn !py-1 !text-xs" data-testid={`profile-cert-verify-${c.id}`}><ExternalLink className="h-3.5 w-3.5" />Verify</Link></Glass>)}
             </div> : <p className="text-sm font-mono text-slate-500">// no certificates yet</p>}
-            <Glass className="p-6 mt-14 flex flex-wrap items-center justify-between gap-4"><span className="text-slate-300">Train on the same alerts as {p.name.split(" ")[0]}.</span><Link to="/register" className="glow-btn" data-testid="profile-cta-signup">Join SOCForge</Link></Glass>
+            <Glass className="p-6 mt-14 flex flex-wrap items-center justify-between gap-4"><span className="text-slate-300">Train on the same alerts as {p.name.split(" ")[0]}.</span><Link to="/register" className="glow-btn" data-testid="profile-cta-signup">Join SOCProfessionals Academy</Link></Glass>
           </div>
         )}
       </div>

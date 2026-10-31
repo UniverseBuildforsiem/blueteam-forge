@@ -77,7 +77,7 @@ def test_drill_submit_flow(client):
 
 def test_drill_deterministic_across_users(client):
     s2 = requests.Session()
-    s2.post(f"{BASE_URL}/api/auth/login", json={"email": "student@socforge.io", "password": "Student@123"})
+    s2.post(f"{BASE_URL}/api/auth/login", json={"email": "student@socprofessionals.academy", "password": "Student@123"})
     a = client.get(f"{BASE_URL}/api/drill/today").json()
     b = s2.get(f"{BASE_URL}/api/drill/today").json()
     assert a["id"] == b["id"] and a["title"] == b["title"] and a["evidence"] == b["evidence"]

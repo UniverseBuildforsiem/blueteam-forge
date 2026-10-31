@@ -25,5 +25,5 @@ else:
         for col in ("drill_submissions", "drill_freezes", "activity", "challenge_submissions", "certificates"):
             mc[col].delete_many({"user_id": u["id"]})
         mc.users.delete_one({"id": u["id"]})
-    mc.users.update_one({"email": "student@socforge.io"}, {"$set": {"public_profile": True}})
+    mc.users.update_one({"email": "student@socprofessionals.academy"}, {"$set": {"public_profile": True}})
     print("cleaned")

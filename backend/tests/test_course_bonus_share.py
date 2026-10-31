@@ -176,7 +176,7 @@ def test_share_card_flow(created):
 # Demo student sanity
 def test_demo_student_progress():
     s = requests.Session()
-    assert s.post(f"{API}/auth/login", json={"email": "student@socforge.io", "password": "Student@123"}).status_code == 200
+    assert s.post(f"{API}/auth/login", json={"email": "student@socprofessionals.academy", "password": "Student@123"}).status_code == 200
     d = s.get(f"{API}/me/courses/progress").json()
     r = row(d, WS)
     assert r and r["bonus_paid"] is True and d["awarded"] == []

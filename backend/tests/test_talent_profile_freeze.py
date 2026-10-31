@@ -121,7 +121,7 @@ def test_streak_share_page_points_to_profile(tal):
 # ---- Leaderboards public flag ----
 def test_leaderboards_public_flag():
     s = requests.Session()
-    assert s.post(f"{BASE_URL}/api/auth/login", json={"email": "student@socforge.io", "password": "Student@123"}).status_code == 200
+    assert s.post(f"{BASE_URL}/api/auth/login", json={"email": "student@socprofessionals.academy", "password": "Student@123"}).status_code == 200
     lb = s.get(f"{BASE_URL}/api/leaderboard").json()
     assert lb and all("public" in x and "username" in x for x in lb)
     sb = s.get(f"{BASE_URL}/api/ctf/scoreboard").json()
