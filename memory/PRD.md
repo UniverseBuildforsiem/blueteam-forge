@@ -46,6 +46,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - New course alerts (2026-06): sync detects never-seen course ids and emails every active student with course_emails != false (db.course_alerts unique user+course, no resend); dashboard switch (PATCH /api/me/preferences {course_emails}); signed unsubscribe link GET /api/public/unsubscribe/course-alerts
 - Course completion badges: POST/DELETE /api/me/courses/{id}/complete, GET /api/me/courses; badges kind 'course' in dashboard badges and public profile; "Mark as watched" in course popup
 - Note: seed accounts (@socforge.io) are undeliverable for email (422) — use real addresses or delivered+x@resend.dev to test emails
+- Watched course bonus (2026-06): +100 XP once per course (db.course_bonus unique) when a trackable matching item is completed after watched_at; SIEM/Kali/Tools untracked; evaluated on GET /api/me/courses/progress and /api/dashboard (toasts via awarded/course_bonus)
+- Course badge share card: POST /api/me/courses/{id}/share-card -> /api/public/course-badge/{token}/{id}(.png) PIL card + OG page (LinkedIn)
+- My courses page /app/courses: watched courses, badge, bonus status, matching items done/to finish, share
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

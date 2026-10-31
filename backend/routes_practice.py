@@ -154,7 +154,7 @@ async def lab_report(lid: str, body: ReportIn, user=Depends(get_current_user)):
     prog = await db.lab_progress.find_one({"user_id": user["id"], "lab_id": lid}, NO_ID) or {}
     if len(prog.get("answered", {})) < len(l["tasks"]):
         raise HTTPException(400, "Solve all tasks before submitting the final report")
-    await db.lab_progress.update_one({"user_id": user["id"], "lab_id": lid}, {"$set": {"report": body.report, "report_submitted": True, "report_at": now_iso(), "user_name": user["name"], "lab_title": l["title"]}})
+    await db.lab_progress.update_one({"user_id": user["id"], "lab_id": lid}, {"$set": {"report": body.report, "report_submitted": True, "report_at": prog.get("report_at") or now_iso(), "user_name": user["name"], "lab_title": l["title"]}})
     if not prog.get("report_submitted"):
         await award(user["id"], 50, f"Submitted final report for lab '{l['title']}'")
     return {"ok": True}

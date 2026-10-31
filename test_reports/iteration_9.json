@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 9: tested the watched-course bonus XP, course badge share card and the My courses page, on both backend and frontend. Backend: 8 of 8 pytest tests pass. They cover the progress API structure, auth (401), the empty state, a +100 bonus paid exactly once with the 'Course bonus' activity and xp=100, no bonus when the completion came before watching (done=true, done_after_watch=false), the bonus being applied through /api/dashboard, no double pay when 6 requests run in parallel (unique index), no repay after unwatch + rewatch, the share-card 404 before watching, a 1200x627 PNG, HTML with og:title/og:image and a redirect to /u/{username}, 404 for a bad token or an unwatched course, and the demo student having the bonus already paid. Frontend E2E with a fresh student: nav-my-courses goes to /app/courses and shows the empty state. Browse goes to /courses. Marking 585979 as watched works. Before the flag the page shows 'Finish any matching item...', 0/3 done, and Kali/SIEM marked PRACTICE TOOL. The ctf-net item link goes to /app/ctf. Solving ctf-net-2 and going back to My courses shows the toast '+100 XP course bonus: ...', the bonus earned and 1/3 done. XP went from 0 to 200 (flag 100 + bonus 100). The share dialog image loads at 1200x627. The LinkedIn href is share-offsite with an encoded share_url. The download href points to the .png. Copy shows the 'Link copied' toast. No console errors.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "/api/dashboard", "issue": "The dashboard calls courses_progress and pays the bonus silently without returning 'awarded'. A student who opens the dashboard first (the default landing page) never sees the '+100 XP course bonus' toast, because My courses later returns awarded []. Only the activity feed shows it."},
+    {"endpoint": "/api/labs/{id}/report", "issue": "Each resubmission overwrites report_at. Resubmitting an old lab report after watching a course counts as 'completed after watch' and pays the bonus without new work."}
+  ]},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [
+    {"screen": "My courses", "issues": ["The 'practice tool' label (text-slate-500, 10px) has low contrast on the dark card, which is minor."]}
+  ]},
+  "test_report_links": ["/app/backend/tests/test_course_bonus_share.py", "/app/test_reports/pytest/pytest_iter9.xml"],
+  "action_items": [
+    "Optional: return 'awarded' from /api/dashboard (or keep an unseen flag in course_bonus) so the bonus toast also appears on the dashboard",
+    "Optional: only set report_at on the first report submission so resubmitting doesn't trigger the bonus"
+  ],
+  "critical_code_review_comments": [
+    "The Wireshark course title contains 'Kali', so it also matches the Kali rule and gets 5 items (ctf-net, kali, siem, lab-brute, ctf-for) instead of the 3 in the review request. This is expected given RULES, but check it is what you intend.",
+    "courses_progress runs 1 + N*items DB queries per call and runs on every dashboard load. That is fine at the current scale (100 courses max)."
+  ],
+  "updated_files": ["/app/backend/tests/test_course_bonus_share.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Test users (test_bonus_*, tui_*) were created and then deleted, along with their completions, bonus records, ctf_solves and activity",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The activity collection is 'activity' (not 'activities'). pytest.ini adds xdist flags (-n), so don't pass -p no:xdist. Course 585979 matches both the wireshark and kali rules. CTF flags: ctf-net-1 SOCF{60}, ctf-net-2 SOCF{3389}. For a fresh user, register and then call /api/auth/onboarding {goal:'SOC L1'}."
+}

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Flame, Trophy, Zap, CalendarClock, Award, Lock, GraduationCap } from "lucide-react";
 import { api, fmtDate } from "../../lib/api";
 import RecommendedCourse from "../../components/RecommendedCourse";
+import { toast } from "sonner";
 import { Glass, PageHeader, ProgressRing, Empty, Stat, SeverityBadge, ProfileLink } from "../../components/common";
 
 const RANK_COLORS = { Recruit: "text-slate-300", Analyst: "text-cyan-300", Hunter: "text-orange-300", Elite: "neon-green" };
@@ -28,7 +29,10 @@ function DrillBanner() {
 export default function Dashboard() {
   const [d, setD] = useState(null);
   useEffect(() => {
-    const load = () => api.get("/dashboard").then((r) => setD(r.data)).catch(() => {});
+    const load = () => api.get("/dashboard").then((r) => {
+      setD(r.data);
+      r.data.course_bonus.forEach((t) => toast.success(`+${r.data.bonus_xp} XP course bonus: ${t}`));
+    }).catch(() => {});
     load();
     const t = setInterval(load, 10000);
     return () => clearInterval(t);

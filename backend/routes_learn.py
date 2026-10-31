@@ -301,13 +301,13 @@ async def leaderboard(user=Depends(get_current_user)):
 @router.get("/dashboard")
 async def dashboard(user=Depends(get_current_user)):
     from routes_courses import courses_progress
-    await courses_progress(user)
+    bonus = await courses_progress(user)
     user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password_hash": 0})
     paths = await list_paths(user)
     xp = user.get("xp", 0)
     nxt = next((t for t in (500, 1500, 3000) if xp < t), None)
     upcoming = [s for s in await list_sessions(user) if not s["is_past"]][:3]
-    return {"user": user, "xp": xp, "rank": rank_for(xp), "next_rank_xp": nxt, "streak": user.get("streak", 0),
+    return {"user": user, "xp": xp, "rank": rank_for(xp), "next_rank_xp": nxt, "streak": user.get("streak", 0), "course_bonus": bonus["awarded"], "bonus_xp": bonus["bonus_xp"],
             "badges": await compute_badges(user), "paths": paths, "current_path": next((p for p in paths if p["id"] == user.get("current_path")), paths[0] if paths else None),
             "upcoming_sessions": upcoming, "activity": await db.activity.find({"user_id": user["id"]}, NO_ID).sort("created_at", -1).to_list(8),
             "leaderboard": await leaderboard(user),

@@ -35,7 +35,7 @@ function ShareBadge({ cid }) {
 
 const ItemRow = ({ i, cid }) => {
   const Icon = !i.trackable ? Wrench : i.done ? CheckCircle2 : Circle;
-  const tone = !i.trackable ? "text-slate-500" : i.done ? "text-green-400" : "text-orange-300";
+  const tone = !i.trackable ? "text-slate-400" : i.done ? "text-green-400" : "text-orange-300";
   return (
     <Link to={i.link} data-testid={`mycourse-item-${cid}-${i.key}`} className="flex items-center gap-3 px-3 py-2 border border-white/10 hover:border-cyan-400/60 hover:bg-cyan-500/5 transition-colors">
       <Icon className={`h-4 w-4 ${tone}`} /><span className="text-sm flex-1">{i.title}</span>
