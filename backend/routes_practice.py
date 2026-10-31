@@ -188,6 +188,12 @@ class ReportIn(BaseModel):
     report: str = Field(min_length=20, max_length=8000)
 
 
+KW_VARIANTS = {"brute force": ["brute force", "bruteforce", "brute forcing"], "dns tunneling": ["dns tunneling", "dns tunnel"], "isolate": ["isolate", "isolation", "isolated"],
+               "reset": ["reset", "rotate", "rotation"], "rotate": ["rotate", "rotation", "reset"], "block": ["block", "blocked", "blocking"], "revoke": ["revoke", "revoked", "revocation"],
+               "web shell": ["web shell", "webshell"], "sql injection": ["sql injection", "sqli"], "kerberoasting": ["kerberoast"], "password spray": ["password spray", "spraying"],
+               "inbox rule": ["inbox rule", "mailbox rule"], "recall": ["recall", "reversal", "reverse the transfer"], "backup": ["backup", "back up", "restore"], "patch": ["patch", "update"]}
+
+
 @router.post("/labs/{lid}/report")
 async def lab_report(lid: str, body: ReportIn, user=Depends(get_current_user)):
     l = await db.labs.find_one({"id": lid}, NO_ID)
@@ -197,8 +203,8 @@ async def lab_report(lid: str, body: ReportIn, user=Depends(get_current_user)):
     if len(prog.get("answered", {})) < len(l["tasks"]):
         raise HTTPException(400, "Solve all tasks before submitting the final report")
     kws = l.get("report_keywords", [])
-    low = body.report.lower()
-    hits = [k for k in kws if k.lower() in low]
+    low = body.report.lower().replace("tunnelling", "tunneling").replace("-", " ")
+    hits = [k for k in kws if any(v.lower().replace("-", " ") in low for v in KW_VARIANTS.get(k, [k]))]
     score = round(100 * len(hits) / len(kws)) if kws else 100
     best = max(score, prog.get("report_score") or 0)
     await db.lab_progress.update_one({"user_id": user["id"], "lab_id": lid}, {"$set": {"report": body.report, "report_submitted": True, "report_at": prog.get("report_at") or now_iso(),

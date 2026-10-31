@@ -110,6 +110,10 @@ def parse_spl(q):
             preds.append(lambda e, t=t: match(e, t))
         i += 1
     for s in segs[1:]:
+        m = re.match(r"^(stats|top)\s+count\s*$", s, re.I)
+        if m:
+            ops.append(("stats", []))
+            continue
         m = re.match(r"^(stats|top)\s+(?:count\s+)?(?:by\s+)?(.+)$", s, re.I)
         if m:
             ops.append(("stats", [fld(x) for x in re.split(r"[,\s]+", m.group(2)) if x and x.lower() != "by"]))
@@ -193,9 +197,10 @@ def parse_kql(q):
         if m:
             preds.append(lambda e, t=m.group(1): match(e, t))
             continue
-        m = re.match(r"^summarize\s+.*?\bby\s+(.+)$", s, re.I)
+        m = re.match(r"^summarize\s+(.*?)(?:\bby\s+(.+))?$", s, re.I)
         if m:
-            ops.append(("stats", [fld(x) for x in m.group(1).split(",") if x.strip() and not x.strip().lower().startswith("bin(")]))
+            by = re.sub(r"bin\([^)]*\)", "", m.group(2) or "")
+            ops.append(("stats", [fld(x) for x in by.split(",") if x.strip()]))
             continue
         m = re.match(r"^(project|distinct)\s+(.+)$", s, re.I)
         if m:
@@ -231,8 +236,8 @@ def run(logs, q, lang="spl", start="", end=""):
     stats = columns = None
     for op in ops:
         if op[0] == "stats":
-            cnt = Counter(" · ".join(str(e.get(f, "-")) for f in op[1]) for e in res)
-            stats = {"field": " · ".join(op[1]), "rows": [{"value": k, "count": v} for k, v in cnt.most_common(50)]}
+            cnt = Counter(" · ".join(str(e.get(f, "-")) for f in op[1]) or "all events" for e in res)
+            stats = {"field": " · ".join(op[1]) or "count", "rows": [{"value": k, "count": v} for k, v in cnt.most_common(50)]}
         elif op[0] == "table":
             columns = op[1]
         elif op[0] == "head":
@@ -246,7 +251,9 @@ def run(logs, q, lang="spl", start="", end=""):
             if stats and f in ("count", "count_", "_count"):
                 stats["rows"].sort(key=lambda r: r["count"], reverse=desc)
             else:
-                res.sort(key=lambda e: (num(e.get(f)) if num(e.get(f)) is not None else str(e.get(f, ""))) if f != "_time" else e["_time"], reverse=desc)
+                has = [e for e in res if e.get(f) is not None]
+                has.sort(key=lambda e: e["_time"] if f == "_time" else ((0, num(e[f]), "") if num(e[f]) is not None else (1, 0, str(e[f]))), reverse=desc)
+                res = has + [e for e in res if e.get(f) is None]
         elif op[0] == "dedup":
             seen, out = set(), []
             for e in res:

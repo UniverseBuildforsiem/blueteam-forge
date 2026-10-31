@@ -27,7 +27,7 @@ function UnlockBox({ price, onPaid, from }) {
   const [phone, setPhone] = useState("");
   useEffect(() => { api.get("/payments/config").then((r) => setCfg(r.data)).catch(() => {}); }, []);
   if (!user) return <Link to="/login" state={{ from }} className="glow-btn w-full justify-center" data-testid="sop-login-to-unlock">Log in to unlock all SOPs</Link>;
-  if (!cfg) return null;
+  if (!cfg) return <div className="h-24 bg-white/5 animate-pulse rounded-sm" data-testid="sop-unlock-loading" />;
   const rzp = () => payRazorpay(ITEM, "SOC SOP Library - Full Access", onPaid, (e) => toast.error(errMsg(e))).catch((e) => toast.error(errMsg(e)));
   const cf = () => (/^\d{10}$/.test(phone) ? payCashfree(ITEM, phone, cfg.cashfree_mode).catch((e) => toast.error(errMsg(e))) : toast.error("Enter a 10-digit mobile number for Cashfree"));
   return (

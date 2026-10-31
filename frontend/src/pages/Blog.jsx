@@ -42,7 +42,8 @@ export function BlogList() {
         <p className="text-slate-400 mt-4 max-w-2xl text-sm md:text-base">Fresh stories from The Hacker News and BleepingComputer every morning, summarised for analysts with the hunts, detections and fixes to run on your shift.</p>
         <div className="flex flex-wrap items-center gap-2 mt-8" data-testid="blog-filters">
           <div className="flex items-center gap-2 bg-black/40 border border-white/10 px-3 rounded-sm"><Search className="h-4 w-4 text-slate-500" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="Search posts" className="bg-transparent py-2 text-sm outline-none w-48" data-testid="blog-search" /></div>
+            <input value={q} onChange={(e) => { setQ(e.target.value); if (!e.target.value) load(cat, ""); }} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="Search posts" className="bg-transparent py-2 text-sm outline-none w-48" data-testid="blog-search" />
+            <button onClick={() => load()} className="text-xs font-mono text-cyan-300 hover:text-cyan-200" data-testid="blog-search-button">go</button></div>
           {["", ...(d?.categories || [])].map((c) => <button key={c || "all"} onClick={() => setCat(c)} data-testid={`blog-cat-${c || "all"}`}
             className={`px-3 py-1.5 text-xs font-mono border rounded-sm transition-colors ${cat === c ? "border-cyan-400 text-cyan-300 bg-cyan-500/10" : "border-white/10 text-slate-400 hover:border-cyan-500/40"}`}>{c || "All"}</button>)}
           {d?.updated_at && <span className="ml-auto text-[11px] font-mono text-slate-500" data-testid="blog-updated">updated {day(d.updated_at)} · {d.total} posts</span>}
@@ -50,7 +51,7 @@ export function BlogList() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-8" data-testid="blog-grid">
           {d?.posts.map((p) => <PostCard key={p.id} p={p} />)}
         </div>
-        {d && !d.posts.length && <Empty text={d.total ? "no posts match" : "the first posts are being written — check back in a few minutes"} />}
+        {d && !d.posts.length && <div data-testid="blog-empty"><Empty text={d.total ? "no posts in this category yet — new stories arrive every morning" : "the first posts are being written — check back in a few minutes"} /></div>}
       </section>
       <Footer />
     </div>

@@ -77,3 +77,13 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 
 ## 2026-06 Challenge Hint Unlocks (DONE)
 - Every SOC challenge has 2 hints (key evidence line, then report keywords), unlocked in order for a flat 25 points each (XP deducted immediately, needs >=25). Stored in `challenge_hints`; never charged twice. Endpoint: POST /api/challenges/{id}/hint/{idx}.
+
+## 2026-06 Blog, SOPs, SIEM v2, Scenario Labs Engine (DONE — iteration_18)
+- Security Blog (/blog, /blog/:slug, public, on landing + nav): daily cron `blog-sync` (07:00 IST) pulls The Hacker News RSS + BleepingComputer (its RSS is Cloudflare-blocked from server → Google News RSS fallback, headline/snippet only), Claude writes summary, key points, SOC action items, IOCs, MITRE. `routes_blog.py`, collection `blog_posts`. Admin manual: POST /api/admin/blog/sync.
+- SOP Library (/sops, /sops/:id): 12 SOPs in `sop_data.py` (phases, roles, tools, SPL+KQL queries, escalation, SLA, MITRE, closure). First 5 free; rest unlock via product `sop-bundle` ₹499 (Razorpay/Cashfree, keys not yet configured) — admin/instructor/Pro get all. `routes_sop.py`.
+- SIEM v2: `siem_engine.py` supports Splunk SPL (index/sourcetype, wildcards, OR/NOT, comparisons, earliest=, stats/table/head/sort/dedup/where) and Sentinel KQL (tables mapped to sourcetypes, where ==/has/contains/in~/startswith/endswith/ago(), summarize, project, take, sort by, distinct). ~870 realistic events incl. password spray, Kerberoasting, web shell, DNS tunnel, exfil. Custom time range, clickable timeline, column tables, saved searches per language, 8 alerts.
+- Scenario Labs: 6 labs (2 upgraded + kerberoast, BEC M365, IIS web shell, DNS tunnel) with briefing, phases, text + MCQ tasks, keyword auto-scored final report (variants supported), best score kept.
+
+## Backlog
+- P1: Instructor panel improvements (author labs/SOPs), Admin panel (users, analytics)
+- P2: Blog email digest, more SOPs, SIEM eval/bin commands

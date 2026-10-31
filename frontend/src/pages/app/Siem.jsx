@@ -24,7 +24,7 @@ function Timeline({ data, onPick }) {
   const rows = (data || []).map((x) => ({ ...x, label: x.t.slice(5).replace("T", " ") + "h" }));
   return (
     <div className="h-36" data-testid="siem-histogram">
-      <ResponsiveContainer><BarChart data={rows} onClick={(e) => e?.activePayload && onPick(e.activePayload[0].payload.t)}>
+      <ResponsiveContainer><BarChart data={rows} onClick={(e) => { const r = e?.activePayload?.[0]?.payload || rows[Number(e?.activeIndex)]; if (r) onPick(r.t); }}>
         <CartesianGrid stroke="rgba(255,255,255,.04)" vertical={false} />
         <XAxis dataKey="label" tick={{ fill: "#64748B", fontSize: 10 }} interval="preserveStartEnd" minTickGap={40} />
         <YAxis tick={{ fill: "#64748B", fontSize: 10 }} width={28} allowDecimals={false} />
