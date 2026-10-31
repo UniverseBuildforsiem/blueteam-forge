@@ -53,7 +53,7 @@ RULES = [
     (("qualys", "vmdr"), ["tools", "triage", "siem"], ["Malware", "Fundamentals"]),
     (("gmon", "monitoring"), ["siem", "drill", "ctf-log"], ["Windows Logs", "Lateral Movement", "Network"]),
     (("itil",), ["path-ir", "lab-phish", "drill"], ["Incident Response", "Ransomware"]),
-    (("jn0", "juniper", "jncia"), ["ctf-net", "siem"], ["Network", "Brute Force"]),
+    (("jn0", "juniper", "jncia"), ["ctf-net", "siem"], ["Network"]),
 ]
 
 
@@ -70,8 +70,9 @@ def enrich(c):
 
 
 def from_store(c, order):
-    tags = (["New"] if c.get("isNew") else []) + (["Free content"] if c.get("freeResources") else [])
-    ctype = ((c.get("courseTags") or [{}])[0].get("text") or "Videos").title()
+    labels = [(t.get("text") or "").upper() for t in c.get("courseTags") or []]
+    ctype = next((l.title() for l in labels if l in ("VIDEOS", "TESTS", "FILES")), "Videos")
+    tags = (["New"] if c.get("isNew") or "NEW" in labels else []) + (["Free content"] if c.get("freeResources") or "FREE CONTENT" in labels else [])
     return {"id": c["id"], "title": " ".join(c["name"].split()), "type": ctype, "price": c["finalPrice"], "mrp": c["price"],
             "image": c["imageUrl"], "url": c.get("shareableLink") or f"{STORE}/{c['id']}", "tags": tags, "order": order}
 
@@ -134,9 +135,11 @@ async def recommended(user=Depends(get_current_user)):
     for a in sorted(acc, key=lambda x: x["accuracy"]):
         matches = sorted((c for c in courses if a["topic"] in c["topics"]), key=lambda c: len(c["topics"]))
         if matches:
-            word = "weakest" if a["accuracy"] < 70 else "lowest-scoring"
-            return {"course": matches[0], "topic": a["topic"], "accuracy": a["accuracy"],
-                    "reason": f"Your {word} skill is {a['topic']} at {a['accuracy']}% accuracy."}
+            acc_n = a["accuracy"]
+            reason = (f"Your weakest skill is {a['topic']} at {acc_n}% accuracy." if acc_n < 70 else
+                      f"{a['topic']} is your lowest score at {acc_n}%." if acc_n < 90 else
+                      f"All your skills score 90% or more. Keep {a['topic']} sharp.")
+            return {"course": matches[0], "topic": a["topic"], "accuracy": acc_n, "reason": reason}
     return {"course": courses[0], "topic": None, "accuracy": None,
             "reason": "Take a quiz or triage challenge and we'll match a course to your weakest skill. Until then, start with the full bundle."}
 

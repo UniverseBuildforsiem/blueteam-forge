@@ -40,6 +40,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Landing feature showcase (2026-06): 10 tabbed features with mock live previews (Kali, SIEM, Drill, CTF, Labs, Tools, Skill radar, Certificates, Sessions, Talent), auto-rotates every 5s, pauses on hover
 - Self-paced courses (2026-06): 13 SOC Professionals courses (static data in frontend/src/lib/courses.js, scraped from classplus API) — landing shows 8 in a 4-column grid + /courses page with type filters & search; each card links to socprofessionals.com/courses/{id}
 - Mobile nav menu on public pages
+- Live course sync (2026-06): backend routes_courses.py, db.courses synced from the store's classplus API; cron course-sync 06:00 Asia/Kolkata -> POST /api/cron/course-sync; startup sync (seed fallback if empty + unreachable); failed sync keeps last list (meta.course_sync.last_error); GET /api/public/courses
+- Course-to-lab links: keyword rules map each course to SOCForge labs/CTF/drill/tools/paths + skill topics; course card opens details popup with practice links (logged-out -> /register)
+- Recommended course: GET /api/courses/recommended (lowest-accuracy topic from analytics -> most specific matching course), dashboard card
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks
