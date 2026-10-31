@@ -3,7 +3,7 @@ import json
 import os
 import random
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException
@@ -37,6 +37,7 @@ def public_session(s):
 @router.post("/start")
 async def start(user=Depends(get_current_user)):
     await require_owner(user)
+    await close_expired(user["id"])
     live = await db.interviews.find_one({"user_id": user["id"], "status": "in_progress", "expires_at": {"$gt": now_iso()}}, NO_ID)
     if live:
         return public_session(live)
@@ -62,11 +63,31 @@ async def own_session(sid, user):
     return s
 
 
+def expired(s, grace=60):
+    return now_iso() > (datetime.fromisoformat(s["expires_at"]) + timedelta(seconds=grace)).isoformat()
+
+
+def queue_grade(sid):
+    t = asyncio.create_task(grade(sid))
+    TASKS.add(t)
+    t.add_done_callback(TASKS.discard)
+
+
+async def close_expired(uid):
+    async for s in db.interviews.find({"user_id": uid, "status": "in_progress", "expires_at": {"$lt": now_iso()}}, NO_ID):
+        if expired(s):
+            r = await db.interviews.update_one({"id": s["id"], "status": "in_progress"}, {"$set": {"status": "grading", "submitted_at": now_iso(), "timed_out": True}})
+            if r.modified_count:
+                queue_grade(s["id"])
+
+
 @router.put("/{sid}/draft")
 async def draft(sid: str, body: AnswersIn, user=Depends(get_current_user)):
     s = await own_session(sid, user)
     if s["status"] != "in_progress":
         raise HTTPException(409, "Interview already submitted")
+    if expired(s):
+        raise HTTPException(409, "Time is up")
     await db.interviews.update_one({"id": sid}, {"$set": {"answers": clean(s, body.answers)}})
     return {"ok": True}
 
@@ -105,18 +126,17 @@ async def submit(sid: str, body: AnswersIn, user=Depends(get_current_user)):
     s = await own_session(sid, user)
     if s["status"] not in ("in_progress", "error"):
         raise HTTPException(409, "Interview already submitted")
-    answers = clean(s, body.answers) if s["status"] == "in_progress" else s["answers"]
+    answers = clean(s, body.answers) if s["status"] == "in_progress" and not expired(s) else s["answers"]
     late = now_iso() > s["expires_at"]
     r = await db.interviews.update_one({"id": sid, "status": s["status"]}, {"$set": {"answers": answers, "status": "grading", "submitted_at": now_iso(), "timed_out": late}})
     if r.modified_count:
-        t = asyncio.create_task(grade(sid))
-        TASKS.add(t)
-        t.add_done_callback(TASKS.discard)
+        queue_grade(sid)
     return {"status": "grading"}
 
 
 @router.get("/history")
 async def history(user=Depends(get_current_user)):
+    await close_expired(user["id"])
     rows = await db.interviews.find({"user_id": user["id"]}, {"_id": 0, "id": 1, "status": 1, "score": 1, "passed": 1, "started_at": 1, "submitted_at": 1}).sort("started_at", -1).to_list(50)
     return {"owned": await owns_book(user), "history": rows, "count": COUNT, "minutes": MINUTES, "pass_mark": PASS, "pool": len(POOL)}
 

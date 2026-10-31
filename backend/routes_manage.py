@@ -10,6 +10,7 @@ from core import db, now, now_iso, new_id, get_current_user, staff, admin_only, 
 
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
+BG_TASKS = set()
 
 KINDS = {"paths": ("paths", staff), "quizzes": ("quizzes", staff), "ctfs": ("ctfs", staff), "labs": ("labs", staff),
          "sessions": ("sessions", staff), "challenges": ("challenges", staff),
@@ -283,7 +284,9 @@ async def activate(user_id, pid):
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
             from routes_book import send_book_receipt
-            asyncio.create_task(send_book_receipt(user_id, p))
+            t = asyncio.create_task(send_book_receipt(user_id, p))
+            BG_TASKS.add(t)
+            t.add_done_callback(BG_TASKS.discard)
         else:
             await db.users.update_one({"id": user_id}, {"$set": {"plan": "pro", "plan_name": p["plan_name"]}})
 

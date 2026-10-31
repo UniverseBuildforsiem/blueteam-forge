@@ -83,16 +83,16 @@ function SampleViewer() {
   return (
     <div className="mt-4" data-testid="book-sample-viewer">
       <div className="flex items-center justify-center gap-4 mb-3 font-mono text-sm">
-        <button className="ghost-btn !py-1.5" disabled={n === 1} onClick={() => setN(n - 1)} data-testid="sample-prev">Previous</button>
+        <button className="ghost-btn !py-1.5 disabled:opacity-30 disabled:pointer-events-none" disabled={n === 1} onClick={() => setN(n - 1)} data-testid="sample-prev">Previous</button>
         <span data-testid="sample-page">Page {n} of 10</span>
-        <button className="ghost-btn !py-1.5" disabled={n === 10} onClick={() => setN(n + 1)} data-testid="sample-next">Next</button>
+        <button className="ghost-btn !py-1.5 disabled:opacity-30 disabled:pointer-events-none" disabled={n === 10} onClick={() => setN(n + 1)} data-testid="sample-next">Next</button>
       </div>
       <div className="grid place-items-center">
         {srcs[n] ? <img src={srcs[n]} alt={`Sample page ${n}`} className="max-h-[78vh] w-auto border border-white/10 shadow-2xl bg-white" data-testid="sample-page-image" />
           : <div className="h-[60vh] grid place-items-center font-mono text-cyan-400 cursor-blink">loading page </div>}
       </div>
       {nudge && (
-        <div className="sticky bottom-4 mt-6 glass border border-orange-400/50 p-5 flex flex-wrap items-center gap-4 shadow-[0_0_40px_rgba(251,146,60,.2)]" data-testid="sample-nudge">
+        <div className="sticky bottom-4 mt-6 bg-[#0B0F1A]/95 backdrop-blur-xl border border-orange-400/50 p-5 flex flex-wrap items-center gap-4 shadow-[0_0_40px_rgba(251,146,60,.2)]" data-testid="sample-nudge">
           <img src="/book/cover.jpg" alt="" className="h-16 w-auto" />
           <div className="flex-1 min-w-[200px]"><div className="font-bold text-lg">Keep reading, unlock the other 158 pages</div>
             <p className="text-sm text-slate-400">Get the full book plus unlimited AI mock interviews for ₹973 <span className="line-through">₹2,999</span>.</p></div>

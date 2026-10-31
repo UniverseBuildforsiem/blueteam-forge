@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 16: tested the Mock Interview API and UI end to end, the sample page-image viewer with the buy nudge, owner /book links, and the receipt email (code review plus a direct render with send_email mocked). Backend 8/8 pytest pass. Real Claude grading works and finishes in under 10s for 2 answers. Blank answers score 0, reference answers only appear after grading, 409 on double submit and on draft after submit, 404 for other users' sessions, 402 for non-owners. Frontend works except for one bug: the 'review' link in interview history does nothing when clicked inside the app. Loading ?view=id directly works.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/mock-interview/{sid}/draft and POST /submit", "issue": "No server-side expiry check. Drafts are accepted after expires_at, and a late submit is graded with the new answers (only timed_out=true is set). A user can bypass the 30-min limit with an API call. Suggest rejecting drafts after expiry plus a small grace period, and grading the last saved draft on a late submit."},
+      {"endpoint": "Mock interview sessions", "issue": "Abandoned in_progress sessions never get closed or graded once they expire. History will show them as 'in_progress' forever."},
+      {"endpoint": "routes_manage.activate", "issue": "asyncio.create_task(send_book_receipt(...)) keeps no reference to the task, so it can be garbage-collected before it finishes. routes_interview already uses a TASKS set for this; do the same here."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MockInterview Intro > interview-history 'review' link", "issue": "Clicking the review Link (/app/interview?view=id) from /app/interview changes the URL but keeps showing the intro. The ?view param is only read in a mount-only useEffect([]), and the component doesn't remount on a same-route search change. A direct page load of ?view=id does show the results. Fix: use useSearchParams() and depend on the view value, or call poll(id) in the link's onClick.", "selector": "[data-testid^='interview-history-'] a", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/book sample viewer", "issues": ["The sticky sample-nudge is semi-transparent and covers the bottom of the page image. Acceptable, but a more opaque background would read better.", "On page 10 the disabled Next button keeps its focus border, so it looks active."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_mock_interview_sample.py", "/app/test_reports/pytest/pytest_iter16.xml"],
+  "action_items": [
+    "Fix the interview history 'review' link inside the app. MockInterview.jsx line 112 reads window.location.search only on mount. Switch to useSearchParams and react to changes of 'view'.",
+    "Enforce the time limit on the server for draft and submit after expires_at (with a grace period).",
+    "Keep a strong reference to the send_book_receipt task in activate() (TASKS set)."
+  ],
+  "critical_code_review_comments": [
+    "routes_interview grade(): a single LLM call grades all answered questions. If the model returns malformed JSON, the session goes to status=error and the UI offers 'Retry marking'. That is good. Retry re-submits with {} but reuses the stored answers, which is correct.",
+    "Model string 'claude-sonnet-5-5' works with the Emergent key (verified live).",
+    "send_book_receipt: verified the HTML passes _assert_safe_email and contains the item, ₹973 amount, order id, provider (title-cased), date and a 'Read your ebook' https link to FRONTEND_URL/book. No real email was sent.",
+    "Session timer auto-submit and the 15s draft autosave rely on stale closures. They go through ansRef, which is fine."
+  ],
+  "updated_files": ["/app/backend/tests/test_mock_interview_sample.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "~93% (1 bug: in-app review link)"},
+  "seed_data_creation": "Created 2 graded interview sessions for the demo student (plus 1 from the UI run) and fresh TEST users test_iv_*/test_ui_*@example.com. The demo student's test purchase row was left in place.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest with -n 0 (pytest.ini enables xdist; tests in test_mock_interview_sample.py share module state). Registration requires a username field. New users land on /onboarding (onboarding-goal-interview-prep then onboarding-continue-button). Grading 2 answers takes about 5-10s."
+}

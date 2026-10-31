@@ -63,6 +63,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - PENDING: RAZORPAY_KEY_ID/SECRET and CASHFREE_CLIENT_ID/SECRET not yet provided — pay buttons disabled until set
 - Free ebook sample (2026-06): first 10 pages (backend/assets/book/sample.pdf) at GET /api/me/book/sample, free account required; SampleBox on /book
 - Interview Ready badge (Analyst, interview-ready.jpg) earned via db.purchases; dashboard EbookCard links to /book
+- AI mock interview (2026-06): /app/interview, buyers only; 30 random of 108 book Q&As (backend/assets/book/questions.json, extracted via scripts/extract_book_questions.py) in 30 min; typed answers graded by Claude claude-sonnet-5-5 (EMERGENT_LLM_KEY) in background (routes_interview.py, db.interviews); drafts autosave, server-side expiry, expired sessions auto-graded
+- Ebook receipt email from activate() (routes_book.send_book_receipt)
+- Sample viewer: page images GET /api/me/book/sample/{n}.jpg + "Keep reading, unlock the other 158 pages" nudge at page 10 or 3 min
+- NOTE: demo student has a TEST db.purchases row (test:true) for the ebook — remove before go-live if desired
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

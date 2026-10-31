@@ -7,7 +7,7 @@ import { Glass, PageHeader } from "../../components/common";
 
 const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-function Intro({ meta, onStart, busy }) {
+function Intro({ meta, onStart, busy, onView }) {
   return (
     <Glass className="p-8" data-testid="interview-intro">
       <div className="grid sm:grid-cols-3 gap-4 font-mono text-center">
@@ -22,7 +22,7 @@ function Intro({ meta, onStart, busy }) {
           <div key={h.id} className="flex items-center gap-3 py-2 border-b border-white/5 text-sm font-mono" data-testid={`interview-history-${h.id}`}>
             <span className="text-slate-500 w-44">{fmtDate(h.started_at)}</span>
             <span className="flex-1">{h.status === "graded" ? `${h.score}% · ${h.passed ? "passed" : "not passed"}` : h.status}</span>
-            {h.status === "graded" && <Link to={`/app/interview?view=${h.id}`} className="text-cyan-300 hover:underline">review</Link>}
+            {h.status === "graded" && <button onClick={() => onView(h.id)} className="text-cyan-300 hover:underline" data-testid={`interview-review-${h.id}`}>review</button>}
           </div>))}
       </div>}
     </Glass>
@@ -122,7 +122,7 @@ export default function MockInterview() {
             <p className="text-sm text-slate-400 mt-2">Buy the SOC Interview Preparation ebook to unlock unlimited 30-question AI-marked mock interviews.</p></div>
           <Link to="/book" className="glow-btn" data-testid="interview-get-book">Get the ebook</Link>
         </Glass>
-      ) : !s ? <Intro meta={meta} onStart={start} busy={busy} />
+      ) : !s ? <Intro meta={meta} onStart={start} busy={busy} onView={poll} />
         : s.status === "in_progress" ? <Session s={s} onSubmitted={() => { setS({ ...s, status: "grading" }); poll(s.id); }} />
         : s.status === "graded" ? <Results s={s} onAgain={() => { setS(null); load(); }} />
         : <Glass className="p-10 text-center" data-testid="interview-grading">
