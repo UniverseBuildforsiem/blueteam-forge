@@ -13,7 +13,7 @@ export const badgeReveal = (lu) => ({
 export const rankReveal = (ru) => ({
   kind: "rank", eyebrow: "// rank up", title: ru.rank, level: ru.rank, img: LEVELS[ru.rank].img,
   message: <>You hit <span className="font-bold text-white" data-testid="rank-up-xp">{ru.xp.toLocaleString()} XP</span> and you're now {/^[AEIOU]/.test(ru.rank) ? "an" : "a"} <span className="font-bold text-white">{ru.rank}</span>. Your new character shows on every leaderboard.{ru.rank === "Elite" ? " You can now pick a glowing avatar frame on the Badges page." : ""}</>,
-  seen: `/me/rank-up/${ru.rank}/seen`,
+  seen: `/me/rank-up/${ru.rank}/seen`, share: { endpoint: "/me/rank/share-card", title: `Share your ${ru.rank} rank card` },
 });
 
 export default function LevelUpReveal({ r, onDone }) {

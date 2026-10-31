@@ -1,5 +1,6 @@
 import os
 import re
+import asyncio
 import ipaddress
 import logging
 import uuid
@@ -122,7 +123,7 @@ def frame_for(u):
 
 async def award(user_id, xp, activity):
     today = now().date().isoformat()
-    u = await db.users.find_one({"id": user_id}, {"_id": 0, "last_active": 1, "streak": 1})
+    u = await db.users.find_one({"id": user_id}, {"_id": 0, "last_active": 1, "streak": 1, "xp": 1})
     streak = u.get("streak", 0) or 0
     last = u.get("last_active")
     if last != today:
@@ -130,6 +131,10 @@ async def award(user_id, xp, activity):
         streak = streak + 1 if last == yesterday else 1
     await db.users.update_one({"id": user_id}, {"$inc": {"xp": xp}, "$set": {"last_active": today, "streak": streak}})
     await db.activity.insert_one({"id": new_id(), "user_id": user_id, "text": activity, "xp": xp, "created_at": now_iso()})
+    old = u.get("xp", 0) or 0
+    if xp > 0 and rank_for(old + xp) != rank_for(old):
+        from routes_share import send_rank_email
+        asyncio.create_task(send_rank_email(user_id, rank_for(old + xp)))
 
 
 # ---------- Email (Emergent managed Resend) ----------

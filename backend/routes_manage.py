@@ -246,6 +246,14 @@ async def put_settings(body: dict, user=Depends(admin_only)):
 
 # ---------- Payments (Razorpay / Cashfree) ----------
 PLANS = {"pro_monthly": {"name": "Pro Monthly", "amount": 999}, "pro_yearly": {"name": "Pro Yearly", "amount": 7999}}
+PRODUCTS = {"soc-interview-ebook": {"name": "SOC Interview Preparation - Ebook", "amount": 973, "return": "/book"}}
+
+
+def item_for(key):
+    item = PLANS.get(key) or PRODUCTS.get(key)
+    if not item:
+        raise HTTPException(400, "Invalid plan")
+    return item
 
 
 class PlanIn(BaseModel):
@@ -271,14 +279,16 @@ async def activate(user_id, pid):
     p = await db.payments.find_one({"id": pid}, NO_ID)
     if p and p["status"] != "paid":
         await db.payments.update_one({"id": pid}, {"$set": {"status": "paid", "paid_at": now_iso()}})
-        await db.users.update_one({"id": user_id}, {"$set": {"plan": "pro", "plan_name": p["plan_name"]}})
+        if p["plan"] in PRODUCTS:
+            await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
+                                          {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
+        else:
+            await db.users.update_one({"id": user_id}, {"$set": {"plan": "pro", "plan_name": p["plan_name"]}})
 
 
 @router.post("/payments/razorpay/order")
 async def rzp_order(body: PlanIn, user=Depends(get_current_user)):
-    plan = PLANS.get(body.plan)
-    if not plan:
-        raise HTTPException(400, "Invalid plan")
+    plan = item_for(body.plan)
     o = rzp().order.create({"amount": plan["amount"] * 100, "currency": "INR", "receipt": f"rcpt_{new_id()}", "payment_capture": 1})
     await db.payments.insert_one({"id": o["id"], "provider": "razorpay", "user_id": user["id"], "plan": body.plan, "plan_name": plan["name"],
                                   "amount": plan["amount"], "status": "created", "created_at": now_iso()})
@@ -297,8 +307,11 @@ async def rzp_verify(body: RzpVerify, user=Depends(get_current_user)):
         rzp().utility.verify_payment_signature(body.model_dump())
     except Exception:
         raise HTTPException(400, "Payment signature verification failed")
+    p = await db.payments.find_one({"id": body.razorpay_order_id, "user_id": user["id"]}, NO_ID)
+    if not p:
+        raise HTTPException(404, "Order not found")
     await activate(user["id"], body.razorpay_order_id)
-    return {"ok": True, "plan": "pro"}
+    return {"ok": True, "plan": p["plan"]}
 
 
 def cf_headers(idem=None):
@@ -317,14 +330,12 @@ def cf_base():
 
 @router.post("/payments/cashfree/order")
 async def cf_order(body: PlanIn, user=Depends(get_current_user)):
-    plan = PLANS.get(body.plan)
-    if not plan:
-        raise HTTPException(400, "Invalid plan")
+    plan = item_for(body.plan)
     base = cf_base()
     oid = f"order_{uuid.uuid4().hex[:20]}"
     payload = {"order_id": oid, "order_amount": float(plan["amount"]), "order_currency": "INR",
                "customer_details": {"customer_id": user["id"], "customer_name": user["name"], "customer_email": user["email"], "customer_phone": body.phone},
-               "order_meta": {"return_url": f"{os.environ['FRONTEND_URL']}/app/billing?cf_order={oid}"}}
+               "order_meta": {"return_url": f"{os.environ['FRONTEND_URL']}{plan.get('return', '/app/billing')}?cf_order={oid}"}}
     async with httpx.AsyncClient(timeout=15) as c:
         r = await c.post(f"{base}/orders", headers=cf_headers(oid), json=payload)
     if r.status_code >= 400:

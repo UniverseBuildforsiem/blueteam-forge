@@ -6,6 +6,7 @@ import AppShell, { ProtectedRoute } from "./components/AppShell";
 import Landing from "./pages/Landing";
 import Catalog from "./pages/Catalog";
 import Courses from "./pages/Courses";
+import Book from "./pages/Book";
 import { Login, Register, ForgotPassword, ResetPassword } from "./pages/AuthPages";
 import Onboarding from "./pages/Onboarding";
 import Verify from "./pages/Verify";
@@ -37,6 +38,7 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/courses" element={<Courses />} />
+            <Route path="/book" element={<Book />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -14,6 +14,7 @@ export default function PublicNav() {
         <nav className="hidden md:flex items-center gap-8 text-sm text-slate-400 font-mono">
           <a href="/#features" className="hover:text-cyan-300 transition-colors">Features</a>
           <Link to="/courses" data-testid="nav-courses" className="hover:text-cyan-300 transition-colors">Courses</Link>
+          <Link to="/book" data-testid="nav-ebook" className="hover:text-cyan-300 transition-colors">Ebook</Link>
           <Link to="/catalog" data-testid="nav-catalog" className="hover:text-cyan-300 transition-colors">Catalog</Link>
           <Link to="/talent" data-testid="nav-talent" className="hover:text-cyan-300 transition-colors">Hire talent</Link>
           <a href="/#pricing" className="hover:text-cyan-300 transition-colors">Pricing</a>
@@ -30,6 +31,7 @@ export default function PublicNav() {
         <nav className="md:hidden border-t border-cyan-500/10 px-6 py-3 flex flex-col gap-3 font-mono text-sm text-slate-300" data-testid="nav-mobile-menu" onClick={() => setOpen(false)}>
           <a href="/#features">Features</a>
           <Link to="/courses" data-testid="nav-mobile-courses">Courses</Link>
+          <Link to="/book" data-testid="nav-mobile-ebook">Ebook</Link>
           <Link to="/catalog">Catalog</Link>
           <Link to="/talent">Hire talent</Link>
           <a href="/#pricing">Pricing</a>

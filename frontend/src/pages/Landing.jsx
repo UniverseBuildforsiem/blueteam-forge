@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check, Quote, Volume2, VolumeX } from "lucide-react";
 import FeatureShowcase from "../components/FeatureShowcase";
 import BadgeShowcase from "../components/BadgeShowcase";
+import BookPromo from "../components/BookPromo";
+import HallOfFame from "../components/HallOfFame";
 import { CourseGrid } from "../components/CourseGrid";
 import { useCourses } from "../lib/courses";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
@@ -203,7 +205,11 @@ export default function Landing() {
         <CourseGrid courses={courses.slice(0, 8)} testId="landing-course-grid" />
       </section>
 
+      <BookPromo />
+
       <BadgeShowcase />
+
+      <HallOfFame />
 
       <section id="paths" className="max-w-7xl mx-auto px-6 pb-24">
         <div className="flex items-end justify-between mb-10">

@@ -386,3 +386,63 @@ async def streak_page(token: str):
 <meta property="og:url" content="{api_base()}/public/streak/{escape(token)}"><meta name="twitter:card" content="summary_large_image">
 <meta http-equiv="refresh" content="0; url={home}"></head>
 <body style="background:#0B0F1A;color:#fff;font-family:monospace"><a href="{home}" style="color:#00F0FF">{title}</a></body></html>"""
+
+
+RANK_ART = {"Recruit": "level-recruit.jpg", "Analyst": "level-analyst.jpg", "Hunter": "level-hunter.png", "Elite": "level-elite.jpg"}
+RANK_ORDER = list(RANK_ART)
+
+
+async def rank_card_user(token, rank):
+    u = await db.users.find_one({"share_token": token}, {"_id": 0, "password_hash": 0})
+    if not u or rank not in RANK_ART or RANK_ORDER.index(rank_for(u.get("xp", 0))) < RANK_ORDER.index(rank):
+        raise HTTPException(404, "Rank card not found")
+    return u
+
+
+@router.post("/me/rank/share-card")
+async def rank_share_card(user=Depends(get_current_user)):
+    rank = rank_for(user.get("xp", 0))
+    share_url = f"{api_base()}/public/rank/{await ensure_token(user)}/{rank}"
+    return {"share_url": share_url, "image_url": f"{share_url}.png", "rank": rank}
+
+
+@router.get("/public/rank/{token}/{rank}.png")
+async def rank_png(token: str, rank: str):
+    u = await rank_card_user(token, rank)
+    handle = u["username"] if u.get("public_profile") is not False else None
+    png = render_badge(u["name"], f"{rank} rank", f"Reached the {rank} rank with {u.get('xp', 0):,} XP of hands-on SOC training", ("XP", f"{u.get('xp', 0):,}"), rank, RANK_ART[rank], handle, "rank")
+    return StreamingResponse(png, media_type="image/png", headers={"Cache-Control": "public, max-age=600"})
+
+
+@router.get("/public/rank/{token}/{rank}", response_class=HTMLResponse)
+async def rank_page(token: str, rank: str):
+    u = await rank_card_user(token, rank)
+    return og_page(f"{u['name']} reached the {rank} rank on SOCProfessionals Academy",
+                   "Hands-on SOC analyst training: alert triage, SIEM, Kali labs and CTFs.", f"/public/rank/{token}/{rank}", home_for(u))
+
+
+async def send_rank_email(uid, rank):
+    from urllib.parse import quote
+    from routes_courses import unsub_url
+    u = await db.users.find_one({"id": uid}, {"_id": 0, "password_hash": 0})
+    if not u or u.get("role") != "student" or u.get("course_emails") is False:
+        return
+    try:
+        await db.rank_emails.insert_one({"user_id": uid, "rank": rank, "at": now_iso()})
+    except Exception:
+        return
+    share = f"{api_base()}/public/rank/{await ensure_token(u)}/{rank}"
+    lines = [f"You just reached the {rank} rank with {u.get('xp', 0):,} XP. Your new character now shows on every leaderboard.",
+             "Your rank card is ready to post. Share it on LinkedIn below, or click the card to download it."]
+    await send_email(to=u["email"], subject=f"You're now {'an' if rank[0] in 'AEIOU' else 'a'} {rank} on SOCProfessionals Academy",
+                     html=email_template(u["name"], lines, f"https://www.linkedin.com/sharing/share-offsite/?url={quote(share, safe='')}", "Share on LinkedIn",
+                                         unsub_url(uid), (f"{share}.png", f"{share}.png", f"{rank} rank card")))
+
+
+@router.get("/public/hall-of-fame")
+async def hall_of_fame():
+    from core import frame_for
+    us = await db.users.find({"role": "student", "status": "active", "xp": {"$gte": 3000}},
+                             {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1, "public_profile": 1, "avatar_frame": 1}).sort("xp", -1).to_list(24)
+    return [{"name": u["name"], "username": u["username"] if u.get("public_profile") is not False else None, "xp": u.get("xp", 0),
+             "rank": "Elite", "frame": frame_for(u)} for u in us]

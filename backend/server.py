@@ -11,10 +11,11 @@ from routes_manage import router as manage_router
 from routes_cron import router as cron_router
 from routes_share import router as share_router
 from routes_courses import router as courses_router, ensure_courses
+from routes_book import router as book_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCProfessionals Academy API")
-for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])
@@ -77,6 +78,8 @@ async def startup():
     await db.course_alerts.create_index([("user_id", 1), ("course_id", 1)], unique=True)
     await db.course_completions.create_index([("user_id", 1), ("course_id", 1)], unique=True)
     await db.course_bonus.create_index([("user_id", 1), ("course_id", 1)], unique=True)
+    await db.rank_emails.create_index([("user_id", 1), ("rank", 1)], unique=True)
+    await db.purchases.create_index([("user_id", 1), ("product_id", 1)], unique=True)
     await seed_collection("categories", [{"id": c, "name": c} for c in ["Foundations", "Analyst", "Response", "Career"]])
     await seed_collection("announcements", [{"id": "ann-1", "title": "New lab: Phishing to Ransomware is live", "body": "Reconstruct a full kill chain in the Kali + SIEM simulators.", "active": True, "created_at": now_iso()}])
     for q in [("Failed logons", "event_id=4625 | stats count by src_ip"), ("Beacon hunting", "sourcetype=proxy url=*gate.php*"), ("Shadow copy deletion", "vssadmin")]:
