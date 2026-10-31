@@ -54,6 +54,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Level-up reveal (2026-06): first Hunter/Elite badge -> full-screen character reveal on dashboard (dashboard.level_up, POST /api/me/level-up/{level}/seen, users.levelups_seen)
 - Character share cards for all 8 badges: POST /api/me/badges/{id}/share-card -> /api/public/badge/{token}/{id}(.png); course cards + badge email card now include character (backend/assets/badges, BADGE_LEVEL in routes_learn.py)
 - Rank avatars (XP rank -> level character) on dashboard/CTF/drill leaderboards, talent search, public profile (RankAvatar component)
+- Rank-up reveal (2026-06): dashboard.rank_up + POST /api/me/rank-up/{rank}/seen (users.rankups_seen); queued after badge level-up reveal
+- Badge collection page /app/badges (GET /api/me/badges): 4 level sections, locked characters + unlock rule, share earned, course badges
+- Elite avatar frames ember/neon/glitch (PATCH /api/me/avatar-frame, users.avatar_frame, frame_for in core) shown on dashboard/CTF/drill leaderboards only
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

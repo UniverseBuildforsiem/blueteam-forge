@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 13: Tested the Rank-Up Reveal, the Badge Collection page and Elite avatar frames from end to end. Backend: 17/17 pytest tests pass. Frontend: every requested flow passes. 1) Elite bot sees the rank-up-reveal with title 'Elite', the character image and '3,450 XP'. Continue closes it and it does not come back after a reload. 2) When both reveals are pending, the level-up reveal (Hunter/Lab Rat) shows first and the rank-up shows after Continue. Close (X) also marks it seen. 3) Regression: the share dialog from the level-up reveal opens on top of the overlay (checked with elementFromPoint). 4) The /app/badges page shows 4 level sections with 2 cards each. Locked cards are greyscale with 'LOCKED' and 'How to unlock: ...'. Earned cards show 'EARNED' and a Share button. The course badge section and the course-empty state both render. 5) Frame picker: for the non-Elite demo user all 4 options are disabled and the 'Reach Elite at 3,000 XP ... 2,591 XP to go' message shows. For Elite, ember/glitch/none/neon each update frame-preview, and glitch was still selected after a reload. 6) The frame wrapper with its animation (neon-spin) shows on the dashboard leaderboard, the CTF scoreboard and the drill leaderboard tab for kai0. No frames show on /talent or /u/kai0, and the public profile API has no frame field. A non-Elite user with a stored avatar_frame does not get a frame on the leaderboard.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/me/badges", "issue": "Returns the raw users.avatar_frame and not frame_for(user). If a user drops below Elite (for example after an XP change), the value is stale. The UI already guards this with elite ? d.frame : null."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Rank-up reveal / Badges frame picker", "issues": ["Grammar: 'you're now a Elite' and 'You're a Elite'. Should be 'an Elite' / 'an Analyst'. Use the article 'an' before ranks that start with a vowel."]},
+      {"screen": "/app/badges collection", "issues": ["Each level has only 2 badges, but the grid is lg:grid-cols-4, so the right half of each section is empty at 1920px. Consider lg:grid-cols-2 with wider cards, or put 2 levels side by side."]},
+      {"screen": "Rank-up reveal", "issues": ["The '// rank up' eyebrow almost touches the pulsing outer ring (-inset-6). Add a little more top margin to the character block."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_rankup_frames.py", "/app/test_reports/pytest/pytest_iter13.xml"],
+  "action_items": [
+    "Fix the article in the rank text ('an Elite', 'an Analyst') in LevelUpReveal.jsx rankReveal and in Badges.jsx FramePicker",
+    "Optional: /me/badges should return frame_for(user) for consistency",
+    "Optional: make the badge collection grid fit 2 cards per level"
+  ],
+  "critical_code_review_comments": [
+    "pending_rank_up only reports the current rank. A user who jumps from Recruit straight to Hunter sees one Hunter reveal, and the seen endpoint marks the lower ranks too. This matches the spec.",
+    "Dashboard polls /dashboard every 10s. The shown ref stops reveals from re-queuing, which is good.",
+    "Drill page crashed with \"Cannot read properties of undefined (reading 'join')\" when a drill_submissions doc had no keywords_hit/missed_keywords. This came from my own malformed test seed, not from real data, but the page could guard against it with (sub.keywords_hit || [])."
+  ],
+  "updated_files": ["/app/backend/tests/test_rankup_frames.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Temporary only, now removed: a ctf_solves row and a lab_progress row (test_seed:true) for kai0, plus one real drill submission for kai0. Restored kai0 to xp 3450, avatar_frame neon, rankups_seen and levelups_seen unset (both reveals pending again). Removed 'Hunter' from demo levelups_seen (level_up pending again). kai0's streak and last_active changed from the drill submit.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "kai0 (bot0) is the only Elite user. kai0 is not on the CTF or drill leaderboards unless you seed a ctf_solves row or submit today's drill (POST /api/drill/today/submit {verdict:TP|FP, report>=20 chars}). The drill leaderboard is behind data-testid drill-tab-leaderboard. Login returns cookies only (no access_token in the body). Run pytest with -n0 to see print output (pytest.ini uses xdist)."
+}

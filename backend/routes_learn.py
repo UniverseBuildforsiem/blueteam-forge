@@ -356,7 +356,7 @@ async def my_badges(user=Depends(get_current_user)):
     badges = await compute_badges(user)
     for b in badges:
         b["level"] = BADGE_LEVEL.get(b["id"], ("Recruit",))[0]
-    return {"badges": badges, "rank": rank_for(user.get("xp", 0)), "xp": user.get("xp", 0), "frame": user.get("avatar_frame"), "frames": list(FRAMES)}
+    return {"badges": badges, "rank": rank_for(user.get("xp", 0)), "xp": user.get("xp", 0), "frame": frame_for(user), "frames": list(FRAMES)}
 
 
 @router.get("/dashboard")

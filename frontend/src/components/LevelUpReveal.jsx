@@ -12,7 +12,7 @@ export const badgeReveal = (lu) => ({
 
 export const rankReveal = (ru) => ({
   kind: "rank", eyebrow: "// rank up", title: ru.rank, level: ru.rank, img: LEVELS[ru.rank].img,
-  message: <>You hit <span className="font-bold text-white" data-testid="rank-up-xp">{ru.xp.toLocaleString()} XP</span> and you're now a <span className="font-bold text-white">{ru.rank}</span>. Your new character shows on every leaderboard.{ru.rank === "Elite" ? " You can now pick a glowing avatar frame on the Badges page." : ""}</>,
+  message: <>You hit <span className="font-bold text-white" data-testid="rank-up-xp">{ru.xp.toLocaleString()} XP</span> and you're now {/^[AEIOU]/.test(ru.rank) ? "an" : "a"} <span className="font-bold text-white">{ru.rank}</span>. Your new character shows on every leaderboard.{ru.rank === "Elite" ? " You can now pick a glowing avatar frame on the Badges page." : ""}</>,
   seen: `/me/rank-up/${ru.rank}/seen`,
 });
 
@@ -27,7 +27,7 @@ export default function LevelUpReveal({ r, onDone }) {
         <button onClick={close} className="absolute top-6 right-6 text-slate-400 hover:text-white" data-testid={`${id}-close`} aria-label="Close"><X className="h-6 w-6" /></button>
         <div className="flex flex-col items-center text-center max-w-xl">
           <motion.div className="font-mono text-xs tracking-[0.4em] text-slate-400" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>{r.eyebrow}</motion.div>
-          <motion.div className="relative mt-6" initial={{ scale: 0.3, rotate: -20, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 120, damping: 12, delay: 0.35 }}>
+          <motion.div className="relative mt-12" initial={{ scale: 0.3, rotate: -20, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 120, damping: 12, delay: 0.35 }}>
             <motion.div className={`absolute -inset-6 rounded-full border-2 ${l.ring}`} animate={{ scale: [1, 1.15, 1], opacity: [0.8, 0.2, 0.8] }} transition={{ duration: 2.4, repeat: Infinity }} />
             <img src={r.img} alt={r.title} className={`h-56 w-56 sm:h-72 sm:w-72 rounded-full object-cover border-4 ${l.ring} ${l.glow}`} data-testid={`${id}-character`} />
           </motion.div>

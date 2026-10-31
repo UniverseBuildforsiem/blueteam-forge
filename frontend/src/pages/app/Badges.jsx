@@ -16,8 +16,8 @@ const BadgeCard = ({ b }) => {
   return (
     <Glass className={`p-5 flex flex-col items-center text-center border ${locked ? "!border-white/5" : a.ring}`} data-testid={`collection-badge-${b.id}`}>
       <div className={`relative h-32 w-32 rounded-full overflow-hidden border-4 ${locked ? "border-white/10" : `${a.ring} ${a.glow}`}`}>
-        <img src={a.img2} alt={b.name} loading="lazy" className={`h-full w-full object-cover ${locked ? "grayscale opacity-25 blur-[1px]" : ""}`} />
-        {locked && <Lock className="absolute inset-0 m-auto h-7 w-7 text-slate-300" />}
+        <img src={a.img2} alt={b.name} loading="lazy" className={`h-full w-full object-cover ${locked ? "grayscale opacity-40" : ""}`} />
+        {locked && <Lock className="absolute bottom-2 right-1/2 translate-x-1/2 h-5 w-5 text-slate-200 drop-shadow" />}
       </div>
       <div className="mt-4 font-bold">{b.name}</div>
       <div className={`mt-1 inline-flex items-center gap-1 text-[10px] font-mono uppercase ${locked ? "text-slate-500" : "text-green-400"}`} data-testid={`collection-status-${b.id}`}>
@@ -41,7 +41,7 @@ function FramePicker({ d, setD }) {
         <RankAvatar rank={d.rank} size="lg" frame={elite ? d.frame : null} testId="frame-preview" />
         <div className="flex-1 min-w-[220px]">
           <div className="eyebrow flex items-center gap-2"><Sparkles className="h-3.5 w-3.5" />avatar frame · elite perk</div>
-          <h3 className="text-xl font-bold mt-2">You're a <span className={LEVELS[d.rank].text}>{d.rank}</span> · {d.xp.toLocaleString()} XP</h3>
+          <h3 className="text-xl font-bold mt-2">You're {/^[AEIOU]/.test(d.rank) ? "an" : "a"} <span className={LEVELS[d.rank].text}>{d.rank}</span> · {d.xp.toLocaleString()} XP</h3>
           <p className="text-sm text-slate-400 mt-1">{elite ? "Pick a glowing frame for your avatar on every leaderboard." : `Reach Elite at 3,000 XP to unlock glowing avatar frames. ${(3000 - d.xp).toLocaleString()} XP to go.`}</p>
         </div>
       </div>
@@ -68,11 +68,13 @@ export default function Badges() {
     <div>
       <PageHeader eyebrow="// badge collection" title="Badges" sub={`${d.badges.filter((b) => b.earned).length} earned · ${std.filter((b) => !b.earned).length} still locked. Harder badges unlock higher levels.`} />
       <FramePicker d={d} setD={setD} />
+      <div className="grid lg:grid-cols-2 gap-x-8">
       {Object.keys(LEVELS).map((lvl, i) => (
         <section key={lvl} className="mb-10" data-testid={`collection-level-${lvl.toLowerCase()}`}>
-          <div className="flex items-baseline gap-3 mb-4"><span className="font-mono text-xs text-slate-500">LEVEL 0{i + 1}</span><h2 className={`text-2xl font-extrabold font-mono ${LEVELS[lvl].text}`}>{lvl}</h2><span className="text-sm text-slate-500">{LEVELS[lvl].blurb}</span></div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">{std.filter((b) => b.level === lvl).map((b) => <BadgeCard key={b.id} b={b} />)}</div>
+          <div className="flex flex-wrap items-baseline gap-3 mb-4"><span className="font-mono text-xs text-slate-500">LEVEL 0{i + 1}</span><h2 className={`text-2xl font-extrabold font-mono ${LEVELS[lvl].text}`}>{lvl}</h2><span className="text-sm text-slate-500">{LEVELS[lvl].blurb}</span></div>
+          <div className="grid sm:grid-cols-2 gap-4">{std.filter((b) => b.level === lvl).map((b) => <BadgeCard key={b.id} b={b} />)}</div>
         </section>))}
+      </div>
       <section data-testid="collection-course-badges">
         <div className="flex items-baseline gap-3 mb-4"><h2 className="text-2xl font-extrabold font-mono text-slate-200">Course badges</h2><span className="text-sm text-slate-500">Recruit level · one per watched course</span></div>
         {courses.length ? <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">{courses.map((b) => <BadgeCard key={b.id} b={b} />)}</div>
