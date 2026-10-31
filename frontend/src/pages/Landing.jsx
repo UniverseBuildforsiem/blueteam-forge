@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Terminal, Search, Flag, FlaskConical, Award, CalendarClock, ArrowRight, Check, Quote, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, Check, Quote, Volume2, VolumeX } from "lucide-react";
+import FeatureShowcase from "../components/FeatureShowcase";
+import { CourseGrid } from "../components/CourseGrid";
+import { COURSES } from "../lib/courses";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
 import { api } from "../lib/api";
@@ -133,15 +136,6 @@ function AlertFeed() {
   );
 }
 
-const FEATURES = [
-  [Terminal, "Kali terminal simulator", "A scripted in-browser shell with seeded evidence. grep, strings, base64, nmap, tshark, john — safe and offline."],
-  [Search, "SIEM you can break", "Search 300+ realistic Windows, firewall, proxy, DNS and auth events. Histograms, field filters, saved searches, alerts."],
-  [Flag, "Jeopardy CTF arena", "Log analysis, forensics, network, malware and web flags with hint economy and a live scoreboard."],
-  [FlaskConical, "Scenario labs", "Multi-step incidents like Phishing to Ransomware. Investigate, answer, write the final report."],
-  [CalendarClock, "Live sessions", "RSVP to instructor-led triage nights, join links, reminders and recordings."],
-  [Award, "Verifiable certificates", "Finish a path, pass the exam at 70%, get a branded PDF with QR verification."],
-];
-
 const TESTIMONIALS = [
   ["Ananya R.", "Now SOC L1 @ MSSP", "The triage cases felt exactly like my first week on shift. I walked into the interview with real stories to tell."],
   ["Daniel K.", "Career switcher", "Breaking the SIEM simulator at 2am taught me more than three video courses combined."],
@@ -195,15 +189,16 @@ export default function Landing() {
       <section id="features" className="max-w-7xl mx-auto px-6 py-24">
         <div className="eyebrow mb-3">// capabilities</div>
         <h2 className="text-3xl font-bold mb-12 max-w-xl">A full SOC, rendered in your browser.</h2>
-        <div className="grid md:grid-cols-3 gap-px bg-cyan-500/10">
-          {FEATURES.map(([I, t, d]) => (
-            <div key={t} className="bg-[#0B0F1A] p-7 group hover:bg-[#0E1424] transition-colors">
-              <I className="h-6 w-6 text-cyan-400 group-hover:text-green-400 transition-colors" />
-              <h3 className="mt-5 font-bold">{t}</h3>
-              <p className="mt-2 text-sm text-slate-400">{d}</p>
-            </div>
-          ))}
+        <FeatureShowcase />
+      </section>
+
+      <section id="courses" className="max-w-7xl mx-auto px-6 pb-24">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+          <div><div className="eyebrow mb-3">// self-paced courses · soc professionals</div><h2 className="text-3xl font-bold">Learn at your own pace.</h2>
+            <p className="text-slate-400 text-sm mt-2 max-w-xl">Recorded courses, exam prep and ebooks. Then practise each skill in SOCForge labs.</p></div>
+          <Link to="/courses" className="ghost-btn" data-testid="landing-courses-see-all">See all {COURSES.length} courses <ArrowRight className="h-4 w-4" /></Link>
         </div>
+        <CourseGrid courses={COURSES.slice(0, 8)} testId="landing-course-grid" />
       </section>
 
       <section id="paths" className="max-w-7xl mx-auto px-6 pb-24">
