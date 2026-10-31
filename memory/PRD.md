@@ -21,8 +21,12 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Instructor: path/quiz builders, JSON editors for CTF/labs/challenges, session form, students, quiz analytics, grading, attendance
 - Admin: analytics, users (role/suspend), publishing, path builder, categories, certificates revoke, announcements, audit logs, settings (allow_signups enforced)
 - Payments: Razorpay order/verify + Cashfree order/status code in place; inactive until keys are added
+- Landing alert queue: severity counters + filter, pause on hover, clickable alerts -> sign-up prompt, optional Critical ping with mute; clicked case carried through sign-up/login
+- Mission briefing dialog before the clicked case opens
+- Daily Alert Drill (/app/drill): deterministic daily case from templates, +50 XP bonus, drill streak, dashboard banner
+- Session reminders: platform cron (.emergent/crons.yml, every 15 min) -> POST /api/cron/session-reminders emails RSVP'd students for sessions starting within the hour (once per RSVP)
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks
-- P1: Gate Pro-only content by plan; scheduled reminder emails before sessions (cron); file uploads for lesson resources (object storage)
+- P1: Gate Pro-only content by plan; file uploads for lesson resources (object storage)
 - P2: WebSocket push instead of polling; more labs/datasets; rich-text editor

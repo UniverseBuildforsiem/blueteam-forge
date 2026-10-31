@@ -1,0 +1,28 @@
+{
+  "summary": "Tested the Daily Alert Drill (backend and frontend), the Mission Briefing (via login and via signup + onboarding), the dashboard drill banner, a regression of opening a challenge straight from the table, and a quick check that the cron endpoint returns 401 without auth. Everything passed. Backend: 6/6 pytest tests pass. GET /api/drill/today returns id drill-2026-10-31, bonus_xp 50, drill_streak 0 and submission null, and does not include verdict/keywords. Submit validation returns 422 for a bad verdict or a short report. Grading follows the formula (60 for the verdict + 40 x keyword coverage). xp = score + 50 and matches the dashboard XP increase. An activity entry 'Daily drill ...' is created. A second submit returns 400, after which GET shows the submission and streak 1. The drill is the same for every user. 8 concurrent submits gave one 200 and seven 400s, with 1 submission stored. Frontend: briefing via login (SOC145) opened ch-rw-01 with title, severity, host, user, reward and 4 objectives; Begin opens the sheet, and a reload does not reopen the briefing. Briefing via signup + onboarding (SOC112) opened ch-bf-01. Drill page: streak 0 -> TP + report -> result shown with score 80/100 -> drill-completed view after about 2.5s (+130 XP), streak 1, still there after reload. Dashboard banner goes from 'Triage now · +50 XP bonus' to 'Done for today · 80/100 · +130 XP'. Opening a challenge from the table shows no briefing; submitting scored 87/100 and the row status updated. No page errors.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "POST /api/drill/today/submit", "issue": "The duplicate check is find-then-insert, with no unique index on drill_submissions(user_id, date). Concurrent requests were handled correctly in testing, but a unique index would guarantee XP cannot be awarded twice."}
+  ]},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Daily Drill completed view", "issues": ["2.5s after submit, the result card (expected verdict and missed keywords) is replaced by drill-completed, which shows only covered keywords. Users lose the learning feedback. Consider showing the missed keywords and expected verdict in the Done view, or using a Continue button instead of the timeout."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_daily_drill.py", "/app/test_reports/pytest/pytest_drill.xml"],
+  "action_items": [
+    "Optional: add a unique index on drill_submissions {user_id, date}",
+    "Optional: show expected verdict and missed keywords in the drill-completed view"
+  ],
+  "critical_code_review_comments": [
+    "drill_today streak loop does one DB query per day of streak. Fine for now, but a single query (dates sorted desc) would scale better.",
+    "Drill submission is not returned with expected_verdict/missed_keywords on GET, so the Done view cannot show them after a reload."
+  ],
+  "updated_files": ["/app/backend/tests/test_daily_drill.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created test_drill_*, test_race_* and test_brief_* users, all deleted from MongoDB together with their drill_submissions and activity. The seeded student has 0 drill submissions today. The student did log in (briefing flow), but nothing was submitted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Today's drill (2026-10-31) is the RDP brute-force template (TP). Use [role=dialog] for the challenge sheet. To click a hero alert, hover hero-alert-feed first to pause the queue. Exclude [data-testid^=hero-alert-feed] when selecting rows."
+}

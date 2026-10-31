@@ -162,6 +162,7 @@ async def lab_report(lid: str, body: ReportIn, user=Depends(get_current_user)):
 from datetime import timedelta
 from core import now
 from drills import drill_for
+from pymongo.errors import DuplicateKeyError
 
 
 @router.get("/drill/today")
@@ -188,10 +189,14 @@ async def drill_submit(body: TriageIn, user=Depends(get_current_user)):
     score = (60 if vc else 0) + round(40 * len(hits) / len(d["keywords"]))
     xp = round(d["points"] * score / 100) + d["bonus_xp"]
     sub = {"user_id": user["id"], "date": d["date"], "verdict": body.verdict, "verdict_correct": vc, "report": body.report,
-           "auto_score": score, "keywords_hit": hits, "xp": xp, "created_at": now_iso()}
-    await db.drill_submissions.insert_one(dict(sub))
+           "auto_score": score, "keywords_hit": hits, "xp": xp, "expected_verdict": d["verdict"],
+           "missed_keywords": [k for k in d["keywords"] if k not in hits], "created_at": now_iso()}
+    try:
+        await db.drill_submissions.insert_one(dict(sub))
+    except DuplicateKeyError:
+        raise HTTPException(400, "You already completed today's drill. Come back tomorrow!")
     await award(user["id"], xp, f"Daily drill '{d['title']}' ({score}/100, +{d['bonus_xp']} bonus)")
-    return {**sub, "expected_verdict": d["verdict"], "missed_keywords": [k for k in d["keywords"] if k not in hits]}
+    return sub
 
 
 # ---------- SIEM ----------
