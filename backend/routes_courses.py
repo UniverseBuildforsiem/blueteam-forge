@@ -188,7 +188,7 @@ async def my_courses(user=Depends(get_current_user)):
 
 @router.post("/me/courses/{cid}/complete")
 async def complete_course(cid: int, user=Depends(get_current_user)):
-    c = await db.courses.find_one({"id": cid}, {"_id": 0, "title": 1})
+    c = await db.courses.find_one({"id": cid, "active": True}, {"_id": 0, "title": 1})
     if not c:
         raise HTTPException(404, "Course not found")
     await db.course_completions.update_one({"user_id": user["id"], "course_id": cid},

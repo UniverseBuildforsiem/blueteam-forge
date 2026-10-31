@@ -1,0 +1,22 @@
+{
+  "summary": "Iteration 8 tested New Course Alerts and Course Completion Badges. Backend: 7 of 7 pytest tests pass when run serially with -n 0. The tests cover: PATCH /me/preferences updating course_emails and streak_emails independently and returning both; an empty body; 401 when logged out. Unsubscribe: a valid HMAC token returns 200 HTML and sets course_emails false; a bad or missing token returns 400 and changes nothing. Completion: 404 for an unknown id; complete and uncomplete are idempotent; the badge (kind 'course') shows in /dashboard and /public/profile/demo and goes away after uncomplete. Sync: I deleted course 584863 and triggered the cron. course_alerts for it then matched the eligible student count (6), with no row for the opted-out demo student. A second trigger added no rows. Frontend: everything passed. Logged out, the dialog has no watched button. Logged in, the button toggles between 'Mark as watched · earn badge' and 'Watched · badge earned', with a toast, the card chip and the course-watched-{id} chip. The dashboard badge shows the graduation-cap icon. /u/demo shows profile-badge-course-{id}. course-emails-toggle stays changed after a reload. Unmarking works.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "notify_new_courses", "issue": "Emails go out one by one inside the cron background task, about 0.4s per student. With many students one sync run takes a long time. The alert row is written before sending, so a failed send (e.g. 422 undeliverable) is never retried. That is acceptable but worth knowing."},
+    {"endpoint": "POST /api/me/courses/{id}/complete", "issue": "Inactive (delisted) courses can still be marked as watched because the active flag is not checked. Minor."}
+  ]},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_course_alerts_badges.py", "/app/test_reports/pytest/pytest_iter8.xml"],
+  "action_items": ["None blocking. Optional: send course alert emails concurrently or in batches; consider rejecting completion of inactive courses."],
+  "critical_code_review_comments": [
+    "sync_courses: 'fresh = [c for c in courses if known and ...]' correctly sends no alerts on the first sync (checked by reading the code; not exercised, because the DB is not empty)",
+    "There is a unique index on course_alerts(user_id, course_id), and DuplicateKeyError is caught, so alerts are never sent twice",
+    "Unsubscribe uses hmac.compare_digest and returns 400 for invalid tokens. Good."
+  ],
+  "updated_files": ["/app/backend/tests/test_course_alerts_badges.py"],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100%"},
+  "test_credentials": "student@socforge.io / Student@123 worked",
+  "seed_data_creation": "Deleted and re-synced course 584863; its course_alerts rows were recreated. cron_runs has TEST_ ids. Final state: 13 active courses, demo course_emails=true, streak_emails=true, completions=[585979].",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run with: pytest tests/test_course_alerts_badges.py -n 0. pytest.ini enables xdist, and parallel runs make the sync test and the completion test interfere because both use course 584863."
+}

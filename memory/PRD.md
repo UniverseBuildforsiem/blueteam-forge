@@ -43,6 +43,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Live course sync (2026-06): backend routes_courses.py, db.courses synced from the store's classplus API; cron course-sync 06:00 Asia/Kolkata -> POST /api/cron/course-sync; startup sync (seed fallback if empty + unreachable); failed sync keeps last list (meta.course_sync.last_error); GET /api/public/courses
 - Course-to-lab links: keyword rules map each course to SOCForge labs/CTF/drill/tools/paths + skill topics; course card opens details popup with practice links (logged-out -> /register)
 - Recommended course: GET /api/courses/recommended (lowest-accuracy topic from analytics -> most specific matching course), dashboard card
+- New course alerts (2026-06): sync detects never-seen course ids and emails every active student with course_emails != false (db.course_alerts unique user+course, no resend); dashboard switch (PATCH /api/me/preferences {course_emails}); signed unsubscribe link GET /api/public/unsubscribe/course-alerts
+- Course completion badges: POST/DELETE /api/me/courses/{id}/complete, GET /api/me/courses; badges kind 'course' in dashboard badges and public profile; "Mark as watched" in course popup
+- Note: seed accounts (@socforge.io) are undeliverable for email (422) — use real addresses or delivered+x@resend.dev to test emails
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks
