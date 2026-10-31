@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Flame, CalendarCheck, CheckCircle2, XCircle, ChevronLeft, RotateCcw, Trophy, History, Mail } from "lucide-react";
+import { Flame, CalendarCheck, CheckCircle2, XCircle, ChevronLeft, RotateCcw, Trophy, History, Mail, Share2, Linkedin, Download, Copy } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Switch } from "../../components/ui/switch";
@@ -79,6 +80,32 @@ function StreakEmailToggle({ on }) {
   );
 }
 
+function ShareStreak() {
+  const [card, setCard] = useState(null);
+  const [v, setV] = useState(0);
+  const open = async () => { const { data } = await api.post("/me/share-card"); setCard(data); setV(Date.now()); };
+  const li = card && `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(card.share_url)}`;
+  return (
+    <>
+      <button className="ghost-btn !py-1 !text-xs" onClick={open} data-testid="drill-share-button"><Share2 className="h-3.5 w-3.5" />Share streak</button>
+      <Dialog open={!!card} onOpenChange={(o) => !o && setCard(null)}>
+        <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-2xl" data-testid="drill-share-dialog">
+          <DialogHeader><DialogTitle className="font-mono">Share your drill streak</DialogTitle></DialogHeader>
+          {card && <>
+            <img src={`${card.image_url}?v=${v}`} alt="Your SOCForge drill streak card" className="w-full border border-cyan-500/20" data-testid="drill-share-image" />
+            <div className="flex flex-wrap gap-2">
+              <a href={li} target="_blank" rel="noreferrer" className="glow-btn" data-testid="drill-share-linkedin"><Linkedin className="h-4 w-4" />Share on LinkedIn</a>
+              <a href={card.image_url} download="socforge-streak.png" target="_blank" rel="noreferrer" className="ghost-btn" data-testid="drill-share-download"><Download className="h-4 w-4" />Download image</a>
+              <button className="ghost-btn" onClick={() => { navigator.clipboard.writeText(card.share_url); toast.success("Link copied"); }} data-testid="drill-share-copy"><Copy className="h-4 w-4" />Copy link</button>
+            </div>
+            <p className="text-xs text-slate-500 font-mono">LinkedIn shows this card as the link preview. Anyone with the link can see your name and streak.</p>
+          </>}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export default function Drill() {
   const [d, setD] = useState(null);
   const load = () => api.get("/drill/today").then((r) => setD(r.data));
@@ -88,7 +115,7 @@ export default function Drill() {
     <div className="max-w-4xl">
       <PageHeader eyebrow={`// daily alert drill · ${d.date}`} title="Daily Alert Drill"
         sub={`One fresh triage case every day. Finish it for a +${d.bonus_xp} XP bonus on top of your score, and keep your streak alive.`}
-        right={<div className="flex flex-col items-end gap-2"><div className="flex items-center gap-2 font-mono text-orange-400 text-lg" data-testid="drill-streak"><Flame className="h-5 w-5" />{d.drill_streak} day drill streak</div><StreakEmailToggle on={d.streak_emails} /></div>} />
+        right={<div className="flex flex-col items-end gap-2"><div className="flex items-center gap-2 font-mono text-orange-400 text-lg" data-testid="drill-streak"><Flame className="h-5 w-5" />{d.drill_streak} day drill streak</div><StreakEmailToggle on={d.streak_emails} /><ShareStreak /></div>} />
       <Tabs defaultValue="today">
         <TabsList className="bg-black/40 mb-4"><TabsTrigger value="today" data-testid="drill-tab-today">Today</TabsTrigger><TabsTrigger value="archive" data-testid="drill-tab-archive"><History className="h-4 w-4 mr-1" />Archive</TabsTrigger><TabsTrigger value="leaderboard" data-testid="drill-tab-leaderboard"><Trophy className="h-4 w-4 mr-1" />Leaderboard</TabsTrigger></TabsList>
         <TabsContent value="today">

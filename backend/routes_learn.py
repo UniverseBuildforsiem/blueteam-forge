@@ -256,12 +256,17 @@ async def rsvp(sid: str, user=Depends(get_current_user)):
 # ---------- Dashboard & analytics ----------
 BADGES = [("first-blood", "First Blood", "Solve your first CTF"), ("triage-pro", "Triage Pro", "3 correct alert verdicts"),
           ("quiz-master", "Quiz Master", "Score 100% on a quiz"), ("pathfinder", "Pathfinder", "Earn a certificate"),
-          ("on-fire", "On Fire", "3-day streak"), ("lab-rat", "Lab Rat", "Finish a scenario lab")]
+          ("on-fire", "On Fire", "3-day streak"), ("lab-rat", "Lab Rat", "Finish a scenario lab"),
+          ("drill-7", "Week Watch", "7-day daily drill streak"), ("drill-30", "Night Shift", "30-day daily drill streak")]
 
 
 async def compute_badges(u):
+    from routes_practice import streak_stats
     uid = u["id"]
+    _, longest, _ = await streak_stats(uid)
     earned = {
+        "drill-7": longest >= 7,
+        "drill-30": longest >= 30,
         "first-blood": await db.ctf_solves.count_documents({"user_id": uid}) > 0,
         "triage-pro": await db.challenge_submissions.count_documents({"user_id": uid, "verdict_correct": True}) >= 3,
         "quiz-master": await db.quiz_attempts.count_documents({"user_id": uid, "score": 100}) > 0,

@@ -196,15 +196,26 @@ async def drill_submit(body: TriageIn, user=Depends(get_current_user)):
 
 
 async def drill_streak(uid):
-    days = {s["date"] for s in await db.drill_submissions.find({"user_id": uid}, {"_id": 0, "date": 1}).sort("date", -1).to_list(400)}
+    return (await streak_stats(uid))[0]
+
+
+async def streak_stats(uid):
+    dates = sorted({s["date"] for s in await db.drill_submissions.find({"user_id": uid}, {"_id": 0, "date": 1}).to_list(2000)})
+    days = set(dates)
     day = now().date()
     if day.isoformat() not in days:
         day -= timedelta(days=1)
-    streak = 0
+    current = 0
     while day.isoformat() in days:
-        streak += 1
+        current += 1
         day -= timedelta(days=1)
-    return streak
+    longest, run, prev = 0, 0, None
+    for ds in dates:
+        d = datetime.strptime(ds, "%Y-%m-%d").date()
+        run = run + 1 if prev and (d - prev).days == 1 else 1
+        longest = max(longest, run)
+        prev = d
+    return current, longest, len(dates)
 
 
 def past_day(date: str):
