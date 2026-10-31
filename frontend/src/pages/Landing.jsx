@@ -1,50 +1,96 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Terminal, Search, Flag, FlaskConical, Award, CalendarClock, ArrowRight, Check, Quote } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
 import { api } from "../lib/api";
 import { Glass, SeverityBadge } from "../components/common";
 import PublicNav, { Footer } from "../components/PublicNav";
 
 const FEED = [
-  ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe"],
-  ["High", "SOC112", "Brute force: 240 x 4625 from 45.155.205.12", "VPN-GW-01"],
-  ["Medium", "SOC201", "Beacon to newly registered domain", "FIN-WS-07"],
-  ["High", "SOC151", "PSEXESVC installed on domain controller", "DC-01"],
-  ["Low", "SOC134", "Scheduled task created by service account", "IT-SRV-02"],
-  ["Critical", "SOC101", "Macro spawned encoded PowerShell", "FIN-WS-07"],
-  ["Medium", "SOC177", "DMARC fail + lookalike sender domain", "MAIL-GW"],
+  ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
+  ["High", "SOC112", "Brute force: 240 x 4625 from 45.155.205.12", "VPN-GW-01", "240 failed VPN logins, then one success, from a hosting provider IP. Did the attacker get in?"],
+  ["Medium", "SOC201", "Beacon to newly registered domain", "FIN-WS-07", "A finance workstation calls out to a 2-day-old domain every 60 seconds. C2 or harmless update check?"],
+  ["High", "SOC151", "PSEXESVC installed on domain controller", "DC-01", "A marketing user installed a remote service on the domain controller. Lateral movement in progress?"],
+  ["Low", "SOC134", "Scheduled task created by service account", "IT-SRV-02", "A patch service account created a daily task. Persistence, or approved IT change?"],
+  ["Critical", "SOC101", "Macro spawned encoded PowerShell", "FIN-WS-07", "An invoice attachment launched hidden, encoded PowerShell. Trace the payload before it spreads."],
+  ["Medium", "SOC177", "DMARC fail + lookalike sender domain", "MAIL-GW", "An 'overdue invoice' from a lookalike domain failed every email check. Phishing or false alarm?"],
 ];
+const SEV_ORDER = ["Critical", "High", "Medium", "Low"];
+const SEV_TEXT = { Critical: "text-red-400", High: "text-orange-400", Medium: "text-yellow-300", Low: "text-green-400" };
+
+function SeverityCounters({ items }) {
+  const counts = SEV_ORDER.map((s) => [s, items.filter((i) => i.f[0] === s).length]);
+  return (
+    <div className="grid grid-cols-4 border-b border-cyan-500/15" data-testid="alert-severity-counters">
+      {counts.map(([s, c]) => (
+        <div key={s} className="px-3 py-2 border-r last:border-r-0 border-cyan-500/10">
+          <div className={`text-lg font-mono font-bold ${SEV_TEXT[s]}`} data-testid={`alert-count-${s.toLowerCase()}`}>{c}</div>
+          <div className="text-[10px] font-mono uppercase text-slate-500">{s}</div>
+        </div>))}
+    </div>
+  );
+}
+
+function AlertPrompt({ alert, onClose }) {
+  if (!alert) return null;
+  const [sev, id, title, host, teaser] = alert;
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-lg" data-testid="alert-signup-prompt">
+        <DialogHeader>
+          <div className="flex items-center gap-2"><SeverityBadge level={sev} /><span className="font-mono text-xs text-cyan-400">{id} · {host}</span></div>
+          <DialogTitle className="font-mono text-xl mt-2">{title}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-slate-300">{teaser}</p>
+        <div className="bg-black/40 border-l-2 border-green-500/50 px-3 py-2 font-mono text-xs text-green-300">evidence locked · logs, sandbox report and intel waiting for an analyst</div>
+        <div className="flex flex-wrap gap-3 mt-2">
+          <Link to="/register" className="glow-btn" data-testid="alert-prompt-signup">Investigate this alert <ArrowRight className="h-4 w-4" /></Link>
+          <Link to="/login" className="ghost-btn" data-testid="alert-prompt-login">I have an account</Link>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function AlertFeed() {
   const [items, setItems] = useState(FEED.slice(0, 4).map((f, i) => ({ f, k: i })));
+  const [paused, setPaused] = useState(false);
+  const [open, setOpen] = useState(null);
+  const n = useRef(4);
+  const hold = paused || !!open;
   useEffect(() => {
-    let n = 4;
-    const t = setInterval(() => { setItems((s) => [{ f: FEED[n % FEED.length], k: n }, ...s].slice(0, 50)); n++; }, 2200);
+    if (hold) return;
+    const t = setInterval(() => { setItems((s) => [{ f: FEED[n.current % FEED.length], k: n.current }, ...s].slice(0, 50)); n.current++; }, 2200);
     return () => clearInterval(t);
-  }, []);
+  }, [hold]);
   return (
-    <Glass className="relative scanlines overflow-hidden" data-testid="hero-alert-feed">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/15 font-mono text-xs text-slate-400">
-        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" /> LIVE ALERT QUEUE</span>
-        <span>siem://socforge/queue</span>
-      </div>
-      <div className="p-3 space-y-2 min-h-[330px] max-h-[516px] overflow-y-auto" data-testid="hero-alert-feed-list">
-        <AnimatePresence initial={false}>
-          {items.map(({ f: [sev, id, title, host], k }) => (
-            <motion.div key={k} layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-              className="flex items-center gap-3 px-3 py-2.5 bg-black/30 border-l-2 border-cyan-500/40 font-mono text-xs">
-              <SeverityBadge level={sev} />
-              <span className="text-cyan-400">{id}</span>
-              <span className="text-slate-200 truncate flex-1">{title}</span>
-              <span className="text-slate-500 hidden sm:block">{host}</span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-      <div className="px-4 py-3 border-t border-cyan-500/15 font-mono text-xs text-green-400 cursor-blink">analyst@socforge:~$ triage --next </div>
-    </Glass>
+    <>
+      <Glass className="relative scanlines overflow-hidden" data-testid="hero-alert-feed" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+        <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/15 font-mono text-xs text-slate-400">
+          <span className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${hold ? "bg-yellow-400" : "bg-red-500 animate-pulse"}`} /> {hold ? "QUEUE PAUSED" : "LIVE ALERT QUEUE"}</span>
+          <span data-testid="alert-feed-status">{hold ? "hover to read · click to investigate" : "siem://socforge/queue"}</span>
+        </div>
+        <SeverityCounters items={items} />
+        <div className="p-3 space-y-2 min-h-[330px] max-h-[516px] overflow-y-auto" data-testid="hero-alert-feed-list">
+          <AnimatePresence initial={false}>
+            {items.map(({ f, k }) => (
+              <motion.button key={k} layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} onClick={() => setOpen(f)}
+                data-testid={`hero-alert-${k}`}
+                className="w-full text-left flex items-center gap-3 px-3 py-2.5 bg-black/30 border-l-2 border-cyan-500/40 font-mono text-xs hover:bg-cyan-500/10 hover:border-cyan-300 transition-colors cursor-pointer">
+                <SeverityBadge level={f[0]} />
+                <span className="text-cyan-400">{f[1]}</span>
+                <span className="text-slate-200 truncate flex-1">{f[2]}</span>
+                <span className="text-slate-500 hidden sm:block">{f[3]}</span>
+              </motion.button>
+            ))}
+          </AnimatePresence>
+        </div>
+        <div className="px-4 py-3 border-t border-cyan-500/15 font-mono text-xs text-green-400 cursor-blink">analyst@socforge:~$ triage --next </div>
+      </Glass>
+      <AlertPrompt alert={open} onClose={() => setOpen(null)} />
+    </>
   );
 }
 
