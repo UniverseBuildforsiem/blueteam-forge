@@ -1,20 +1,63 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowUpRight, PlayCircle, ClipboardCheck, FileText } from "lucide-react";
+import { ArrowUpRight, PlayCircle, ClipboardCheck, FileText, FlaskConical, Flag, Flame, Terminal, BookOpen, ShieldCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
+import { useAuth } from "../context/AuthContext";
 
 const TYPE_ICON = { Videos: PlayCircle, Tests: ClipboardCheck, Files: FileText };
-const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
+const KIND_ICON = { Lab: FlaskConical, CTF: Flag, Drill: Flame, Tool: Terminal, Path: BookOpen, Challenge: ShieldCheck, Quiz: ClipboardCheck };
+export const inr = (n) => `₹${n.toLocaleString("en-IN")}`;
 
-export const CourseCard = ({ c, i = 0 }) => {
+export const PracticeList = ({ c }) => {
+  const { user } = useAuth();
+  return (
+    <div className="space-y-1.5" data-testid={`course-practice-${c.id}`}>
+      {c.practice.map((p) => {
+        const I = KIND_ICON[p.kind] || Terminal;
+        return (
+          <Link key={p.key} to={user ? p.link : "/register"} data-testid={`course-practice-link-${c.id}-${p.key}`}
+            className="flex items-center gap-3 px-3 py-2 border border-white/10 hover:border-cyan-400/60 hover:bg-cyan-500/10 transition-colors">
+            <I className="h-4 w-4 text-green-400" /><span className="text-sm flex-1">{p.title}</span>
+            <span className="text-[10px] font-mono uppercase text-slate-500">{p.kind}</span>
+          </Link>);
+      })}
+      {!user && <p className="text-[11px] font-mono text-slate-500 pt-1">Free account needed to open labs and drills.</p>}
+    </div>
+  );
+};
+
+const CourseDialog = ({ c, onClose }) => (
+  <Dialog open onOpenChange={(v) => !v && onClose()}>
+    <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-2xl" data-testid="course-dialog">
+      <div className="grid sm:grid-cols-[220px_1fr] gap-5">
+        <img src={c.image} alt={c.title} className="w-full aspect-[16/11] object-cover border border-white/10" />
+        <DialogHeader className="text-left">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-300">{c.type} · {c.off}% off</span>
+          <DialogTitle className="text-lg leading-snug" data-testid="course-dialog-title">{c.title}</DialogTitle>
+          <DialogDescription className="font-mono"><span className="text-xl font-bold neon-green">{inr(c.price)}</span> <span className="line-through text-slate-500 text-sm">{inr(c.mrp)}</span></DialogDescription>
+        </DialogHeader>
+      </div>
+      <div>
+        <div className="eyebrow mb-3">// practise it in socforge</div>
+        <PracticeList c={c} />
+      </div>
+      <a href={c.url} target="_blank" rel="noopener noreferrer" className="glow-btn justify-center" data-testid="course-dialog-open">Open course page <ArrowUpRight className="h-4 w-4" /></a>
+    </DialogContent>
+  </Dialog>
+);
+
+export const CourseCard = ({ c, i = 0, onOpen }) => {
   const Icon = TYPE_ICON[c.type] || PlayCircle;
   return (
-    <motion.a href={c.url} target="_blank" rel="noopener noreferrer" data-testid={`course-card-${c.id}`}
+    <motion.button type="button" onClick={() => onOpen(c)} data-testid={`course-card-${c.id}`}
       initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: (i % 4) * 0.06 }}
-      className="group flex flex-col glass rounded-sm overflow-hidden hover:border-cyan-400/60 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(0,240,255,.12)] transition-[transform,box-shadow,border-color] duration-300">
-      <div className="relative aspect-[16/11] overflow-hidden bg-black/50">
+      className="group text-left flex flex-col glass rounded-sm overflow-hidden hover:border-cyan-400/60 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(0,240,255,.12)] transition-[transform,box-shadow,border-color] duration-300">
+      <div className="relative aspect-[16/11] w-full overflow-hidden bg-black/50">
         <img src={c.image} alt={c.title} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
         <span className="absolute top-2 right-2 bg-green-500 text-black text-[10px] font-mono font-bold px-2 py-0.5 rounded-sm" data-testid={`course-off-${c.id}`}>{c.off}% OFF</span>
       </div>
-      <div className="flex flex-col flex-1 p-4">
+      <div className="flex flex-col flex-1 p-4 w-full">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded-sm" data-testid={`course-type-${c.id}`}><Icon className="h-3 w-3" />{c.type}</span>
           {c.tags.map((t) => <span key={t} className="text-[10px] font-mono uppercase tracking-wider text-red-300 border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 rounded-sm">{t}</span>)}
@@ -23,17 +66,24 @@ export const CourseCard = ({ c, i = 0 }) => {
         <div className="mt-auto pt-4 flex items-baseline gap-2 font-mono">
           <span className="text-lg font-bold neon-green" data-testid={`course-price-${c.id}`}>{inr(c.price)}</span>
           <span className="text-xs text-slate-500 line-through" data-testid={`course-mrp-${c.id}`}>{inr(c.mrp)}</span>
+          <span className="ml-auto text-[10px] text-green-400/80">{c.practice.length} labs & drills</span>
         </div>
         <span className="mt-3 inline-flex items-center justify-center gap-1.5 text-xs font-mono py-2 border border-cyan-500/40 text-cyan-200 rounded-sm group-hover:bg-cyan-400 group-hover:text-black transition-colors" data-testid={`course-cta-${c.id}`}>
-          Get this course <ArrowUpRight className="h-3.5 w-3.5" />
+          View course & practice
         </span>
       </div>
-    </motion.a>
+    </motion.button>
   );
 };
 
-export const CourseGrid = ({ courses, testId = "course-grid" }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" data-testid={testId}>
-    {courses.map((c, i) => <CourseCard key={c.id} c={c} i={i} />)}
-  </div>
-);
+export const CourseGrid = ({ courses, testId = "course-grid" }) => {
+  const [open, setOpen] = useState(null);
+  return (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" data-testid={testId}>
+        {courses.map((c, i) => <CourseCard key={c.id} c={c} i={i} onOpen={setOpen} />)}
+      </div>
+      {open && <CourseDialog c={open} onClose={() => setOpen(null)} />}
+    </>
+  );
+};

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check, Quote, Volume2, VolumeX } from "lucide-react";
 import FeatureShowcase from "../components/FeatureShowcase";
 import { CourseGrid } from "../components/CourseGrid";
-import { COURSES } from "../lib/courses";
+import { useCourses } from "../lib/courses";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
 import { api } from "../lib/api";
@@ -158,6 +158,7 @@ const FAQ = [
 export default function Landing() {
   const [paths, setPaths] = useState([]);
   const [stats, setStats] = useState(null);
+  const { courses } = useCourses();
   useEffect(() => {
     api.get("/public/paths").then((r) => setPaths(r.data)).catch(() => {});
     api.get("/public/stats").then((r) => setStats(r.data)).catch(() => {});
@@ -196,9 +197,9 @@ export default function Landing() {
         <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
           <div><div className="eyebrow mb-3">// self-paced courses · soc professionals</div><h2 className="text-3xl font-bold">Learn at your own pace.</h2>
             <p className="text-slate-400 text-sm mt-2 max-w-xl">Recorded courses, exam prep and ebooks. Then practise each skill in SOCForge labs.</p></div>
-          <Link to="/courses" className="ghost-btn" data-testid="landing-courses-see-all">See all {COURSES.length} courses <ArrowRight className="h-4 w-4" /></Link>
+          <Link to="/courses" className="ghost-btn" data-testid="landing-courses-see-all">See all {courses.length} courses <ArrowRight className="h-4 w-4" /></Link>
         </div>
-        <CourseGrid courses={COURSES.slice(0, 8)} testId="landing-course-grid" />
+        <CourseGrid courses={courses.slice(0, 8)} testId="landing-course-grid" />
       </section>
 
       <section id="paths" className="max-w-7xl mx-auto px-6 pb-24">

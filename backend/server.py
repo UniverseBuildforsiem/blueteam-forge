@@ -10,10 +10,11 @@ from routes_practice import router as practice_router
 from routes_manage import router as manage_router
 from routes_cron import router as cron_router
 from routes_share import router as share_router
+from routes_courses import router as courses_router, ensure_courses
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCForge API")
-for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])
@@ -58,6 +59,7 @@ async def startup():
     await seed_collection("labs", S.LABS)
     await seed_collection("sessions", S.sessions_seed())
     await seed_collection("siem_alerts", S.SIEM_ALERTS)
+    await ensure_courses()
     await seed_collection("categories", [{"id": c, "name": c} for c in ["Foundations", "Analyst", "Response", "Career"]])
     await seed_collection("announcements", [{"id": "ann-1", "title": "New lab: Phishing to Ransomware is live", "body": "Reconstruct a full kill chain in the Kali + SIEM simulators.", "active": True, "created_at": now_iso()}])
     for q in [("Failed logons", "event_id=4625 | stats count by src_ip"), ("Beacon hunting", "sourcetype=proxy url=*gate.php*"), ("Shadow copy deletion", "vssadmin")]:

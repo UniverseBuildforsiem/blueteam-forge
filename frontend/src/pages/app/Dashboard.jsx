@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Flame, Trophy, Zap, CalendarClock, Award, Lock } from "lucide-react";
 import { api, fmtDate } from "../../lib/api";
+import RecommendedCourse from "../../components/RecommendedCourse";
 import { Glass, PageHeader, ProgressRing, Empty, Stat, SeverityBadge, ProfileLink } from "../../components/common";
 
 const RANK_COLORS = { Recruit: "text-slate-300", Analyst: "text-cyan-300", Hunter: "text-orange-300", Elite: "neon-green" };
@@ -45,6 +46,7 @@ export default function Dashboard() {
         <Stat label="Flags / Cases / Quizzes" value={`${d.counts.ctf} / ${d.counts.challenges} / ${d.counts.quizzes}`} testId="dashboard-counts" />
       </div>
       <DrillBanner />
+      <RecommendedCourse />
       <div className="grid lg:grid-cols-3 gap-4">
         <Glass className="p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-6"><h3 className="font-bold">Path progress</h3>

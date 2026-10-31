@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Search, ExternalLink } from "lucide-react";
 import PublicNav, { Footer } from "../components/PublicNav";
 import { CourseGrid } from "../components/CourseGrid";
-import { COURSES, COURSE_TYPES, COURSES_URL } from "../lib/courses";
+import { useCourses, COURSE_TYPES, COURSES_URL } from "../lib/courses";
 
 export default function Courses() {
   const [type, setType] = useState("All");
   const [q, setQ] = useState("");
+  const { courses: COURSES, synced_at, loading } = useCourses();
   const shown = COURSES.filter((c) => (type === "All" || c.type === type) && c.title.toLowerCase().includes(q.toLowerCase()));
   return (
     <div className="grid-bg min-h-screen">
@@ -15,7 +16,8 @@ export default function Courses() {
         <div className="rise">
           <div className="eyebrow mb-4">// self-paced courses · by soc professionals</div>
           <h1 className="text-4xl sm:text-5xl font-extrabold">Recorded courses & exam prep.</h1>
-          <p className="mt-4 text-slate-400 max-w-2xl">Video courses, practice exams and ebooks from SOC Professionals. Learn at your own pace, then drill the skills in SOCForge labs.</p>
+          <p className="mt-4 text-slate-400 max-w-2xl">Video courses, practice exams and ebooks from SOC Professionals. Learn at your own pace, then drill the skills in SOCForge labs. Click a course to see the matching labs and drills.</p>
+          {synced_at && <p className="mt-2 text-[11px] font-mono text-slate-500" data-testid="courses-synced-at">prices synced {new Date(synced_at).toLocaleString()}</p>}
         </div>
         <div className="mt-10 flex flex-wrap items-center gap-3">
           {COURSE_TYPES.map((t) => (
@@ -29,7 +31,7 @@ export default function Courses() {
           </label>
         </div>
         <div className="mt-8">
-          {shown.length ? <CourseGrid courses={shown} testId="courses-page-grid" /> :
+          {loading ? <div className="font-mono text-cyan-400 cursor-blink">loading courses </div> : shown.length ? <CourseGrid courses={shown} testId="courses-page-grid" /> :
             <div className="text-center font-mono text-sm text-slate-500 py-16" data-testid="courses-empty">// no courses match "{q}"</div>}
         </div>
         <a href={COURSES_URL} target="_blank" rel="noopener noreferrer" className="ghost-btn mt-10" data-testid="courses-visit-store">Visit the SOC Professionals store <ExternalLink className="h-4 w-4" /></a>
