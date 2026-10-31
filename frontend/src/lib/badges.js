@@ -10,6 +10,7 @@ export const BADGE_ART = {
   "on-fire": ["Recruit", "/badges/on-fire.jpg"],
   "triage-pro": ["Analyst", "/badges/triage-pro.jpg"],
   "quiz-master": ["Analyst", "/badges/quiz-master.jpg"],
+  "interview-ready": ["Analyst", "/badges/interview-ready.jpg"],
   "lab-rat": ["Hunter", "/badges/lab-rat.jpg"],
   "drill-7": ["Hunter", "/badges/drill-7.jpg"],
   pathfinder: ["Elite", "/badges/pathfinder.jpg"],
@@ -24,6 +25,7 @@ export const badgeArt = (b) => {
 export const SHOWCASE_BADGES = [
   ["first-blood", "First Blood", "Solve your first CTF"], ["on-fire", "On Fire", "3-day streak"],
   ["triage-pro", "Triage Pro", "3 correct alert verdicts"], ["quiz-master", "Quiz Master", "Score 100% on a quiz"],
+  ["interview-ready", "Interview Ready", "Buy the SOC Interview ebook"],
   ["lab-rat", "Lab Rat", "Finish a scenario lab"], ["drill-7", "Week Watch", "7-day daily drill streak"],
   ["pathfinder", "Pathfinder", "Earn a certificate"], ["drill-30", "Night Shift", "30-day daily drill streak"],
 ];

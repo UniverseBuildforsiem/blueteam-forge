@@ -443,6 +443,6 @@ async def send_rank_email(uid, rank):
 async def hall_of_fame():
     from core import frame_for
     us = await db.users.find({"role": "student", "status": "active", "xp": {"$gte": 3000}},
-                             {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1, "public_profile": 1, "avatar_frame": 1}).sort("xp", -1).to_list(24)
+                             {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1, "public_profile": 1, "avatar_frame": 1}).sort("xp", -1).to_list(500)
     return [{"name": u["name"], "username": u["username"] if u.get("public_profile") is not False else None, "xp": u.get("xp", 0),
              "rank": "Elite", "frame": frame_for(u)} for u in us]

@@ -260,9 +260,10 @@ async def rsvp(sid: str, user=Depends(get_current_user)):
 BADGES = [("first-blood", "First Blood", "Solve your first CTF"), ("triage-pro", "Triage Pro", "3 correct alert verdicts"),
           ("quiz-master", "Quiz Master", "Score 100% on a quiz"), ("pathfinder", "Pathfinder", "Earn a certificate"),
           ("on-fire", "On Fire", "3-day streak"), ("lab-rat", "Lab Rat", "Finish a scenario lab"),
-          ("drill-7", "Week Watch", "7-day daily drill streak"), ("drill-30", "Night Shift", "30-day daily drill streak")]
+          ("drill-7", "Week Watch", "7-day daily drill streak"), ("drill-30", "Night Shift", "30-day daily drill streak"),
+          ("interview-ready", "Interview Ready", "Buy the SOC Interview Preparation ebook")]
 BADGE_LEVEL = {"first-blood": ("Recruit", "first-blood.jpg"), "on-fire": ("Recruit", "on-fire.jpg"),
-               "triage-pro": ("Analyst", "triage-pro.jpg"), "quiz-master": ("Analyst", "quiz-master.jpg"),
+               "triage-pro": ("Analyst", "triage-pro.jpg"), "quiz-master": ("Analyst", "quiz-master.jpg"), "interview-ready": ("Analyst", "interview-ready.jpg"),
                "lab-rat": ("Hunter", "lab-rat.jpg"), "drill-7": ("Hunter", "drill-7.jpg"),
                "pathfinder": ("Elite", "pathfinder.jpg"), "drill-30": ("Elite", "drill-30.jpg")}
 REVEAL_LEVELS = ("Elite", "Hunter")
@@ -298,6 +299,7 @@ async def compute_badges(u):
         "pathfinder": await db.certificates.count_documents({"user_id": uid}) > 0,
         "on-fire": (u.get("streak") or 0) >= 3,
         "lab-rat": await db.lab_progress.count_documents({"user_id": uid, "report_submitted": True}) > 0,
+        "interview-ready": bool(await db.purchases.find_one({"user_id": uid, "product_id": "soc-interview-ebook"})),
     }
     return [{"id": i, "name": n, "description": d, "earned": earned[i]} for i, n, d in BADGES] + await course_badges(uid)
 

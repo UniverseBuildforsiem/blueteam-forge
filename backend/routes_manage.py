@@ -276,9 +276,8 @@ async def pay_config():
 
 
 async def activate(user_id, pid):
-    p = await db.payments.find_one({"id": pid}, NO_ID)
-    if p and p["status"] != "paid":
-        await db.payments.update_one({"id": pid}, {"$set": {"status": "paid", "paid_at": now_iso()}})
+    p = await db.payments.find_one_and_update({"id": pid, "status": {"$ne": "paid"}}, {"$set": {"status": "paid", "paid_at": now_iso()}}, projection=NO_ID)
+    if p:
         if p["plan"] in PRODUCTS:
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)

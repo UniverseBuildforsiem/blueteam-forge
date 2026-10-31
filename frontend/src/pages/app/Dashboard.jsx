@@ -7,7 +7,7 @@ import ShareCardButton from "../../components/ShareCardButton";
 import LevelUpReveal, { badgeReveal, rankReveal } from "../../components/LevelUpReveal";
 import { api, fmtDate } from "../../lib/api";
 import RecommendedCourse from "../../components/RecommendedCourse";
-import NextBadge from "../../components/NextBadge";
+import NextBadge, { EbookCard } from "../../components/NextBadge";
 import { toast } from "sonner";
 import { Glass, PageHeader, ProgressRing, Empty, Stat, SeverityBadge, ProfileLink } from "../../components/common";
 
@@ -62,6 +62,7 @@ export default function Dashboard() {
         <Stat label="Flags / Cases / Quizzes" value={`${d.counts.ctf} / ${d.counts.challenges} / ${d.counts.quizzes}`} testId="dashboard-counts" />
       </div>
       <DrillBanner />
+      <EbookCard badges={d.badges} />
       <NextBadge badges={d.badges} />
       <RecommendedCourse />
       <div className="grid lg:grid-cols-3 gap-4">

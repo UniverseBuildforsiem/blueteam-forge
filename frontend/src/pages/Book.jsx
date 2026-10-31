@@ -31,15 +31,47 @@ function BuyBox({ cfg, onPaid }) {
   );
 }
 
-const Reader = () => (
-  <section className="max-w-7xl mx-auto px-6 pb-16" data-testid="book-reader">
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <h2 className="text-2xl font-bold flex items-center gap-2"><BookOpen className="h-5 w-5 text-green-400" />Your ebook</h2>
-      <a href={`${FILE}?download=true`} className="glow-btn" data-testid="book-download"><Download className="h-4 w-4" />Download PDF</a>
-    </div>
-    <iframe title="SOC Interview Preparation Ebook" src={FILE} className="w-full h-[80vh] border border-cyan-500/20 bg-white" data-testid="book-reader-frame" />
-  </section>
-);
+const Reader = () => {
+  const [ready, setReady] = useState(false);
+  useEffect(() => { api.get("/me/book").finally(() => setReady(true)); }, []);
+  const go = async (q, tab) => { await api.get("/me/book").catch(() => {}); tab ? window.open(`${FILE}${q}`, "_blank", "noopener") : (window.location.href = `${FILE}${q}`); };
+  return (
+    <section className="max-w-7xl mx-auto px-6 pb-16" data-testid="book-reader">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 className="text-2xl font-bold flex items-center gap-2"><BookOpen className="h-5 w-5 text-green-400" />Your ebook</h2>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => go("", true)} className="ghost-btn" data-testid="book-open-tab">Open in new tab</button>
+          <button onClick={() => go("?download=true")} className="glow-btn" data-testid="book-download"><Download className="h-4 w-4" />Download PDF</button>
+        </div>
+      </div>
+      <p className="text-xs font-mono text-slate-500 mb-3 sm:hidden">On phones, tap "Open in new tab" to read the full book.</p>
+      {ready && <iframe title="SOC Interview Preparation Ebook" src={FILE} className="w-full h-[80vh] border border-cyan-500/20 bg-white" data-testid="book-reader-frame" />}
+    </section>
+  );
+};
+
+const SampleBox = () => {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="max-w-7xl mx-auto px-6 pb-16" data-testid="book-sample">
+      <Glass className="p-6 flex flex-wrap items-center gap-5">
+        <img src="/book/page1.jpg" alt="Sample page" className="h-24 w-auto border border-white/10 shadow-lg" />
+        <div className="flex-1 min-w-[220px]">
+          <div className="eyebrow">// free sample</div>
+          <h2 className="text-xl font-bold mt-1">Read the first 10 pages free</h2>
+          <p className="text-sm text-slate-400">{user ? "See how the questions and answers are laid out before you buy." : "Create a free account to read the sample. No payment needed."}</p>
+        </div>
+        {user ? <button className="ghost-btn" onClick={() => setOpen(!open)} data-testid="book-sample-toggle">{open ? "Hide sample" : "Read free sample"}</button>
+          : <div className="flex gap-2"><Link to="/register" className="glow-btn" data-testid="book-sample-signup">Sign up free</Link><Link to="/login" state={{ from: "/book" }} className="ghost-btn" data-testid="book-sample-login">Log in</Link></div>}
+      </Glass>
+      {user && open && <>
+        <iframe title="Free sample: first 10 pages" src={`${process.env.REACT_APP_BACKEND_URL}/api/me/book/sample`} className="mt-4 w-full h-[75vh] border border-cyan-500/20 bg-white" data-testid="book-sample-frame" />
+        <a href={`${process.env.REACT_APP_BACKEND_URL}/api/me/book/sample`} target="_blank" rel="noopener noreferrer" className="ghost-btn mt-3" data-testid="book-sample-open-tab">Open sample in new tab</a>
+      </>}
+    </section>
+  );
+};
 
 export default function Book() {
   const { user } = useAuth();
@@ -74,7 +106,7 @@ export default function Book() {
           <a href={UDEMY_URL} target="_blank" rel="noopener noreferrer" className="ghost-btn mt-4" data-testid="book-udemy-link"><PlayCircle className="h-4 w-4" />Prefer video? Get the same course on Udemy</a>
         </div>
       </section>
-      {owned && <Reader />}
+      {owned ? <Reader /> : <SampleBox />}
       <section className="max-w-7xl mx-auto px-6 pb-16 grid lg:grid-cols-[1.4fr_1fr] gap-8">
         <Glass className="p-7" data-testid="book-learn">
           <h2 className="text-xl font-bold mb-5">What You'll Learn</h2>

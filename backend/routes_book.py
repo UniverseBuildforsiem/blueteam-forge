@@ -9,6 +9,7 @@ BOOK_ID = "soc-interview-ebook"
 BOOK = {"id": BOOK_ID, "name": "SOC Interview Preparation - Ebook", "amount": 973, "mrp": 2999, "pages": 168,
         "author": "Gopi Pakanati", "udemy_url": "https://www.udemy.com/course/soc-interview-preparation-100questions-from-top-interviews/?referralCode=EB7475E7369B8DD58A38"}
 PDF = Path(__file__).parent / "assets" / "book" / "soc-interview-book.pdf"
+SAMPLE = Path(__file__).parent / "assets" / "book" / "sample.pdf"
 
 
 async def owns_book(user):
@@ -25,6 +26,11 @@ async def book_info():
 @router.get("/me/book")
 async def my_book(user=Depends(get_current_user)):
     return {"owned": await owns_book(user)}
+
+
+@router.get("/me/book/sample")
+async def book_sample(user=Depends(get_current_user)):
+    return FileResponse(SAMPLE, media_type="application/pdf", headers={"Content-Disposition": 'inline; filename="SOC-Interview-Ebook-Free-Sample.pdf"', "Cache-Control": "private, no-store"})
 
 
 @router.get("/me/book/file")

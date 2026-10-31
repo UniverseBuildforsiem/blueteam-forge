@@ -17,7 +17,7 @@ const LevelCard = ({ name, i }) => {
           <p className="text-xs text-slate-400 mt-1">{l.blurb}</p>
         </div>
       </div>
-      <div className="p-4 grid grid-cols-2 gap-3">
+      <div className={`p-4 grid gap-3 ${badges.length > 2 ? "grid-cols-3" : "grid-cols-2"}`}>
         {badges.map(([id, n, d]) => (
           <div key={id} className="flex flex-col items-center text-center gap-1.5" title={d} data-testid={`landing-badge-${id}`}>
             <img src={BADGE_ART[id][1]} alt={n} loading="lazy" className={`h-14 w-14 rounded-full object-cover border-2 ${l.ring} hover:scale-110 transition-transform`} />

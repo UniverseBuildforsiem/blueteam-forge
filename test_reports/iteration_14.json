@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 14: tested SOC Interview Ebook store (/book), payments wiring for product, owner read/download, landing book promo + nav links, Elite Hall of Fame, Dashboard next-badge card, rank-up email + rank share cards + rank-up-share reveal button. Backend 14/14 pytest passed; all frontend flows passed (desktop + mobile). No functional bugs found; only minor/code-review notes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/public/hall-of-fame", "issue": "Capped at to_list(24) while requirement says show ALL Elite students; fine today (1 Elite) but will silently truncate later."},
+      {"endpoint": "activate() routes_manage.py", "issue": "find_one status!='paid' then update is not atomic (verify + cashfree status poll could both run). Harmless today thanks to purchases unique index/upsert, but use find_one_and_update({id, status:{$ne:'paid'}}) to be safe."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Ebook reader / download", "issue": "iframe src and Download link hit /api/me/book/file directly (cookie only, no axios refresh). If the 15-min access token expires while the page is open, Download PDF / iframe reload return 401 JSON instead of the PDF. Consider refreshing token before download or fetching via api blob.", "affected_selectors": ["[data-testid='book-download']", "[data-testid='book-reader-frame']"]},
+      {"flow": "Ebook reader on mobile", "issue": "Android Chrome cannot render PDFs inside an iframe (shows blank/opens download); iOS shows only the first page. Consider a fallback 'Open in new tab' link or pdf.js viewer for mobile.", "affected_selectors": ["[data-testid='book-reader-frame']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_ebook_hof_rankcard.py", "/app/test_reports/pytest/pytest_iter14.xml"],
+  "action_items": [
+    "Optional: remove the 24 cap on hall-of-fame or add pagination to truly show ALL Elite students",
+    "Optional: make activate() atomic with find_one_and_update",
+    "Optional: handle expired access token for direct PDF link/iframe and add mobile fallback for the inline reader"
+  ],
+  "critical_code_review_comments": [
+    "routes_book.py: clean; owner check admin/instructor + db.purchases; FileResponse with inline/attachment and no-store verified.",
+    "item_for() validated before rzp()/cf_base() so invalid plan -> 400 even with keys missing (verified).",
+    "core.award(): reads xp then $inc (not atomic) - concurrent awards could miss a rank-change detection; rank_emails unique index prevents duplicates. Acceptable.",
+    "send_rank_email respects role=student and course_emails=false (verified by test with patched send_email); email has LinkedIn share-offsite link, rank PNG image and unsubscribe link."
+  ],
+  "updated_files": ["/app/backend/tests/test_ebook_hof_rankcard.py"],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "100%"},
+  "seed_data_creation": "Temporarily inserted db.purchases row for student (removed; purchases collection now empty). Temporarily set bot0 rankups_seen/levelups_seen to trigger rank-up reveal, then $unset back to original (fields were absent). TEST_ users created in pytest were deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Payment keys intentionally unconfigured (503 / disabled buttons expected). Headless Chromium shows the PDF iframe as blank white, but network confirms 200 application/pdf inline - not a bug. Next-badge for demo student currently 'On Fire' (first-blood earned). Hall of fame has only kai0 (neon frame). Rank-up reveal test: set bot0 rankups_seen=['Analyst','Hunter'] and levelups_seen all levels, then restore with $unset."
+}

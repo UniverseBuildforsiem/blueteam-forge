@@ -57,6 +57,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Rank-up reveal (2026-06): dashboard.rank_up + POST /api/me/rank-up/{rank}/seen (users.rankups_seen); queued after badge level-up reveal
 - Badge collection page /app/badges (GET /api/me/badges): 4 level sections, locked characters + unlock rule, share earned, course badges
 - Elite avatar frames ember/neon/glitch (PATCH /api/me/avatar-frame, users.avatar_frame, frame_for in core) shown on dashboard/CTF/drill leaderboards only
+- SOC Interview ebook (2026-06): /book page (routes_book.py; PDF at backend/assets/book, cover at frontend/public/book), ₹973 (MRP ₹2,999) via Razorpay/Cashfree (PRODUCTS in routes_manage.py, activate() -> db.purchases), in-browser reader + download for owners (admins/instructors free), Udemy video link; landing BookPromo with animated cover
+- Rank-up email (core.award -> routes_share.send_rank_email, db.rank_emails unique) + rank share cards /api/public/rank/{token}/{rank}(.png); share button on rank-up reveal
+- Dashboard "next badge to chase" (NextBadge); landing Elite Hall of Fame (GET /api/public/hall-of-fame, all Elite; private ones not linked)
+- PENDING: RAZORPAY_KEY_ID/SECRET and CASHFREE_CLIENT_ID/SECRET not yet provided — pay buttons disabled until set
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks
