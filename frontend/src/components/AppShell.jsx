@@ -1,13 +1,13 @@
 import { NavLink, Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { LayoutDashboard, Route as RouteIcon, CalendarClock, ListChecks, Activity, Siren, Flag, FlaskConical, Terminal, Search, Wrench,
-  Award, CreditCard, GraduationCap, Medal, ShieldCheck, LogOut, Menu, Zap } from "lucide-react";
+  Award, CreditCard, GraduationCap, Medal, Mic, ShieldCheck, LogOut, Menu, Zap } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "./common";
 
 const STUDENT = [
   ["Dashboard", "/app", LayoutDashboard], ["Learning Paths", "/app/paths", RouteIcon], ["Live Sessions", "/app/sessions", CalendarClock],
-  ["Quizzes", "/app/quizzes", ListChecks], ["Progress", "/app/progress", Activity], ["Daily Drill", "/app/drill", Zap], ["My Courses", "/app/courses", GraduationCap], ["Badges", "/app/badges", Medal], ["SOC Challenges", "/app/challenges", Siren],
+  ["Quizzes", "/app/quizzes", ListChecks], ["Progress", "/app/progress", Activity], ["Daily Drill", "/app/drill", Zap], ["My Courses", "/app/courses", GraduationCap], ["Badges", "/app/badges", Medal], ["Mock Interview", "/app/interview", Mic], ["SOC Challenges", "/app/challenges", Siren],
   ["CTF Arena", "/app/ctf", Flag], ["Scenario Labs", "/app/labs", FlaskConical], ["Kali Terminal", "/app/kali", Terminal],
   ["SIEM", "/app/siem", Search], ["Investigation Tools", "/app/tools", Wrench], ["Certificates", "/app/certificates", Award], ["Billing", "/app/billing", CreditCard],
 ];

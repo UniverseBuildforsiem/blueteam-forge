@@ -1,0 +1,650 @@
+[
+ {
+  "id": "bq1",
+  "q": "What is the difference between authenticated and unauthenticated scanning, and which one is more result-oriented?",
+  "a": "Authenticated scanning uses valid credentials to log into targets. It sees internal issues such as misconfigurations, weak passwords, excessive permissions and missing patches, so results are deeper and more thorough. Unauthenticated scanning uses no credentials and simulates an external attacker, finding only what is exposed publicly (open ports, outdated services, firewall misconfigurations). Authenticated scanning is generally more result-oriented, especially for attackers who already have access through phishing or weak credentials. In practice a combination of both is recommended for a full view of security posture.",
+  "topic": "Vulnerability Mgmt"
+ },
+ {
+  "id": "bq2",
+  "q": "Can you explain the CIA Triad (Confidentiality, Integrity, Availability) and how it applies in a real-world scenario from your SOC experience?",
+  "a": "Confidentiality means only authorized people can access data. Controls: encryption at rest and in transit, access control, MFA. SOC monitors logs for unusual access, such as after-hours access to sensitive records. Integrity means data is accurate and untampered. Controls: file integrity monitoring (OSSEC, Tripwire), hashing, digital signatures, audit trails. Availability means systems are accessible when needed. Controls: load balancing, redundancy and failover, disaster recovery, DDoS protection. Example: ransomware hits all three by exposing data, corrupting files and causing downtime. The SOC monitors file changes, uses IDS and ensures backups exist.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq3",
+  "q": "Can you walk us through what the Cyber Kill Chain is, and explain each step as a SOC Analyst?",
+  "a": "The stages are: 1) Reconnaissance: attacker gathers information; SOC detects port scans, odd DNS queries and failed logins via IDS/IPS. 2) Weaponization: payload paired with an exploit; SOC spots exploit kits and malicious files via SIEM and email filters. 3) Delivery: phishing, malicious links or sites; SOC uses email gateway, proxy and EDR, then quarantines and blocks the sender. 4) Exploitation: EDR detects unexpected code execution. 5) Installation: persistence such as RATs or startup changes; isolate the host. 6) C2: abnormal outbound traffic or DNS to malicious IPs; block the IP. 7) Actions on Objectives: exfiltration, lateral movement; use DLP and firewall blocks and escalate to IR. Then contain, eradicate, recover and review.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq4",
+  "q": "Can you walk us through how you would handle an attack based on the Cyber Kill Chain in a real-time SOC scenario?",
+  "a": "Use a phishing example. On detecting suspicious outbound traffic and an email with a malicious attachment, first check the email for phishing or malware indicators. If malicious, quarantine the email, block the sender and investigate. Monitor for exploitation, using EDR to see whether a payload ran. If the host is compromised and malware is installed, check for a C2 channel and work with the team to block communication to the external C2 server. After containment, focus on recovery and prevention: patching and improving email filtering. This shows proactive mitigation at every stage of the attack lifecycle.",
+  "topic": "Incident Response"
+ },
+ {
+  "id": "bq5",
+  "q": "Could you please explain what defense-in-depth is and describe it using a layered approach as a SOC Analyst?",
+  "a": "Defense-in-depth uses multiple layers of defense so that an attacker must bypass several barriers, and if one layer fails the others still protect. Layers: perimeter defense (firewalls, IDS/IPS); network segmentation to contain breaches; endpoint security (antivirus, EDR); application security (secure coding, vulnerability scanning, patch management); access controls (authentication, RBAC, MFA); monitoring and logging with a SIEM to detect anomalies; and incident response with predefined processes to detect, contain and mitigate incidents.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq6",
+  "q": "What is the main difference between TCP and UDP? Explain as a SOC Analyst.",
+  "a": "TCP is connection-oriented and reliable, with error checking, retransmission and flow control. It is used where integrity matters, such as HTTP and SMTP. UDP is connectionless and faster but unreliable, with no guarantee of delivery, ordering or error checking. It is used for real-time uses such as streaming and DNS. From a security view, monitoring TCP and UDP traffic helps spot unusual patterns and attacks such as TCP floods or DNS amplification.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq7",
+  "q": "Could you please explain the TCP flags and why flag sets are needed in networking?",
+  "a": "TCP flags control and manage data flow between devices. SYN initiates a connection (part of the 3-way handshake). ACK acknowledges received data. FIN gracefully closes a connection. RST resets a connection. PSH pushes data to the receiving application immediately. URG marks urgent data. They ensure data is sent, acknowledged, and connections are established or terminated properly. SOC analysts monitor flags to identify unusual patterns such as SYN floods or excessive connection resets, which can indicate attacks or misconfigurations.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq8",
+  "q": "How do you identify normal traffic spikes versus DoS/DDoS attack traffic as a SOC Analyst?",
+  "a": "Normal spikes are expected and tied to events such as marketing campaigns or promotions, with gradual growth in user activity over a longer period. DoS/DDoS attacks send non-legitimate packets to overload a server or application and make it unavailable. They show sudden, massive spikes, often from many sources in a DDoS, with repetitive requests, unusual traffic sources, odd packet patterns and resource utilization spikes. Detection uses IDS/IPS, traffic analysis and anomaly detection.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq9",
+  "q": "Explain what a Golden Ticket attack is, and have you worked on any Golden Ticket incidents?",
+  "a": "A Golden Ticket is a forged Kerberos authentication ticket (TGT) that lets attackers impersonate any user in a Windows domain, including Domain Admins, without detection. It is typically created after compromising a domain controller and gaining access to the KDC (krbtgt account), giving persistent access and bypassing security controls. In an incident, the SOC detected unusual Kerberos ticket activity in logs showing privilege escalation. Response: isolate affected systems, reset key service accounts, and run a forensic investigation to find and remediate the root cause.",
+  "topic": "Incident Response"
+ },
+ {
+  "id": "bq10",
+  "q": "Could you please explain what a hash, signature, encoding, and encryption are, with examples, and how you use them in SOC investigations?",
+  "a": "Hash: a one-way fixed-length digest that cannot be reversed; any change to the file changes the hash. It verifies integrity. In the SOC, compute a SHA-256 of a sample and compare it with threat intelligence, and block or whitelist by hash rather than filename. Signature: a digital signature validates authenticity and integrity and confirms the source, for example verifying a vendor patch. SOC keeps trusted signatures for whitelisting vendor apps. Encryption: converts data to ciphertext unreadable without a key (for example AES) to ensure confidentiality. Encoding: reversible transformation for transport, not security (for example Base64); analysts decode it to see the real content, such as encoded malicious URLs.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq11",
+  "q": "Could you please explain HIDS and NIDS, with a real-time scenario as a SOC Analyst?",
+  "a": "HIDS (Host-based IDS) monitors activity on individual hosts such as servers, workstations and endpoints, looking for unauthorized file changes or unusual processes. NIDS (Network-based IDS) analyzes network traffic and packets to detect threats such as malware, DDoS and unauthorized access attempts. In a SOC, HIDS monitors critical servers and endpoints for abnormal login attempts or file integrity issues. NIDS analyzes network traffic for external threats such as scanning or suspicious communication patterns, alerting before breaches affect the network.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq12",
+  "q": "What is a honeypot and why do we use it in a SOC?",
+  "a": "A honeypot is a decoy system built to look like a vulnerable, valuable asset, luring attackers away from real systems. It detects attacks early, before critical systems are affected. It lets analysts study the techniques and tools attackers use, which improves defenses. It also distracts attackers and buys the team time to respond. Example: a honeypot mimicking a vulnerable server alerts the SOC when an attacker tries to exploit it. The team analyzes the attack and strengthens the real systems.",
+  "topic": "Threat Hunting"
+ },
+ {
+  "id": "bq13",
+  "q": "What is the main difference between IDS and IPS? Explain with a real-time scenario as a SOC analyst.",
+  "a": "An IDS (Intrusion Detection System) monitors for suspicious activity or breaches and only alerts the security team; it takes no action itself. An IPS (Intrusion Prevention System) also detects threats and actively blocks malicious traffic in real time. Scenario: with an IDS I watch for port scans or unauthorized access attempts, then investigate and respond to the alerts. With an IPS the system automatically blocks attacks such as a DDoS or malware entering the network, so no manual intervention is needed.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq14",
+  "q": "Could you please explain IP address classification with a real-time example?",
+  "a": "IPv4 addresses are divided into classes by network size. Class A (1.0.0.0\u2013127.255.255.255) suits large networks, Class B (128.0.0.0\u2013191.255.255.255) medium networks, and Class C (192.0.0.0\u2013223.255.255.255) small networks. Classes D and E are reserved for multicast and experimental use. Each class has a private range, which is not internet-routable: 10.0.0.0/8, 172.16.0.0\u2013172.31.255.255, and 192.168.0.0/16. The rest are public addresses assigned by ISPs. Public IPs are traceable, so they help trace employee account activity and malicious logons. Example: a public IP from a suspicious region trying to reach private IPs could signal an external attack.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq15",
+  "q": "What is the main role of the network layer in the OSI model? Explain with a real-time scenario as a SOC analyst.",
+  "a": "The Network Layer (Layer 3) routes data packets between devices across different networks. It uses IP addresses to choose the best path from source to destination. Scenario: when monitoring for threats, I analyze traffic patterns and network logs for suspicious activity such as DDoS attacks or unauthorized access attempts. I use firewalls, IDS/IPS and network segmentation to secure this layer and stop threats spreading across the network.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq16",
+  "q": "What is the malware SOP? Explain with a real-time scenario.",
+  "a": "When an alert fires, collect IOCs: file, file path, hash, signature, file status, endpoint, usernames, artifacts and process. Validate hashes and signatures with OSINT and sandboxes such as VirusTotal, IBM X-Force, Talos and AnyRun. Contact the employee or administrator, copying their manager, and check device health in EDR. True positive (malicious, no business need): eradicate by deleting the file, isolating the endpoint if needed, blocking the hash and signature (via Sophos MDR ticket), and engaging IT helpdesk through ServiceNow. Reset credentials or hand the device to backup & recovery where required. False positive: whitelist by hash, signature and path after the employee's email and manager or client approval. Run monthly awareness sessions.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq17",
+  "q": "Could you please explain what network segmentation is, with a real-time explanation?",
+  "a": "Network segmentation divides a larger network into smaller, isolated subnets to improve security and performance. It contains breaches and limits attackers' lateral movement. As a SOC analyst I use it to isolate sensitive systems such as financial databases or critical servers from the rest of the network. If an attacker compromises a less critical segment, segmentation prevents easy access to sensitive areas and minimizes damage.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq18",
+  "q": "Could you please explain the OSI layers and specify which operations or services are associated with each layer?",
+  "a": "Answer each layer with a SOC example. Application: HTTP, email and DNS logs, e.g. SQL injection or phishing emails. Presentation: SSL/TLS, weak ciphers and misconfigured certificates, which enable MITM. Session: session hijacking, e.g. a hijacked SSH session. Transport: TCP/UDP patterns such as SYN floods and port scans. Network: IP anomalies and IP spoofing. Data link: MAC flooding and ARP spoofing or poisoning. Physical: cable or hardware failures. In a DDoS incident each layer shows symptoms. Examples are rebooting devices, MAC flooding, massive traffic to org IPs, SYN spikes, session timeouts and floods of malicious HTTP requests.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq19",
+  "q": "What is the ping command, which protocol does it use, and how do you use it as a SOC analyst?",
+  "a": "Ping tests connectivity between two devices by sending ICMP Echo Requests and receiving Echo Replies. It shows whether a host is reachable and measures round-trip time. The TTL value in replies helps guess the OS: Windows is typically 128 and Linux 64. As a SOC analyst I use it to check whether servers or devices are online, diagnose downtime or latency, and spot segmentation or connectivity problems during incident response.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq20",
+  "q": "Explain what a port scan is, and vertical vs horizontal port scanning. What is Nmap used for?",
+  "a": "A port scan sends requests to ports on a device to find open ports, running services and versions, so weaknesses can be identified. Vertical scan: one host across many or all ports (e.g. all 65,535 TCP ports). Horizontal scan: the same port across many hosts, such as port 80 on 192.168.1.1\u2013255, to map web servers. Nmap is an open-source tool for network discovery and security auditing. It detects open ports, services, OS and versions, and firewall configurations. Example: nmap -sS -p 1-65535 <target> runs a SYN scan. The SOC then checks whether the open services are configured safely and patches or blocks as needed.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq21",
+  "q": "Could you please explain the common ports and the services that use them?",
+  "a": "Port ranges are well-known (0\u20131023), registered (1024\u201349151) and dynamic/private (49152\u201365535). Common ports: 80 HTTP, 443 HTTPS, 22 SSH, 21 FTP, 25 SMTP, 53 DNS, 3389 RDP, 110 POP3, 143 IMAP. Given a port I name the service, and given a service I name the port. Monitoring them matters in a SOC. Unusual access to 3389 may indicate RDP brute force, and a spike in port 25 traffic may suggest email-based malware. Ports can be reconfigured, so traffic analysis is still needed regardless of port numbers.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq22",
+  "q": "Could you please explain what a private IP address and a public IP address are.",
+  "a": "A private IP is used inside a LAN and is not routable on the internet. IANA reserves 10.0.0.0\u201310.255.255.255, 172.16.0.0\u2013172.31.255.255 and 192.168.0.0\u2013192.168.255.255. Private hosts reach the internet via NAT. A public IP is globally unique, assigned by an ISP and routable on the internet, used by web and email servers. Private IPs protect internal systems from direct outside access, but internal traffic still needs monitoring. Public IPs are exposed to DDoS and brute force, so analysts protect them with firewalls and IDS/IPS.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq23",
+  "q": "What is the difference between a search head and an indexer in Splunk? Have you used both in your investigations?",
+  "a": "A search head runs searches using SPL (Search Processing Language) and manages the user interface. Users query indexed data, visualize results and build use cases to detect real-time threats. An indexer receives incoming data, processes and parses it, then stores and organizes it for efficient searching. In investigations I query and analyze data on the search head with SPL, while the indexer ensures the data is properly stored and accessible.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq24",
+  "q": "What is a silver ticket, and in your past experience have you worked on any silver ticket incidents?",
+  "a": "A Silver Ticket is a forged Kerberos service ticket. It gives an attacker unauthorized access to a specific service, such as file shares or databases, by manipulating that service's authentication, without compromising the whole domain. A Golden Ticket, by contrast, grants broad access. Example incident: we noticed unusual service ticket requests from a compromised account and found the attacker had forged a Silver Ticket. We blocked the compromised account, reset service account credentials, and investigated thoroughly to prevent further exploitation.",
+  "topic": "Incident Response"
+ },
+ {
+  "id": "bq25",
+  "q": "Explain the TCP 3-way handshake, or explain it with a real-time incident.",
+  "a": "The TCP 3-way handshake establishes a reliable client-server connection. SYN: the client sends a synchronize packet. SYN-ACK: the server acknowledges and signals it is ready. ACK: the client confirms, completing the handshake. In a SYN flood, an attacker sends many SYN requests without completing the handshake, exhausting server resources. As a SOC analyst I monitor for high numbers of half-open connections. At the firewall I check the attacker's IP and request packets for investigation, and apply eradication steps such as blocking if needed.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq26",
+  "q": "What is the use of the tracert and traceroute commands, and have you used them as a SOC analyst?",
+  "a": "Tracert (Windows) and traceroute (Linux/Unix) trace the route packets take between systems. They show each hop and the time taken per hop, which helps identify latency or bottlenecks. I have used both to troubleshoot network issues, such as finding where delays occur between servers. They also help detect misconfigurations or attacks like DDoS where traffic may be routed unusually.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq27",
+  "q": "Could you explain the concept of Zero Trust Security as a SOC analyst?",
+  "a": "Zero Trust is a security approach built on 'never trust, always verify'. It assumes threats can come from inside or outside the organization. Access is granted only after rigorous authentication and continuous monitoring. Every user, device and application must prove its identity, and access is constantly reassessed based on real-time risk and behavior.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq28",
+  "q": "What are the key components of Zero Trust network security?",
+  "a": "Five key components: (1) Identity and Access Management, authenticating users and devices, typically with MFA. (2) Least privilege access, limiting users to necessary resources and reducing the attack surface. (3) Micro-segmentation, dividing the network into small segments to hinder lateral movement. (4) Continuous monitoring and trust evaluation, adjusting access based on behavior, location and security posture. (5) Device security, enforcing policy compliance with tools like EDR.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq29",
+  "q": "What are the benefits of Zero Trust network security for a SOC analyst?",
+  "a": "Benefits: reduced attack surface through continuous verification; improved security posture, with fewer insider threats and less lateral movement and stronger defense against phishing-led attacks; faster incident detection and response through continuous monitoring and isolation; compliance support through strict access controls and monitoring; and adaptability, securing cloud, remote work and mobile devices with consistent authentication across all resources.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq30",
+  "q": "What are Indicators of Attack (IOA)? Explain with one real-time example as an analyst.",
+  "a": "IOAs are signs or patterns suggesting an attack is occurring or about to occur. Unlike IOCs, which are evidence of a past compromise, IOAs focus on attacker behaviors and tactics in real time to prevent attacks. Example: multiple failed login attempts from various IP addresses within a short period suggest a brute-force attack in progress. This prompts immediate action to block the suspicious IPs and investigate further.",
+  "topic": "Threat Intel"
+ },
+ {
+  "id": "bq31",
+  "q": "Explain true positive, false positive, true negative and false negative with one real-time example as an analyst.",
+  "a": "True Positive: a real threat correctly flagged, e.g. EDR detects malware confirmed malicious. False Positive: a harmless event wrongly flagged, e.g. a legitimate software update flagged as malicious. True Negative: a harmless event correctly not flagged, e.g. a routine update. False Negative: a real threat missed, e.g. a phishing email not detected by email security. Actions: for TPs, contain and eradicate; for FPs, whitelist after verification; for TNs, none; for FNs, improve detection to reduce missed threats.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq32",
+  "q": "Explain the difference between vulnerability, risk and threat with a real-time example.",
+  "a": "A vulnerability is a weakness that could be exploited, e.g. outdated software with known flaws. A threat is any potential danger that exploits a vulnerability, e.g. a cybercriminal or malware targeting that software. Risk is the likelihood and impact of the threat exploiting the vulnerability, e.g. a data breach with financial or reputational damage from unpatched software. As an analyst I find vulnerabilities through scanning, assess threats using threat intelligence, and evaluate risk to prioritize mitigation such as patching or stronger controls.",
+  "topic": "Vulnerability Mgmt"
+ },
+ {
+  "id": "bq33",
+  "q": "What are Indicators of Compromise (IOCs)? Explain with one real-time example as an analyst.",
+  "a": "IOCs are pieces of forensic data showing a system or network has been compromised or attacked. They help detect breaches, track attacker movements and prevent further damage. Examples include IP addresses, domain names, file hashes and suspicious network traffic patterns. Example: if EDR detects a known malicious file hash on an endpoint, that IOC confirms compromise. I would isolate the system, remove the malware and block the hash across the network to stop spread.",
+  "topic": "Threat Intel"
+ },
+ {
+  "id": "bq34",
+  "q": "What is a path traversal (directory traversal) attack, how do you investigate it, and what IOCs do you consider?",
+  "a": "Path traversal uses ../../ sequences to manipulate file paths and reach files outside the intended directory, such as password or configuration files. Detect it in SIEM/SOAR use cases with payloads like ../../../ or encoded ..%2F. Investigate by reviewing web server logs for out-of-place paths, using file integrity monitoring to check for unauthorized access or changes, and analyzing network traffic for unusual requests to vulnerable endpoints. Key IOCs: HTTP requests containing ../, ..%2f or other encoded traversal sequences; attempts to reach /etc/passwd or C:\\Windows\\System32\\config; and unexplained access or changes to critical system files.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq35",
+  "q": "How do you investigate XSS, and what are the main IOCs you consider? Explain with a real-time example.",
+  "a": "Start by understanding the alert: how it was detected (WAF, SIEM, user report), the affected application, endpoints and input fields. Collect IOCs: payload, URL/URI, status codes (200, 403, 404, 500) and HTTP method (GET, POST, PUT), plus the log sources. Determine whether it is stored, reflected or DOM-based. Analyze the payload for script, iframe or h1 tags, JavaScript functions or encoded data. Typos with <, > or / may be false positives. Where permitted, reproduce the issue with Burp Suite or browser dev tools. Review logs for suspicious inputs, encoded parameters, session hijacking and error spikes. Work with developers on input sanitization, output encoding and Content Security Policy.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq36",
+  "q": "Could you please explain HTTP methods and how they are used in SOC investigations?",
+  "a": "HTTP methods are standardized actions clients use to communicate with web servers. GET retrieves data, and is used to spot unauthorized access to web resources. POST sends data such as forms, and SOCs use it to detect harmful payloads or data exfiltration. PUT uploads data or files and is monitored for suspicious changes to web resources. DELETE removes data and is investigated if deletions are abnormal. UPDATE modifies existing information. HEAD retrieves only metadata and reveals server configuration. Clients often restrict certain methods, so we analyze unauthorized methods to detect unauthorized access, breaches or web attacks.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq37",
+  "q": "What are the major IOCs of web application attacks, and which logs do you collect them from?",
+  "a": "Major IOCs: (1) suspicious URLs, especially API endpoints and restricted URLs; (2) malicious or blacklisted IPs, including IPs from restricted countries; (3) unusual HTTP methods such as PUT, DELETE or TRACE; (4) payloads in login, search or comment fields containing special characters, boolean operators or HTML/JavaScript tags; (5) status codes (200, 201, 302, 403, 404, 500) showing whether a request was accepted; (6) SQL injection patterns; (7) file inclusion patterns such as php:// or file://; (8) unusual user-agent strings. I collect them from WAF logs (e.g. Imperva), web server logs, application logs and network traffic logs.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq38",
+  "q": "What are LFI and RFI, and how do you detect both attacks in your infrastructure?",
+  "a": "Both are file inclusion vulnerabilities caused by unsanitized input. LFI includes files from the local server, leading to information leakage or remote code execution. RFI includes a file from an external, potentially malicious server. Detection: review web server logs for inclusion patterns like php:// or file://; use a WAF to block known attack vectors; use file integrity monitoring to catch unauthorized changes to critical files; validate input, especially file paths. Regular vulnerability scanning and patch management also help mitigate both.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq39",
+  "q": "Explain the OWASP Top 10 (2017) and what common web application attacks you've encountered in your shift.",
+  "a": "The 2017 list covers injection, broken authentication, sensitive data exposure, XXE, broken access control, security misconfiguration, XSS, insecure deserialization, using components with known vulnerabilities, and insufficient logging and monitoring. In my MSSP role supporting banking and healthcare customers, I see 20+ web application alerts a day. The most common are SQL injection, XSS, brute force on login endpoints, LFI/RFI file inclusion, credential stuffing and PHP code injection. I handle them by monitoring alerts, reviewing logs, and using WAFs, SIEM and IDS/IPS to detect and mitigate.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq40",
+  "q": "What is PHP code injection and how do you prevent it as a SOC Analyst or Incident Responder?",
+  "a": "PHP code injection is when an attacker inserts malicious PHP code, commonly a phpinfo() probe, into a web application and the server executes it. This can lead to unauthorized access, data breach or server compromise. Detection in the SIEM uses the phpinfo() payload combined with 200 OK or 201 Created status codes. Prevention covers input validation and sanitization, prepared statements, least privilege for the web application, regular patching of PHP and related software, and a WAF to block malicious requests. SOC also monitors for suspicious patterns and runs regular vulnerability assessments.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq41",
+  "q": "How do you prevent SQL injection? What are the possible ways of prevention?",
+  "a": "Key controls:\n- Input validation and sanitization: reject unexpected input such as ', ; and --.\n- Prepared statements or parameterized queries, so input is treated as data and not executable code.\n- Stored procedures, which keep the SQL logic predefined.\n- Least privilege for database accounts and the web application.\n- A WAF to detect and block SQLi attempts in real time.\n- Regular security audits, patching and updates of applications and databases.\n\nTogether these significantly reduce the risk of SQL injection.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq42",
+  "q": "Explain Remote Code Execution (RCE) vulnerability. Have you handled any recent cyber threats related to RCE?",
+  "a": "RCE lets an attacker run arbitrary code on a target system remotely, which can give full control, data theft or network compromise. Causes include improper input validation, misconfigured services and insecure deserialization. In a case I handled, an attacker uploaded a malicious script through an unprotected file upload endpoint on an outdated web server. The SIEM use case flagged abnormal outbound traffic and suspicious uploads. I analyzed logs, traced the script execution and collected IOCs. Containment was isolating the server with EDR/XDR. Eradication was patching the app and improving upload validation. We also added WAF policies to block unauthorized file extensions.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq43",
+  "q": "Explain an XSS attack with a real-time incident analysis you handled.",
+  "a": "Example: an attacker injects <script>alert('XSS')</script> into a blog comment field, it is stored in the database and executes whenever the comments page loads. My steps:\n- Collect IOCs: payload, URL/URI, status codes (200, 201 mean the payload was accepted) and HTTP method.\n- Identify log sources and confirm when and by whom the payload was submitted.\n- Reproduce the issue if the customer allows it.\n- Find other fields that accept unsanitized input.\n- Work with developers to sanitize inputs, and apply WAF rules to block similar payloads.\n\nKey mitigations are input validation, output encoding, CSP, log monitoring and a robust WAF.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq44",
+  "q": "Explain SQL injection and the types of SQL injection.",
+  "a": "SQL injection is a web vulnerability where attackers inject malicious SQL into input fields. If the application accepts unsanitized data, they can exfiltrate data or gain admin-like control. Types:\n- Classic/basic: unfiltered input runs SQL directly, e.g. ' OR '1'='1;--.\n- Blind: results aren't visible, so behavior is inferred. Boolean-based observes response changes. Time-based uses delays.\n- Union-based: the UNION operator combines malicious and legitimate query results.\n- Error-based: forces detailed error messages that reveal database structure.\n- Out-of-band: exfiltrates data over DNS or HTTP channels.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq45",
+  "q": "How do you investigate SQL injection, and what are true positive and false positive situations?",
+  "a": "I assign the ticket to myself in the ticketing tool and collect IOCs: payload, URL, URI, HTTP method and status code. The status code is the conclusion IOC. A 200 OK (or 201 Created) in WAF/server logs means the payload was accepted. 4xx and 500 codes mean it was rejected or errored. I check IP reputation with VirusTotal, AbuseIPDB and IPVoid, then block the IP, update WAF/IDS rules and have the developer or client SPOC fix input validation.\n\nTrue positive: special characters accepted with a 200/201, a malicious IP, and unauthorized admin changes.\nFalse positive: a benign input such as a username with a single quote.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq46",
+  "q": "Explain what SSRF and CSRF attacks are, and have you dealt with such incidents?",
+  "a": "SSRF: the application fetches a remote resource from a user-supplied URL without validation. The attacker points it at internal resources such as 127.0.0.1, which can expose sensitive data, enable internal scans or lead to RCE.\n\nCSRF: an authenticated user clicks a malicious link, usually from phishing. The browser automatically sends session cookies, so the site processes the forged request as legitimate.\n\nI've investigated both. For SSRF I watched for unusual outbound requests from trusted servers and exploitation attempts. For CSRF I reviewed user activity and suspicious requests. WAFs help detect and prevent both.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq47",
+  "q": "Can you explain HTTP status codes and how they help SOC analysts during investigations?",
+  "a": "Status codes show whether the server accepted the attacker's request, so they are major IOCs for deciding whether a breach occurred. Classes: 1xx informational; 2xx success (200 OK); 3xx redirection (301); 4xx client error (403, 404), which SOC watches for scanning and unauthorized access; 5xx server error (500), which can indicate attack patterns or server issues. Analyzing them tells us whether a payload was accepted and helps identify failed logins, unauthorized access and attacks against the web server.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq48",
+  "q": "What is URL encoding and Base64 encoding? Where would you use them in your investigation as a SOC Analyst?",
+  "a": "URL (percent) encoding converts special characters into a URL-safe form, e.g. space as %20 and ' as %27. Base64 encodes binary data into ASCII text for transmission over text-based protocols. URL encoding matters when investigating XSS and SQL injection, because attackers encode payloads to bypass filters. Base64 matters in malware analysis and phishing investigations, where scripts or payloads are encoded to hide them in web requests or emails. Both turn up in suspicious traffic, logs and email headers, and recognizing and decoding them helps identify malicious activity.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq49",
+  "q": "What is a WAF, why is it important in a SOC, and have you worked with WAF logs?",
+  "a": "A WAF (Web Application Firewall) monitors and filters incoming traffic to web applications, protecting against SQL injection, XSS and file inclusion. In a SOC it adds a defense layer that blocks malicious traffic before it reaches the application layer, reducing breach and downtime risk. I regularly analyze Imperva WAF logs. Web application investigations start with WAF logs to collect IOCs. I check traffic from malicious IPs and restricted locations, forbidden URL access and unsanitized inputs, which supports real-time detection and quick response.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq50",
+  "q": "What is XSS and what are the types of XSS?",
+  "a": "XSS (Cross-Site Scripting) lets attackers inject malicious HTML/JavaScript into input fields. If the application accepts unsanitized input, it can lead to data or session compromise. Types:\n- Stored XSS: the payload is permanently stored on the server, e.g. in a database, and executes for every user who views that content.\n- Reflected XSS: the script is embedded in a URL or input and reflected back to that user without being stored. It is generally less dangerous.\n- DOM-based XSS: script execution happens client-side because JavaScript handles input improperly in the browser.\n\nFix at code level and add WAF policies.",
+  "topic": "Web Attacks"
+ },
+ {
+  "id": "bq51",
+  "q": "Explain what adware is, its behavior, and whether you have dealt with any adware incidents.",
+  "a": "Adware is software that automatically displays or downloads ads, often without consent. It can be legitimate, or malicious, tracking activity and redirecting to fraudulent sites. Behavior: excessive pop-ups and redirects, bundled unwanted installs, browser hijacking, data collection and slower performance. Yes, I've handled it. In one case a user reported redirects and pop-ups. I found chromium.exe running from an unusual directory, modified browser settings and registry, and connections to adware C2 domains with bad reputation. Persistence was via two scheduled tasks and 4+ registry changes. The source was adware bundled with a free PDF converter.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq52",
+  "q": "Have you dealt with credential dumping alerts, and what are the most used tools for credential dumping?",
+  "a": "Yes. Credential dumping extracts authentication data from compromised systems to escalate access. In the SOC I monitor for abnormal processes, unusual PowerShell activity and suspicious memory dumps, and build SIEM rules to detect them. Common tools:\n- Mimikatz: extracts plaintext passwords and Kerberos tickets from memory.\n- LSASS dumping, using Mimikatz or Procdump on the LSASS process.\n- PowerShell scripts that gather password hashes.\n- Impacket (secretsdump.py): extracts hashes from remote systems.\n- Hashcat and John the Ripper: crack the obtained hashes.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq53",
+  "q": "Can you explain the difference between EDR and Antivirus?",
+  "a": "Both protect against malware, but their scope differs. Antivirus is signature-based and reactive. It detects known threats by matching file hashes and signatures against its own database. A new malware sample with an unknown hash can be missed until the database is updated. EDR is proactive. It continuously monitors endpoints, uses behavioral analytics and threat intelligence to detect known and unknown threats, and provides real-time alerts, incident analysis and response automation. It also offers sandboxing and threat intel feeds.\n\nKey points: AV is signature-based and reactive; EDR is behavioral, proactive, and includes monitoring, sandboxing, threat intel and incident response.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq54",
+  "q": "Explain the difference between EDR, XDR, and MDR, and which is most effective for malware detection.",
+  "a": "EDR monitors endpoint activity, gives real-time visibility, alerts the SOC on malicious or PUA files, and supports threat hunting, alert triage and remediation. XDR centralizes and correlates security data across the organization into a single console, improving visibility and speeding response. MDR is endpoint security as a service. It manages EDR with continuous monitoring, threat hunting, investigation and guided response, easing staff shortages. For malware detection, XDR is most effective because of its broader visibility across vectors. EDR stays strong for endpoint-specific threats, and MDR adds expert oversight that improves response times.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq55",
+  "q": "What happens if the EDR/XDR fails to quarantine a file, and what are your next actions? Explain the end-to-end process.",
+  "a": "Steps:\n1. Verify the threat by checking the hash on VirusTotal or Hybrid Analysis and reviewing EDR telemetry.\n2. Isolate the endpoint via EDR, or ask IT to disconnect it.\n3. Manually quarantine or delete the file, using Defender or AV, or safe mode or a live boot environment.\n4. Root cause analysis: system logs, user activity, network traffic, and whether phishing delivered it.\n5. Scan for lateral movement and persistence such as scheduled tasks, registry changes and extra payloads.\n6. Patch and harden.\n7. Update EDR signatures and rules, and submit the sample to the vendor.\n8. Document the incident and update playbooks.\n9. Run user awareness training if needed.",
+  "topic": "Incident Response"
+ },
+ {
+  "id": "bq56",
+  "q": "Explain what file-less malware is, and have you dealt with a file-less malware incident (LOLBins)? Give a real-time example.",
+  "a": "File-less malware executes in memory and uses legitimate tools such as PowerShell, WMI or Office macros (living-off-the-land), so there is no file for AV to scan. In one case, EDR flagged PowerShell running encoded commands. Windows logs showed base64 scripts, which I decoded, and PowerShell spawning mshta.exe, which downloaded an .hta file that ran a script in memory. The PowerShell process connected to a malicious IP, checked on IPVoid, AbuseIPDB, VirusTotal and Talos. Firewall and DNS logs showed C2 traffic, and threat intel linked it to Cobalt Strike beacons. Response: isolate the host, kill the process, restrict PowerShell via GPO to signed scripts, block the C2 domain and IP, and train users on phishing.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq57",
+  "q": "What are the important IOCs for malware investigation, and where do you collect those IOCs from?",
+  "a": "Key IOCs are the file hash (the primary IOC for blocking), file name, file path, file status (quarantined or not, PUA), and signature. Others are IPs and domains used for C2, phishing URLs, and registry keys that show persistence. Before blocking IPs, domains or URLs, check their reputation with OSINT tools (VirusTotal, URLScan, AnyRun, Talos). Use EDR to find every endpoint holding the same file. Sources are threat intel feeds (AlienVault, OpenPhish, CrowdStrike), SIEM logs such as Splunk, network tools (Zeek, Suricata), malware repositories (VirusTotal, Hybrid Analysis) and EDR telemetry.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq58",
+  "q": "Have you dealt with any Mimikatz credential dumping incidents? Can you explain with a real-time incident you handled?",
+  "a": "Mimikatz is a post-exploitation tool that dumps plaintext passwords, NTLM hashes and Kerberos tickets from LSASS memory. Attackers use them to escalate privileges and move laterally. Common commands are sekurlsa::logonPasswords and kerberos::tickets (Pass-the-Ticket). In my incident, an endpoint alert showed anomalous PowerShell running sekurlsa::logonPasswords. I confirmed LSASS credential dumping and escalated. I isolated the host, correlated logs from other systems for similar activity, reset passwords on the affected accounts and started forensics. Lesson: monitor unusual PowerShell and memory-dumping behaviour.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq59",
+  "q": "Which OSINT tools do you prefer to use for checking IOCs in a malware incident?",
+  "a": "I cross-reference IOCs (IPs, domains, URLs, hashes) across several tools. VirusTotal checks files, URLs and hashes against many AV engines. AbuseIPDB gives IP reputation. Hybrid Analysis gives behavioural analysis and threat scoring. URLVoid and IPVoid check domain and IP reputation. Shodan shows exposed services and vulnerabilities. AlienVault OTX gives community threat intel and campaign IOCs. CIRCL Passive DNS shows domain resolution history, which helps spot DGA domains. These results confirm the threat, give context and decide the mitigation.",
+  "topic": "Threat Intel"
+ },
+ {
+  "id": "bq60",
+  "q": "What happens when ransomware is executed on an endpoint, and what are the primary IOCs you look for as a SOC analyst?",
+  "a": "Ransomware follows a pattern. (1) Initial execution via phishing, downloads, exploit kits or RDP brute force, often using LOLBins (powershell, wmic, mshta). (2) Privilege escalation and lateral movement through credential dumping, SMB, RDP and PsExec. (3) Encryption with AES/RSA, changed file extensions, ransom notes, and shadow copies deleted (vssadmin delete shadows /all /quiet). (4) Persistence through scheduled tasks and registry changes, disabled security services, and possible data exfiltration (double extortion). (5) Log and registry IOCs: Event ID 4663 file modifications, 4104 PowerShell, and registry changes disabling Defender or the firewall. Behavioural monitoring is essential.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq61",
+  "q": "What is the SLA for malware alerts, and did you follow the SLA in your current project?",
+  "a": "An SLA defines the maximum time to acknowledge, investigate and resolve an alert by severity. MSSP projects have no room for SLA breaches because they cause escalations. Typical values: P1 Critical within 15 minutes (acknowledge and start investigating); P2 High 30 minutes to 1 hour; P3 Medium 2 to 3 hours; P4 Low 4 to 8 hours; P5 Info usually no SLA. High-priority alerts may need resolution within 4 to 6 hours. In my project we follow these SLAs, use automation to meet them and log all actions to track compliance.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq62",
+  "q": "What are the important malicious processes commonly associated with malware files?",
+  "a": "I monitor these with EDR, SIEM and behavioural analytics, looking at parent-child context. Process injection into explorer.exe or svchost.exe (e.g. svchost making unknown outbound C2 connections). Suspicious parent-child chains such as Word spawning cmd or PowerShell, or wmic/mshta launched by odd apps. Encoded or obfuscated scripts via PowerShell, wscript or cscript. Persistence via regsvr32 or schtasks. Credential dumping through suspicious access to lsass.exe (Mimikatz). Network recon with netstat or net, and unusual outbound traffic from svchost or rundll32. Fileless techniques using rundll32 or msiexec. Cryptojacking processes with high CPU/GPU use.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq63",
+  "q": "Could you please explain what malware is and the different types of malware?",
+  "a": "Malware is software designed to harm, exploit or compromise a system or network, steal data or disrupt operations. Files are validated by hash and signature, then whitelisted or blocklisted via EDR/XDR. Types: viruses (self-replicating, attach to files); worms (standalone, spread over networks); trojans (disguised as legitimate software, give the attacker remote control); ransomware (encrypts data and demands ransom, usually spread by phishing); spyware (silently collects data); adware (unwanted ads); rootkits (hide malicious activity); keyloggers (record keystrokes); and fileless malware (runs in memory using legitimate tools, hard to detect with file scanning).",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq64",
+  "q": "What is static and dynamic analysis of malware, and which tools do you have hands-on experience with?",
+  "a": "Static analysis examines malware without executing it, by disassembling or decompiling the binary. It reveals hashes, strings (URLs, IPs, C2), IOCs and functionality. Tools: IDA Pro, Ghidra, PEStudio. Dynamic analysis runs the malware in a controlled sandbox to observe real-time behaviour: files modified, registry and process activity, network traffic, spreading and privilege escalation. Tools: Any.Run and ThreatGrid sandboxes, Process Monitor (ProcMon), Wireshark. Both are crucial for understanding and mitigating malware and improving incident response.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq65",
+  "q": "How do you whitelist legitimate files, and what factors do you consider when whitelisting them in your EDR tools?",
+  "a": "Using Sophos MDR as the example. Before whitelisting: verify legitimacy (check the hash against VirusTotal or Sophos Labs, review vendor documentation, correlate alerts across endpoints); analyze behaviour (unusual outbound connections, privilege escalation); verify the digital signature; and test in a sandbox. Then add the hash, path or certificate under Global Settings \u2192 Global Exclusions, scoped only to necessary devices or groups. Factors: hash consistency, vendor reputation, behaviour and usage, signature validity, business necessity, and scope (global or specific systems).",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq66",
+  "q": "Explain why we need to follow an SOP, and which SOP do you follow for malware investigation after receiving an EDR alert?",
+  "a": "An SOP gives a standardized, repeatable process that reduces human error, speeds up prioritization, containment and remediation, helps teamwork, preserves evidence and chain of custody, and documents steps for customers. My flow starts with a ServiceNow ticket for a malicious or PUA file. (1) Initial triage: collect IOCs (file, path, status, hash, signature, file tree and registry keys, hostname) and find all affected endpoints. A quarantined file can be closed as a false positive. (2) Confirm the threat with hash, signature, OSINT, sandbox and firewall logs. (3) Containment: block hash and signature, isolate hosts, disable compromised accounts. (4) Analysis of EDR, firewall, email and WOT logs. (5) Eradication/remediation and RCA by the responder, with re-imaging if needed. (6) Reporting: document findings, escalate and apply lessons learned.",
+  "topic": "Incident Response"
+ },
+ {
+  "id": "bq67",
+  "q": "What are the common phishing attacks, and which is most frequent in your current project?",
+  "a": "Types: spear phishing (targeted at specific individuals or organizations using personal information); whaling (aimed at executives and VIPs); vishing (voice phishing by phone); smishing (SMS phishing with malicious links); angler phishing (on social media, impersonating companies or support); and Business Email Compromise (attackers impersonate or compromise a trusted vendor's email, with urgent, suspicious content). The most frequent in my project is spear phishing and phishing with links or attachments, where attackers impersonate internal executives or vendors to steal credentials or install malware.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq68",
+  "q": "Could you please explain what email hops are and which hop is responsible for which operation?",
+  "a": "Email hops are the stages an email passes through from sender to recipient. Understanding them helps trace phishing and malware. MUA (Mail User Agent) is the client, e.g. Outlook or Gmail, where mail is created and read. MSA (Mail Submission Agent) accepts mail from the MUA, authenticates it (e.g. SPF) and prepares it for forwarding. MTA (Mail Transfer Agent) routes mail between domains through multiple servers, scanning for spam and malware, and malicious domains get blocked. MDA (Mail Delivery Agent) identifies the recipient and stores the mail in the mailbox. Extra MTAs or external security services may scan mail before delivery.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq69",
+  "q": "Which logs do you need to check to confirm whether the employee interacted with the phishing link or not?",
+  "a": "First, the email gateway (Mimecast, Cisco IronPort), which shows delivery and whether the user clicked the link in the IOC tab. You can also check how many users received or clicked the same email over the last 6 months. Next, web proxy logs (Zscaler) for visits to the phishing URL or domain. Then DNS logs for queries resolving the malicious domain. If still inconclusive, check EDR/XDR logs for attachment opening, link clicks or suspicious processes, and firewall logs for connections to known malicious IPs. SIEM logs aggregate and correlate all of these sources.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq70",
+  "q": "What is the main role of an email security gateway, and which email security gateway tools are you currently working with?",
+  "a": "An email security gateway is a protective barrier between internal mail infrastructure and external email traffic. It scans inbound and outbound mail for malicious attachments, suspicious links and harmful content, filters spam, detects phishing and blocks malware and ransomware so only legitimate mail reaches the inbox. Tools I've worked with: Cisco IronPort (advanced threat protection, phishing detection, DLP), Mimecast (cloud-based malware protection, spam filtering, email continuity) and Barracuda (protection against spam, phishing and malware, plus data security).",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq71",
+  "q": "What are the important email headers that help with SOC investigation, and which do you consider most important to investigate a phishing email?",
+  "a": "From shows the sender address and may be spoofed. Return-Path is where bounces go, and a mismatch with From suggests spoofing. Received records the path through mail servers and can reveal unfamiliar servers. Message-ID is a unique identifier, and a missing or odd one suggests bulk or automated mail. Subject may show urgency. Date can reveal odd sending times or time zones. SPF, DKIM and DMARC verify the sender domain and that the mail wasn't tampered with, and a failure is a clear red flag. For phishing, the most critical are Return-Path, Received and DKIM/SPF/DMARC, because mismatches there show a forged source.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq72",
+  "q": "What are the important IOCs (Indicators of Compromise) for phishing emails in an investigation?",
+  "a": "IOCs are forensic artifacts indicating a breach or malicious activity. For phishing they include: lookalike sender domains (siemhunter.com vs siemhunters.com); malicious attachments (.exe, .js, macro documents), which should be quarantined via EDR/XDR; suspicious URLs (paypa1.com); urgent or threatening language; anomalous source IPs tied to past campaigns; header/metadata discrepancies such as mismatched domains, odd routing and SPF/DKIM failures; unexpected attachments or links; and poor grammar or spelling.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq73",
+  "q": "How do you confirm whether an employee interacted with a suspicious link in a phishing email?",
+  "a": "Use the email gateway (e.g., Mimecast), which can show whether the user clicked the link. Confirm with email logs, web proxy logs and endpoint security tools to track URL interactions. Check WOT and DNS logs to trace the URL and count how many internal IPs contacted it. Examine the employee's system for unusual activity or malware, run a full scan, and isolate the machine if needed. Finally, gather the affected employees and run an awareness session on phishing.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq74",
+  "q": "Explain how you investigate a phishing email and give a real-time example you handled.",
+  "a": "Alerts come from user reports or from gateway-flagged emails. Initial assessment: verify the sender domain (VirusTotal reputation, web.archive.org for domain age, MXToolbox for SPF/DKIM/DMARC and blocklists), review subject and content for urgency, and hover over links. Check URLs with VirusTotal, urlscan.io and Any.run, and detonate attachments in a sandbox, watching IPs, ports, registry and process tree. Technical analysis covers headers, URL/IP reputation and threat intel. Example: a fake finance email with a ZIP containing a macro Word doc that downloaded a RAT. I blocked the URL, quarantined the attachment, escalated to IR, and ran an awareness campaign. If credentials were entered, reset the password, revoke sessions and disable the account.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq75",
+  "q": "What happens if the \"Return-Path\" and \"Received-From\" fields in an email header are not the same?",
+  "a": "A mismatch suggests a forged or spoofed domain and a possible phishing attempt. Return-Path is where bounces go, while Received shows the path through mail servers. The mismatch implies the email may have been altered to look like it came from a trusted source. I would inspect the header for inconsistencies, check for SPF/DKIM/DMARC failures, and look up suspicious IPs and domains. If confirmed malicious, I would flag the email, block the sender and educate users.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq76",
+  "q": "Explain email authentication, SPF, DKIM and DMARC, and give a real-time incident you analyzed.",
+  "a": "Email authentication verifies that mail comes from legitimate sources and wasn't tampered with. SPF lists which mail servers/IPs may send for a domain. A hard fail rejects the mail, while a soft fail delivers it but flags it as suspicious. DKIM signs the message with a digital signature to prove the content wasn't altered, and a mismatch means forgery. DMARC builds on SPF and DKIM, tells receivers to quarantine or reject failures, and provides reporting. Example: a lookalike vendor domain passed SPF but failed DKIM. DMARC was set to reject, so the gateway blocked it before it reached the inbox.",
+  "topic": "Phishing"
+ },
+ {
+  "id": "bq77",
+  "q": "What is your analysis if a suspicious email contains an attachment and the employee executed it? Have you dealt with a similar incident?",
+  "a": "Contain first: isolate the endpoint from the network to stop spread. Extract the attachment and analyze it in a sandbox. Look for IOCs such as unusual network traffic, registry changes and suspicious processes. Run AV scans and use EDR for more data, and escalate to the IR team if it is malicious. In a past incident, malware tried to reach a C2 server and was identified as a trojan variant. We isolated the host, analyzed the email and file, restored from backup, scanned the network, and sent a company-wide alert and training.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq78",
+  "q": "What is the use of Zscaler, and have you worked with it in your project?",
+  "a": "Zscaler is a cloud-based security platform that routes user traffic through its cloud to inspect for malware, phishing and data breaches. Key features: Secure Web Gateway (inspects web traffic and blocks malicious sites, used for clicked-link cases), cloud firewall, DLP (alerts such as USB insertion or copy events), and threat intelligence/analytics. I have used it to monitor web traffic, identify threats, enforce policy for remote users, and investigate suspicious network activity, phishing and malware.",
+  "topic": "Network"
+ },
+ {
+  "id": "bq79",
+  "q": "What is an Event ID in Windows and what are the commonly used Event IDs for SOC investigation?",
+  "a": "An Event ID is a unique number identifying a logged event, generated by the OS and applications. Analysts use it to detect patterns such as unauthorized access, privilege escalation or malware. Common IDs: 4624 successful logon; 4625 failed logon (brute force, credential stuffing); 4740 account lockout; 4648 logon with explicit credentials (lateral movement); 4672 special privileges assigned; 4688 new process created; 7036 service state change; 1102 audit log cleared (covering tracks); 5156 WFP allowed connection (suspicious network traffic).",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq80",
+  "q": "What is the log path for Windows and what are the important log sources collected from a Windows endpoint?",
+  "a": "Logs are stored in C:\\Windows\\System32\\winevt\\Logs\\ as System.evtx, Application.evtx, Security.evtx and ForwardedEvents.evtx (viewable in Event Viewer or collected by a SIEM agent). Key sources: Security (4624/4625 logons); System (6005/6006 startup/shutdown); Application (1000 crashes); account management (4720 creation, 4723 password change, 4740 lockout); PowerShell (4104 script execution); Windows Firewall (5156 allowed, 5158 blocked); and Defender (1116, 1000 malware detections). If a log source stops reporting, do basic troubleshooting, including reinstalling the agent.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq81",
+  "q": "What are Windows logon types, why are they used, and which are important for SOC investigations?",
+  "a": "Logon types describe how and where a user logged in, helping detect anomalies and unauthorized access. Type 2 is interactive (local), 3 is network (shares, remote), 4 is batch (scheduled tasks), 5 is service, 7 is unlock, and 10 is RemoteInteractive (RDP). Most important for SOC: Type 3 for lateral movement or unauthorized network access; Type 10 for RDP brute force and suspicious remote access; Type 2 for unexpected physical logons to sensitive systems.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq82",
+  "q": "What is Mimikatz, and have you dealt with incidents related to it?",
+  "a": "Mimikatz is a post-exploitation tool that extracts plaintext passwords, hashes and Kerberos tickets from memory, enabling privilege escalation, lateral movement and persistence, including Pass-the-Hash and Pass-the-Ticket. In my project, the SIEM detected credential dumping with signs of lateral movement. We identified compromised accounts and systems, isolated machines, ran forensics to confirm Mimikatz, improved monitoring for further dumping, and strengthened authentication with Kerberos hardening and MFA.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq83",
+  "q": "Explain brute force and password spraying attacks, which is more critical, and whether you have handled such incidents.",
+  "a": "Brute force tries many username/password combinations against an account and often triggers lockouts. Password spraying tries a few common passwords across many accounts, avoiding lockouts, usually with usernames from breaches or phishing. Spraying is more critical because it is harder to detect and bypasses lockout policies. I handled spraying by spotting failed logins across many accounts in the SIEM, found some successful logins with common passwords, then enforced stronger password policies, MFA and increased monitoring. Brute force was easier to spot, so we applied lockout policies and alerted users.",
+  "topic": "Incident Response"
+ },
+ {
+  "id": "bq84",
+  "q": "What are Windows PowerShell logs, how do you decode encoded PowerShell scripts, and why are they important for SOC analysis?",
+  "a": "PowerShell logs record command execution, parameters, scripts and errors, stored under Microsoft-Windows-PowerShell/Operational. Attackers use -EncodedCommand with Base64 to obfuscate. Decode with OSINT tools, a sandbox, or a command like [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('...')). The logs matter because they reveal malware execution (downloading payloads), privilege escalation and system changes, and lateral movement using remote commands.",
+  "topic": "Malware"
+ },
+ {
+  "id": "bq85",
+  "q": "Can you explain Event ID 4624, 4625 and 4740, and what alerts you have received related to them?",
+  "a": "4624 is a successful logon with username, domain, logon type and source. Alerts fire for logins at odd hours or from unusual IPs, which may indicate lateral movement or a compromised account. 4625 is a failed logon with the failure reason and source. Alerts fire for many failures from one user or IP in a short time, suggesting brute force or spraying. 4740 is an account lockout after the failure threshold is exceeded, suggesting automated attacks; we also check whether the lockout was intentional. We correlate with network and firewall logs.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq86",
+  "q": "Explain Windows authentication methods and why, as a SOC analyst, we care about SAM and Domain Controllers.",
+  "a": "Local authentication checks credentials against the SAM database, which stores usernames and NTLM password hashes on standalone systems. In domain environments, Domain Controllers (Active Directory) authenticate and authorize all users and computers and enforce policy. SAM matters for monitoring local account activity, and attackers who steal it may crack hashes. DC logs reveal unauthorized logons, lockouts, privilege escalation (users added to admin groups), lateral movement and password spraying.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq87",
+  "q": "In Linux, how do you check for brute-force attacks, authentication failures and successful root logins? Which logs do you consider?",
+  "a": "Use the authentication logs: /var/log/auth.log on Debian/Ubuntu or /var/log/secure on RedHat/CentOS. They record login attempts, so repeated failed logins from the same or multiple IPs indicate brute force. Tools like grep or awk can search for failures and for successful root logins that may indicate compromise or privilege escalation. Correlating these logs allows timely detection and response.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq88",
+  "q": "How do you investigate and confirm if there have been any file permission changes on a Linux machine, and which log sources do you consider?",
+  "a": "Check auditd logs in /var/log/audit/audit.log for chmod or chown system calls. If auditd is not enabled, fall back to /var/log/syslog for related messages or errors. Review the user's ~/.bash_history for manual permission changes, though it is less reliable because it can be tampered with. Use stat or ls -l to check file timestamps and correlate the change time with other system events. This matters in banking and financial environments because a changed configuration file can bring down an application.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq89",
+  "q": "Can you explain the Linux file system and which directories are important for SOC investigations?",
+  "a": "Linux uses a hierarchical file system. Key directories: /root (root's home; unauthorized changes suggest privilege escalation). /var/log (auth.log, syslog, messages). /etc (passwd for accounts, shadow for password hashes, sudoers for sudo privileges). /home (user data, hidden files, rogue accounts). /tmp and /var/tmp (attackers stage scripts and binaries here). /bin, /sbin, /usr/bin, /usr/sbin (system binaries; watch for tampered or unauthorized files). /proc (virtual files showing live processes, network connections and memory, useful for spotting malware).",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq90",
+  "q": "Do you have experience with Linux commands, and have you dealt with any Linux-related incidents in your current project?",
+  "a": "Yes. I use ps, top, netstat, grep, awk and sed to inspect processes, analyze logs and network activity. In one incident an Apache web server was compromised. We checked for unusual processes, examined server logs and looked for file modifications. That revealed a web shell uploaded by the attacker. We then contained the incident, patched the vulnerability and secured the server. I also monitor Linux servers for abnormal logins, privilege escalation and unusual network connections, and use tools like OSSEC and automation scripts to streamline detection.",
+  "topic": "Incident Response"
+ },
+ {
+  "id": "bq91",
+  "q": "Where are Linux logs stored, and what are the important log sources collected from Linux?",
+  "a": "Logs are centralized in /var/log and its subdirectories, and are often forwarded to ELK, Splunk or syslog servers. Important sources: auth.log or secure (logins, sudo, SSH, brute force); syslog or messages (general system and service activity); kern.log (kernel and hardware errors); dmesg (boot messages); httpd or nginx logs (web access and errors, useful for SQLi, XSS and DDoS); cron (scheduled jobs, malicious persistence); faillog (failed logins); and audit/audit.log (auditd records of user activity, file access and config changes, valuable for forensics).",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq92",
+  "q": "Have you dealt with user group changes, privileged command execution, and user switching alerts in your current project?",
+  "a": "Yes. The process is to verify legitimacy, identify the users involved, check for other suspicious activity, and remediate (for example disable accounts) or escalate. User group changes: watch usermod and groupadd, since attackers add users to sudo or wheel; unexpected changes trigger an investigation. Privileged commands: monitor sudo and root activity in /var/log/auth.log and sudo.log, especially from non-privileged users. User switching: watch su and sudo for impersonation or escalation, prioritizing access to root or admin accounts.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq93",
+  "q": "Have you handled any user management command alerts in your current project? Which commands do you monitor?",
+  "a": "Yes. I monitor useradd (attackers creating accounts for access), userdel (unauthorized deletion of users or removal of traces), passwd (unauthorized password changes that lock out users or take over accounts), plus su and sudo. Command activity is recorded in auth.log, which I use for analysis. If there is no prior task or email authorizing the change, we investigate. On finding anomalies we escalate and take steps such as account lockout, system isolation or forensic analysis.",
+  "topic": "Core SOC"
+ },
+ {
+  "id": "bq94",
+  "q": "Explain the common Splunk commands used for use cases and investigations.",
+  "a": "Common SPL commands, shown with firewall-log examples: search (filter events, e.g. action=blocked); stats (aggregate, e.g. stats count by src_ip); timechart (time trends, e.g. span=1h count by src_ip); table (format fields such as _time, src_ip, dest_ip, action); where (condition filtering, e.g. dest_port=22); transaction (group events, e.g. failed login followed by success to detect brute force); dedup (remove duplicates by field); top (most frequent values); fields (limit returned fields for performance).",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq95",
+  "q": "What is fine-tuning and how do you perform fine-tuning in Splunk?",
+  "a": "Fine-tuning is eliminating false-positive alerts so analysts focus on true positives. We do it weekly with customer approval, using a bridge call to discuss use-case (SPL query) changes. First we collect false-positive IOCs from L1 and L2 investigations and decide which to tune. Then we adjust the queries by adding specific conditions or exclusions, adjusting thresholds or time windows, and reviewing alert history to adjust correlation rules.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq96",
+  "q": "Explain what an index is in Splunk and how many indexers and their names are in your current project.",
+  "a": "An index is the repository where Splunk stores data after it is parsed and indexed, making it searchable and optimizing searches by segmenting data (for example by time). Indexers are the components that do the indexing, storing data in predefined indexes. In my project, indexes are named by log type, such as main (the default), web and security. The exact number and names vary with the project architecture.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq97",
+  "q": "What is the difference between a search head and an indexer in Splunk? Have you used both in investigations?",
+  "a": "The search head runs SPL searches and provides the user interface for querying and visualizing indexed data and building detection use cases. The indexer receives, processes, breaks down, stores and organizes raw data for efficient searching. Yes, I use both: the search head for querying and analysis with SPL, and the indexer to keep the data stored and accessible. The default index is main.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq98",
+  "q": "What is the role of the Search Head Cluster in Splunk?",
+  "a": "A Search Head Cluster is a group of search heads that work together to distribute and manage search workloads. It provides load balancing and high availability: queries are distributed across members to improve performance and redundancy, and multiple searches can run simultaneously. If one search head fails, the others take over, minimizing downtime and keeping search access consistent. It improves scalability in larger environments.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq99",
+  "q": "What are the common ports used for Splunk?",
+  "a": "Port 8000: Splunk Web interface (HTTP by default, HTTPS configurable). Port 8088: HTTP Event Collector (HEC), for ingesting data from external or custom applications. Port 9997: default receiving port where Universal Forwarders send data to indexers (TCP). Port 8089: management port for REST API, inter-component communication, and clustering (HTTPS). Port 514: syslog ingestion from network devices, firewalls and Linux (UDP commonly, TCP optional). If a log source stops reporting, check whether the port is blocked at the firewall.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq100",
+  "q": "Explain what the Splunk components or Splunk architecture are.",
+  "a": "Splunk is a SIEM for searching, monitoring and analyzing machine data. Components include forwarders, indexers, search heads, deployment server, cluster master and license master. For SOC analysts, the three main ones are: Forwarders collect and send logs. The Universal Forwarder is lightweight and sends raw data without parsing; the Heavy Forwarder can parse, index and filter before sending. Indexers receive data, break it into events and store it in searchable time-series indexes. Search Heads let users run SPL searches, create reports and dashboards, and can be clustered for load balancing and availability.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq101",
+  "q": "What is the difference between Splunk Enterprise and Splunk Cloud, and what is the current version of Splunk?",
+  "a": "Splunk Enterprise is the on-premises version that you install and manage yourself. It gives full control over data storage, processing and security, but needs hardware, maintenance and resources. Splunk Cloud is hosted by Splunk, which handles infrastructure and maintenance, giving scalability, lower operational overhead and access from anywhere. Versions update frequently, so check the official site; the book cites Splunk 9.4.1 as the latest stable at the time of writing.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq102",
+  "q": "What are the stats and tstats commands in Splunk, and where do you use them in an investigation?",
+  "a": "stats works on raw search results; it is versatile but slower on large datasets. tstats works on indexed fields, summary indexes or data models, so it is much faster at scale. For a brute force investigation, start with stats, for example: index=security sourcetype=linux_secure \"Failed password\" | stats count by src_ip. For large volumes across many servers, use tstats against the Authentication data model, for example: | tstats count from datamodel=Authentication where Authentication.src_ip=... by Authentication.dest_ip.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq103",
+  "q": "What is Splunk, and how does it help a SOC analyst in security operations?",
+  "a": "Splunk is a SIEM tool that collects, indexes, monitors and analyzes log data, helping identify security incidents and understand security posture. Its major components are the forwarder, receiving indexer and search head. SPL is used to query logs and build use cases for real-time threat detection. Add-ons extend integration and enrichment, such as Cisco ASA, Microsoft Windows, FireEye, Palo Alto Networks, Suricata, and VirusTotal or Talos for OSINT. SOC analysts use it for investigation, log analysis, threat hunting and incident response.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq104",
+  "q": "Write a Splunk query to find all successful logins from a specific IP address.",
+  "a": "Identify the IOCs first: Windows EventCode 4624 (successful logon; 4688 is process creation), Linux auth.log \"Accepted password\" or \"session opened\", and Okta user.authentication.success. Query: index=* (sourcetype=WinEventLog OR sourcetype=linux_auth OR sourcetype=okta) (EventCode=4624 OR \"Accepted password\" OR \"session opened\" OR \"user.authentication.success\") src_ip=\"100.11.12.16\" | stats count by user, src_ip, _time. Use a specific index for performance and normally review the last 7 days.",
+  "topic": "SIEM & Splunk"
+ },
+ {
+  "id": "bq105",
+  "q": "What are CVE and CVSS, and how do they relate to vulnerability management?",
+  "a": "CVE (Common Vulnerabilities and Exposures) is a public catalog assigning unique IDs to known vulnerabilities so they can be tracked across tools. CVSS (Common Vulnerability Scoring System) rates severity from 0 to 10 based on exploitability, impact and complexity: 0.0-3.9 Low, 4.0-6.9 Medium, 7.0-8.9 High, 9.0-10.0 Critical. Tools like Qualys use CVE IDs and CVSS scores to scan, assess and recommend fixes for vulnerabilities.",
+  "topic": "Vulnerability Mgmt"
+ },
+ {
+  "id": "bq106",
+  "q": "How would you handle a situation where a high-severity vulnerability has no official patch available?",
+  "a": "First assess risk: read vendor notes, identify affected systems (for example with a Qualys scan), and judge exploitability and impact. Apply temporary mitigations such as the vendor's triage guidance, blocking suspicious traffic, firewall rule changes, disabling affected services or adding WAF protections. Monitor SIEM, EDR and threat intelligence feeds for exploitation and set alerts for related activity. Keep checking vendor and security community advisories for workarounds. Deploy the official patch immediately once released and reassess controls.",
+  "topic": "Vulnerability Mgmt"
+ },
+ {
+  "id": "bq107",
+  "q": "What are the key phases of a vulnerability management lifecycle?",
+  "a": "Five phases: 1) Discovery: identify assets and scan with tools like Qualys. 2) Assessment: prioritize by CVSS, exploitability and asset criticality. 3) Remediation: work with IT to patch, reconfigure or mitigate. 4) Verification: re-scan to confirm the fix. 5) Reporting and continuous monitoring: compliance reports, progress tracking and watching for new vulnerabilities. Example: CVE-2023-4863 (Chrome, CVSS 9.8) hit about 12K endpoints with no auto-patch support. We held a bridge call with IT, deployed the patch, re-scanned, reported, and kept monitoring.",
+  "topic": "Vulnerability Mgmt"
+ },
+ {
+  "id": "bq108",
+  "q": "Can you explain what a zero-day vulnerability is? Have you handled any recent zero-day vulnerabilities in your current project?",
+  "a": "A zero-day is a flaw unknown to the vendor with no official patch, so attackers can exploit it before a fix exists, making it high risk. I monitor for zero-days using threat intelligence feeds, SIEM alerts and behavior-based detection. If one is found I follow incident response: isolate affected systems, apply temporary mitigations such as firewall rules and endpoint protection, and coordinate with the vendor. We recently handled a zero-day in an Apache server by blocking IOCs, enhancing monitoring and applying security controls until the vendor patch arrived. We use Qualys VMDR.",
+  "topic": "Vulnerability Mgmt"
+ }
+]

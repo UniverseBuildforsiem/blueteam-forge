@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 from collections import Counter, defaultdict
@@ -281,6 +282,8 @@ async def activate(user_id, pid):
         if p["plan"] in PRODUCTS:
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
+            from routes_book import send_book_receipt
+            asyncio.create_task(send_book_receipt(user_id, p))
         else:
             await db.users.update_one({"id": user_id}, {"$set": {"plan": "pro", "plan_name": p["plan_name"]}})
 

@@ -65,13 +65,44 @@ const SampleBox = () => {
         {user ? <button className="ghost-btn" onClick={async () => { if (!open) await api.get("/me/book").catch(() => {}); setOpen(!open); }} data-testid="book-sample-toggle">{open ? "Hide sample" : "Read free sample"}</button>
           : <div className="flex gap-2"><Link to="/register" className="glow-btn" data-testid="book-sample-signup">Sign up free</Link><Link to="/login" state={{ from: "/book" }} className="ghost-btn" data-testid="book-sample-login">Log in</Link></div>}
       </Glass>
-      {user && open && <>
-        <iframe title="Free sample: first 10 pages" src={`${process.env.REACT_APP_BACKEND_URL}/api/me/book/sample`} className="mt-4 w-full h-[75vh] border border-cyan-500/20 bg-white" data-testid="book-sample-frame" />
-        <button onClick={async () => { await api.get("/me/book").catch(() => {}); window.open(`${process.env.REACT_APP_BACKEND_URL}/api/me/book/sample`, "_blank", "noopener"); }} className="ghost-btn mt-3" data-testid="book-sample-open-tab">Open sample in new tab</button>
-      </>}
+      {user && open && <SampleViewer />}
     </section>
   );
 };
+
+function SampleViewer() {
+  const [n, setN] = useState(1);
+  const [srcs, setSrcs] = useState({});
+  const [nudge, setNudge] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setNudge(true), 180000); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (n === 10) setNudge(true);
+    [n, n + 1].filter((p) => p <= 10 && !srcs[p]).forEach((p) =>
+      api.get(`/me/book/sample/${p}.jpg`, { responseType: "blob" }).then((r) => setSrcs((s) => ({ ...s, [p]: URL.createObjectURL(r.data) }))).catch(() => {}));
+  }, [n]); // eslint-disable-line
+  return (
+    <div className="mt-4" data-testid="book-sample-viewer">
+      <div className="flex items-center justify-center gap-4 mb-3 font-mono text-sm">
+        <button className="ghost-btn !py-1.5" disabled={n === 1} onClick={() => setN(n - 1)} data-testid="sample-prev">Previous</button>
+        <span data-testid="sample-page">Page {n} of 10</span>
+        <button className="ghost-btn !py-1.5" disabled={n === 10} onClick={() => setN(n + 1)} data-testid="sample-next">Next</button>
+      </div>
+      <div className="grid place-items-center">
+        {srcs[n] ? <img src={srcs[n]} alt={`Sample page ${n}`} className="max-h-[78vh] w-auto border border-white/10 shadow-2xl bg-white" data-testid="sample-page-image" />
+          : <div className="h-[60vh] grid place-items-center font-mono text-cyan-400 cursor-blink">loading page </div>}
+      </div>
+      {nudge && (
+        <div className="sticky bottom-4 mt-6 glass border border-orange-400/50 p-5 flex flex-wrap items-center gap-4 shadow-[0_0_40px_rgba(251,146,60,.2)]" data-testid="sample-nudge">
+          <img src="/book/cover.jpg" alt="" className="h-16 w-auto" />
+          <div className="flex-1 min-w-[200px]"><div className="font-bold text-lg">Keep reading, unlock the other 158 pages</div>
+            <p className="text-sm text-slate-400">Get the full book plus unlimited AI mock interviews for ₹973 <span className="line-through">₹2,999</span>.</p></div>
+          <button className="glow-btn" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} data-testid="sample-nudge-buy">Unlock the full book</button>
+          <button className="text-slate-500 text-xs font-mono hover:text-slate-300" onClick={() => setNudge(false)} data-testid="sample-nudge-dismiss">later</button>
+        </div>)}
+    </div>
+  );
+}
+
 
 export default function Book() {
   const { user } = useAuth();
@@ -95,12 +126,14 @@ export default function Book() {
           <div className="eyebrow mb-4">// ebook · 168 pages · pdf</div>
           <h1 className="text-4xl sm:text-5xl font-extrabold" data-testid="book-title">SOC Interview Preparation - Ebook</h1>
           <p className="mt-4 text-slate-300 text-lg">SOC Interview preparation with 100+ Questions and Answers from 200+ interviews experience.</p>
+          <p className="mt-2 text-sm text-cyan-300 font-mono" data-testid="book-interview-included">+ Includes unlimited 30-question AI-marked mock interviews</p>
           <div className="mt-6 flex flex-wrap items-baseline gap-3 font-mono">
             <span className="text-4xl font-bold neon-green" data-testid="book-price">₹973</span><span className="text-slate-500 line-through" data-testid="book-mrp">₹2,999</span>
             <span className="text-xs bg-green-500 text-black font-bold px-2 py-0.5">67% OFF</span>
           </div>
           <Glass className="p-5 mt-6 max-w-md">
-            {owned ? <div className="flex items-center gap-2 text-green-300 font-mono text-sm" data-testid="book-owned"><Check className="h-4 w-4" />You own this ebook. Read or download it below.</div>
+            {owned ? <div className="space-y-3"><div className="flex items-center gap-2 text-green-300 font-mono text-sm" data-testid="book-owned"><Check className="h-4 w-4" />You own this ebook. Read or download it below.</div>
+              <Link to="/app/interview" className="ghost-btn" data-testid="book-start-interview">Start an AI mock interview</Link></div>
               : <><div className="flex items-center gap-2 text-xs font-mono text-slate-400 mb-3"><Lock className="h-3.5 w-3.5" />Reading and download unlock after payment</div><BuyBox cfg={cfg} onPaid={paid} /></>}
           </Glass>
           <a href={UDEMY_URL} target="_blank" rel="noopener noreferrer" className="ghost-btn mt-4" data-testid="book-udemy-link"><PlayCircle className="h-4 w-4" />Prefer video? Get the same course on Udemy</a>
