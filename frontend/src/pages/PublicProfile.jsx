@@ -43,7 +43,7 @@ function ContactDialog({ p, open, setOpen }) {
 function SkillChart({ data }) {
   if (!data?.length) return null;
   return (
-    <Glass className="p-5 mt-4 h-[340px]" data-testid="profile-skill-radar">
+    <Glass className={`p-5 mt-4 ${data.length >= 3 ? "h-[340px]" : ""}`} data-testid="profile-skill-radar">
       <div className="eyebrow mb-1">skill radar · accuracy by area</div>
       {data.length >= 3 ? <ResponsiveContainer width="100%" height="92%"><RadarChart data={data}><PolarGrid stroke="rgba(0,240,255,.15)" />
         <PolarAngleAxis dataKey="topic" tick={{ fill: "#94A3B8", fontSize: 11 }} /><PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />

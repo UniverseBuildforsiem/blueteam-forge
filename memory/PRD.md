@@ -33,6 +33,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Recruiter view /talent (public): search public student profiles by name, rank, certificate, verified skill (>=70% accuracy topics)
 - Profile links on verify page, streak share page redirect + card handle, dashboard/CTF/drill leaderboards (private profiles plain text)
 - Streak freeze: 100 XP each, max 2 held, auto-applied for one missed day (on owner's drill visit or in streak-rescue cron); public reads count it virtually without side effects
+- Open to Work (toggle, location, work mode on Certificates page); talent filters open-only + location/remote
+- Contact candidate: public form on /u/:username (open-to-work only) emails student, recruiter email shown in body, student email never exposed; limits 5/day per IP or sender, 1/day per sender+candidate
+- Skill radar on public profile (accuracy by topic; bars if <3 topics)
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

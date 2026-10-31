@@ -143,7 +143,8 @@ async def contact(username: str, body: ContactIn, request: Request):
     u = await db.users.find_one({"username": username.lower(), "status": "active", "public_profile": {"$ne": False}}, {"_id": 0, "id": 1, "name": 1, "email": 1, "open_to_work": 1})
     if not u or not u.get("open_to_work"):
         raise HTTPException(404, "This candidate is not accepting contact requests")
-    ip = request.client.host if request.client else "x"
+    fwd = request.headers.get("X-Forwarded-For", "")
+    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "x")
     day_ago = (now() - timedelta(days=1)).isoformat()
     if await db.contact_requests.count_documents({"$or": [{"ip": ip}, {"recruiter_email": email}], "created_at": {"$gte": day_ago}}) >= 5:
         raise HTTPException(429, "Daily contact limit reached. Try again tomorrow.")
@@ -157,6 +158,8 @@ async def contact(username: str, body: ContactIn, request: Request):
         msg_id = await send_email(to=u["email"], subject=f"Recruiter contact: {body.company} via SOCForge", html=html)
     except ValueError:
         raise HTTPException(400, "Your message contains content we can't send. Please rephrase it.")
+    if not msg_id:
+        raise HTTPException(502, "We couldn't deliver your request right now. Please try again in a few minutes.")
     await db.contact_requests.insert_one({"user_id": u["id"], "recruiter_name": body.recruiter_name, "recruiter_email": email, "company": body.company,
                                           "role": body.role, "message": body.message, "ip": ip, "sent": bool(msg_id), "created_at": now_iso()})
     return {"ok": True, "message": "Your request was sent. The candidate will reply by email if interested."}

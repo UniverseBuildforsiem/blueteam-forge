@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 5 (frontend only): tested Open to Work prefs, Contact Candidate dialog, talent open/location filters and the public-profile Skill Radar end to end through the UI as student@socforge.io and as an anonymous recruiter. Every requested flow worked. (1) On /app/certificates, job-prefs-card toggles ON with a toast; location 'Bengaluru' and mode 'Remote' save with a toast and persist after reload. (2) /u/demo shows profile-open-to-work with 'Open to SOC roles · Bengaluru · Remote' and the contact button. The send button stays disabled until name, company and a 20+ character message are filled. An invalid email shows a toast and keeps the dialog open. A valid submit shows the success toast within 0.5s and closes the dialog. A second send with the same email shows 'You already contacted this candidate today'. (3) On /talent, the open toggle shows only demo (1 candidate, with the talent-open-demo badge); 'bengaluru' and 'remote' match demo, 'mumbai' gives 0; clear resets everything (7 candidates, toggle off, empty input). (4) Skill radar showed bars with 1 topic. After taking the quiz-winlogs, quiz-net and quiz-phish quizzes it showed a recharts radar with 5 axes (Brute Force, Malware, Network, Phishing, Windows Logs). (5) With the toggle OFF, the profile hides the open-to-work block and the contact button, the contact API returns 404, and the talent open-only filter shows 0. No JS errors on the talent, profile or certificates pages; the only console errors are the expected anonymous 401s from /auth/me and refresh. One HIGH backend issue was found in code review (IP rate limit behind the ingress).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/public/profile/{username}/contact", "issue": "The IP rate limit uses request.client.host. Behind the k8s ingress this is the ingress pod IP (seen in the DB and logs: 10.201.1.194 and 10.201.4.160), not the recruiter's IP. So the limit of 5 per day per IP applies to ALL recruiters platform-wide (per ingress pod). After about 5 to 10 contacts a day, every recruiter gets 429 'Daily contact limit reached'. Use the first entry of X-Forwarded-For (or X-Real-IP) instead.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/public/profile/{username}/contact", "issue": "The endpoint returns ok:true ('Your request was sent') even when send_email fails and returns None (stored sent:false). The recruiter is told the request was sent but the candidate never gets it, and the failed attempt still counts toward the rate limits. In this run, all sends to student@socforge.io failed with 422 undeliverable_recipient. That part is expected because it is a seed address, but the false success message is a real gap. Suggest returning 502 or a different message when msg_id is None, and not counting it toward the limits."},
+      {"endpoint": "GET /api/public/talent", "issue": "Still N+1 (profile_summary per user, now plus skill_scores). Carried over from iteration 4."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/u/{username} skill radar (fewer than 3 topics)", "issues": ["The Glass card has a fixed h-[340px], so with 1 to 2 topics in bar mode there is about 200px of empty space under the bars. Use auto height for bar mode."]},
+      {"screen": "/app/certificates job prefs", "issues": ["job-mode-select is a native <select> (browser default dropdown), not the shadcn Select used on /talent"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "HIGH: Use X-Forwarded-For (first entry) for the contact rate-limit IP in routes_share.contact. Today all recruiters share one 'IP' (the ingress pod).",
+    "Handle a failed email send in contact (do not return success, do not count toward limits)",
+    "Optional: auto height for the SkillChart card in bar mode; consider shadcn Select for job-mode-select"
+  ],
+  "critical_code_review_comments": [
+    "email_template HTML-escapes recruiter-supplied lines, so there is no HTML injection into the candidate email. Good.",
+    "Candidate email is never returned to the client; the contact response is generic. Good.",
+    "The contact form 'ok' check uses raw length (whitespace counts), which matches the backend min_length (also unstripped). '  ' plus 18 spaces would pass both; minor.",
+    "Turning Open to Work OFF keeps location and work_mode stored; they come back when it is turned on again (reasonable UX)"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend only); 1 HIGH code-review issue", "frontend": "100% (all 6 requested flows passed)"},
+  "test_credentials": "student@socforge.io / Student@123 from /app/memory/test_credentials.md",
+  "seed_data_creation": "3 quiz_attempts and 3 contact_requests were created and then deleted. Demo XP was reset to 209, and demo was set back to open_to_work:false, location '', work_mode ''. Demo stays public.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Contact emails to seed addresses (@socforge.io) fail with 422 undeliverable_recipient (sent:false); use @example.com for candidates if real delivery matters. Clear db.contact_requests between runs. Quizzes quiz-winlogs, quiz-net and quiz-phish give demo 5 topics, which renders the radar; delete demo's quiz_attempts afterwards. The ingress IP issue means rate-limit tests from different clients still hit the same IP bucket."
+}

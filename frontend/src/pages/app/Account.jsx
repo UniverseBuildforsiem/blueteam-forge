@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Award, Download, ExternalLink, Check, Linkedin, UserRound, Copy, Briefcase } from "lucide-react";
 import { Switch } from "../../components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
 import { api, API, errMsg, fmtDate } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
@@ -49,8 +50,10 @@ function JobPrefsCard() {
       </div>
       {f.open_to_work && <div className="flex flex-wrap gap-2">
         <input className="field max-w-xs" placeholder="Preferred location, e.g. Bengaluru" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} data-testid="job-location-input" />
-        <select className="field !w-40" value={f.work_mode} onChange={(e) => setF({ ...f, work_mode: e.target.value })} data-testid="job-mode-select">
-          <option value="">Any work mode</option>{["Remote", "Hybrid", "On-site"].map((m) => <option key={m}>{m}</option>)}</select>
+        <Select value={f.work_mode || "any"} onValueChange={(v) => setF({ ...f, work_mode: v === "any" ? "" : v })}>
+          <SelectTrigger className="w-40 bg-black/40 border-cyan-500/20 text-sm" data-testid="job-mode-select"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-[#0B0F1A] border-cyan-500/30"><SelectItem value="any">Any work mode</SelectItem>{["Remote", "Hybrid", "On-site"].map((m) => <SelectItem key={m} value={m} data-testid={`job-mode-option-${m.toLowerCase()}`}>{m}</SelectItem>)}</SelectContent>
+        </Select>
         <button className="ghost-btn" onClick={() => save()} data-testid="job-prefs-save">Save</button>
       </div>}
       {f.open_to_work && user.public_profile === false && <div className="text-xs text-yellow-300 font-mono">Your profile is private, so recruiters can't find you. Make it public above.</div>}
