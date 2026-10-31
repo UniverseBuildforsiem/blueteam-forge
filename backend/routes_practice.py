@@ -170,6 +170,7 @@ from pymongo.errors import DuplicateKeyError
 async def drill_today(user=Depends(get_current_user)):
     d = drill_for(now().date().isoformat())
     sub = await db.drill_submissions.find_one({"user_id": user["id"], "date": d["date"]}, NO_ID)
+    await apply_freeze(user["id"])
     streak = await drill_streak(user["id"])
     fresh = await db.users.find_one({"id": user["id"]}, {"_id": 0, "streak_freezes": 1, "xp": 1})
     frozen = [f["date"] for f in await db.drill_freezes.find({"user_id": user["id"]}, {"_id": 0, "date": 1}).sort("date", -1).to_list(5)]
@@ -223,10 +224,12 @@ async def apply_freeze(uid):
 
 
 async def streak_stats(uid):
-    await apply_freeze(uid)
     real = {s["date"] for s in await db.drill_submissions.find({"user_id": uid}, {"_id": 0, "date": 1}).to_list(2000)}
     frozen = {f["date"] for f in await db.drill_freezes.find({"user_id": uid}, {"_id": 0, "date": 1}).to_list(500)}
     days = real | frozen
+    y, y2 = (now().date() - timedelta(days=1)).isoformat(), (now().date() - timedelta(days=2)).isoformat()
+    if y not in days and y2 in days and ((await db.users.find_one({"id": uid}, {"_id": 0, "streak_freezes": 1})) or {}).get("streak_freezes", 0) > 0:
+        days.add(y)
     dates = sorted(days)
     day = now().date()
     if day.isoformat() not in days:

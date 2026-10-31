@@ -2,15 +2,20 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Flame, Award, Users } from "lucide-react";
 import { api } from "../lib/api";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Glass } from "../components/common";
 import PublicNav, { Footer } from "../components/PublicNav";
 
 const RANK_COLOR = { Recruit: "text-slate-300", Analyst: "text-cyan-300", Hunter: "text-orange-300", Elite: "neon-green" };
 
 const Pick = ({ label, value, set, options, testId }) => (
-  <select className="field !w-auto min-w-[160px]" value={value} onChange={(e) => set(e.target.value)} data-testid={testId}>
-    <option value="">{label}</option>{options.map((o) => <option key={o} value={o}>{o}</option>)}
-  </select>
+  <Select value={value || "any"} onValueChange={(v) => set(v === "any" ? "" : v)}>
+    <SelectTrigger className="w-[190px] font-mono text-xs bg-black/40 border-cyan-500/20" data-testid={testId}><SelectValue /></SelectTrigger>
+    <SelectContent className="bg-[#0B0F1A] border-cyan-500/30">
+      <SelectItem value="any">{label}</SelectItem>
+      {options.map((o) => <SelectItem key={o} value={o} data-testid={`${testId}-option-${o.toLowerCase().replace(/\s+/g, "-")}`}>{o}</SelectItem>)}
+    </SelectContent>
+  </Select>
 );
 
 function Candidate({ c }) {

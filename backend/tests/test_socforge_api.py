@@ -162,7 +162,7 @@ class TestLearn:
 
     def test_dashboard_analytics(self, newuser):
         d = newuser.get(f"{API}/dashboard").json()
-        assert d["xp"] > 0 and len(d["badges"]) == 6 and d["leaderboard"]
+        assert d["xp"] > 0 and len(d["badges"]) == 8 and d["leaderboard"]
         a = newuser.get(f"{API}/me/analytics").json()
         assert a["attempts"] >= 2
 

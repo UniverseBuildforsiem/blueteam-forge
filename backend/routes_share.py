@@ -114,6 +114,9 @@ async def public_profile(username: str):
 async def talent(q: str = "", rank: str = "", cert: str = "", skill: str = ""):
     us = await db.users.find({"role": "student", "status": "active", "public_profile": {"$ne": False}, "onboarded": True},
                              {"_id": 0, "password_hash": 0}).sort("xp", -1).to_list(300)
+    if cert:
+        holders = set(await db.certificates.distinct("user_id", {"path_title": cert, "status": "valid"}))
+        us = [u for u in us if u["id"] in holders]
     rows = []
     for u in us:
         if q and q.lower() not in f"{u['name']} {u['username']}".lower():

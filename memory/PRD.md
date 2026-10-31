@@ -30,6 +30,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Share streak card: PIL-rendered 1200x627 PNG + public OG page (/api/public/streak/{token}) for LinkedIn share-offsite, download, copy link (fonts bundled in backend/assets/fonts)
 - Certificates: "Add to LinkedIn profile" (linkedin.com/profile/add prefilled with name, org, issue date, verify URL, cert ID)
 - Public badge showcase /u/:username (rank, XP, earned badges, valid certificates, drill streak); public/private toggle on Certificates page
+- Recruiter view /talent (public): search public student profiles by name, rank, certificate, verified skill (>=70% accuracy topics)
+- Profile links on verify page, streak share page redirect + card handle, dashboard/CTF/drill leaderboards (private profiles plain text)
+- Streak freeze: 100 XP each, max 2 held, auto-applied for one missed day (on owner's drill visit or in streak-rescue cron); public reads count it virtually without side effects
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

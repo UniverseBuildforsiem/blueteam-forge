@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Switch } from "../../components/ui/switch";
 import { useAuth } from "../../context/AuthContext";
-import { Glass, PageHeader, SeverityBadge } from "../../components/common";
+import { Glass, PageHeader, SeverityBadge, ProfileLink } from "../../components/common";
 import { Investigate } from "./Challenges";
 
 function Done({ d }) {
