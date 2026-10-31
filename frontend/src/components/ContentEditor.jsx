@@ -3,6 +3,7 @@ import { Plus, Trash2, Save, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg } from "../lib/api";
 import { Glass, Empty } from "./common";
+import PathBuilder from "./PathBuilder";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const Lbl = ({ l, children }) => <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
@@ -15,43 +16,6 @@ const TEMPLATES = {
   challenges: () => ({ title: "", category: "Phishing", severity: "Medium", points: 100, verdict: "TP", description: "", alert: { rule: "", host: "", user: "" }, evidence: [], keywords: [], published: false }),
   labs: () => ({ title: "", description: "", difficulty: "Beginner", duration: "30 min", published: false, tasks: [{ id: "t1", title: "", question: "", answer: "", hint: "" }], kali: { fs: { "/home/analyst/README.txt": "" }, net: { whois: {}, dns: {}, nmap: {}, curl: {} }, pcap: "", cracked: {} } }),
 };
-
-function PathBuilder({ d, set }) {
-  const mods = d.modules;
-  const upMod = (i, m) => set({ ...d, modules: mods.map((x, j) => (j === i ? m : x)) });
-  return (
-    <div className="space-y-4">
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Lbl l="Title"><input className="field" value={d.title} onChange={(e) => set({ ...d, title: e.target.value })} data-testid="builder-path-title" /></Lbl>
-        <Lbl l="Level"><input className="field" value={d.level} onChange={(e) => set({ ...d, level: e.target.value })} /></Lbl>
-        <Lbl l="Category"><input className="field" value={d.category} onChange={(e) => set({ ...d, category: e.target.value })} /></Lbl>
-        <Lbl l="Order"><input type="number" className="field" value={d.order} onChange={(e) => set({ ...d, order: +e.target.value })} /></Lbl>
-      </div>
-      <Lbl l="Description"><textarea className="field h-20" value={d.description} onChange={(e) => set({ ...d, description: e.target.value })} data-testid="builder-path-description" /></Lbl>
-      {mods.map((m, i) => (
-        <Glass key={m.id} className="p-4 space-y-3">
-          <div className="flex gap-2"><input className="field font-mono" value={m.title} placeholder="Module title" onChange={(e) => upMod(i, { ...m, title: e.target.value })} data-testid={`builder-module-title-${i}`} />
-            <button onClick={() => set({ ...d, modules: mods.filter((_, j) => j !== i) })} className="text-red-400"><Trash2 className="h-4 w-4" /></button></div>
-          {m.lessons.map((l, k) => {
-            const upL = (nl) => upMod(i, { ...m, lessons: m.lessons.map((x, j) => (j === k ? nl : x)) });
-            return (
-              <div key={l.id} className="border-l-2 border-cyan-500/30 pl-3 space-y-2">
-                <div className="flex gap-2"><input className="field" placeholder="Lesson title" value={l.title} onChange={(e) => upL({ ...l, title: e.target.value })} data-testid={`builder-lesson-title-${i}-${k}`} />
-                  <button onClick={() => upMod(i, { ...m, lessons: m.lessons.filter((_, j) => j !== k) })} className="text-red-400"><Trash2 className="h-4 w-4" /></button></div>
-                <textarea className="field h-28 text-sm" placeholder="Lesson content (rich text: use line breaks, '- ' bullets)" value={l.content} onChange={(e) => upL({ ...l, content: e.target.value })} />
-                <div className="grid sm:grid-cols-3 gap-2">
-                  <input className="field text-xs" placeholder="Video embed URL" value={l.video_url} onChange={(e) => upL({ ...l, video_url: e.target.value })} />
-                  <input className="field text-xs" placeholder="Resource name" value={l.resources?.[0]?.name || ""} onChange={(e) => upL({ ...l, resources: [{ name: e.target.value, url: l.resources?.[0]?.url || "" }] })} />
-                  <input className="field text-xs" placeholder="Resource file URL" value={l.resources?.[0]?.url || ""} onChange={(e) => upL({ ...l, resources: [{ name: l.resources?.[0]?.name || "Resource", url: e.target.value }] })} />
-                </div>
-              </div>);
-          })}
-          <button className="ghost-btn !text-xs" onClick={() => upMod(i, { ...m, lessons: [...m.lessons, { id: `l-${uid()}`, title: "", content: "", video_url: "", minutes: 10, resources: [] }] })} data-testid={`builder-add-lesson-${i}`}><Plus className="h-3 w-3" />Lesson</button>
-        </Glass>))}
-      <button className="ghost-btn" onClick={() => set({ ...d, modules: [...mods, { id: `m-${uid()}`, title: "", lessons: [] }] })} data-testid="builder-add-module"><Plus className="h-4 w-4" />Module</button>
-    </div>
-  );
-}
 
 function QuizBuilder({ d, set }) {
   const qs = d.questions;

@@ -139,7 +139,7 @@ async def reset(body: ResetIn):
         exp = exp.replace(tzinfo=now().tzinfo)
     if exp < now():
         raise HTTPException(400, "Reset link expired")
-    await db.users.update_one({"id": rec["user_id"]}, {"$set": {"password_hash": hash_password(body.password)}})
+    await db.users.update_one({"id": rec["user_id"]}, {"$set": {"password_hash": hash_password(body.password)}, "$unset": {"invite_pending": ""}})
     await db.password_reset_tokens.update_one({"token": body.token}, {"$set": {"used": True}})
     return {"ok": True}
 

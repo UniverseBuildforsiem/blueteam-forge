@@ -26,15 +26,28 @@ export function Paths() {
   );
 }
 
+const ATTACH = { quiz: ["Quiz", (a) => `/app/quizzes/${a.id}`], lab: ["Lab", (a) => `/app/labs/${a.id}`], challenge: ["SOC challenge", (a) => `/app/challenges?case=${a.id}`],
+  ctf: ["CTF", () => "/app/ctf"], course: ["Course", (a) => a.url], sop: ["SOP", (a) => `/sops/${a.id}`] };
+
+export function LessonBody({ lesson }) {
+  return (<>
+    <div className="eyebrow mb-2">// lesson · {lesson.minutes} min</div>
+    <h2 className="text-2xl font-bold mb-6">{lesson.title || "Untitled lesson"}</h2>
+    {lesson.video_url && <div className="aspect-video mb-6 border border-cyan-500/20"><iframe title={lesson.title} src={lesson.video_url} className="w-full h-full" allowFullScreen data-testid="lesson-video" /></div>}
+    <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[15px]">{lesson.content}</div>
+    {lesson.attachments?.length > 0 && <div className="mt-8" data-testid="lesson-practice"><div className="eyebrow mb-3">practice this lesson</div>
+      <div className="grid sm:grid-cols-2 gap-2">{lesson.attachments.map((a) => { const [label, to] = ATTACH[a.type] || ["Item", () => "#"]; const href = to(a); const ext = /^https?:/.test(href || "");
+        return <a key={`${a.type}-${a.id}`} href={href} {...(ext ? { target: "_blank", rel: "noreferrer" } : {})} className="glass rounded-sm p-3 hover:border-cyan-400/50 transition-colors flex items-center gap-3" data-testid={`lesson-attachment-${a.type}-${a.id}`}>
+          <span className="text-[10px] font-mono uppercase text-green-400 border border-green-500/30 px-1.5 py-0.5">{label}</span><span className="text-sm truncate">{a.title}</span><ChevronRight className="h-4 w-4 ml-auto text-slate-500" /></a>; })}</div></div>}
+    {lesson.resources?.filter((r) => r.url).length > 0 && <div className="mt-8"><div className="eyebrow mb-3">resources</div>
+      {lesson.resources.filter((r) => r.url).map((r) => <a key={r.name + r.url} href={r.url.startsWith("/api") ? `${process.env.REACT_APP_BACKEND_URL}${r.url}` : r.url} target="_blank" rel="noreferrer" className="ghost-btn mr-2 mb-2 !text-xs" data-testid="lesson-resource-link"><Download className="h-3.5 w-3.5" />{r.name || "Resource"}</a>)}</div>}
+  </>);
+}
+
 function LessonView({ lesson, done, onComplete }) {
   return (
     <Glass className="p-6 sm:p-8" data-testid="lesson-view">
-      <div className="eyebrow mb-2">// lesson · {lesson.minutes} min</div>
-      <h2 className="text-2xl font-bold mb-6">{lesson.title}</h2>
-      {lesson.video_url && <div className="aspect-video mb-6 border border-cyan-500/20"><iframe title={lesson.title} src={lesson.video_url} className="w-full h-full" allowFullScreen data-testid="lesson-video" /></div>}
-      <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[15px]">{lesson.content}</div>
-      {lesson.resources?.length > 0 && <div className="mt-8"><div className="eyebrow mb-3">resources</div>
-        {lesson.resources.map((r) => <a key={r.name} href={r.url.startsWith("/api") ? `${process.env.REACT_APP_BACKEND_URL}${r.url}` : r.url} target="_blank" rel="noreferrer" className="ghost-btn mr-2 mb-2 !text-xs" data-testid="lesson-resource-link"><Download className="h-3.5 w-3.5" />{r.name}</a>)}</div>}
+      <LessonBody lesson={lesson} />
       <button className="glow-btn mt-8" disabled={done} onClick={onComplete} data-testid="lesson-complete-button">{done ? <><CheckCircle2 className="h-4 w-4" /> Completed</> : "Mark as complete (+10 XP)"}</button>
     </Glass>
   );

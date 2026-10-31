@@ -1,54 +1,12 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Trash2, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { api, errMsg, fmtDate } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
-import { Glass, PageHeader, Stat, Empty } from "../components/common";
+import { Glass, PageHeader, Empty } from "../components/common";
 import ContentEditor from "../components/ContentEditor";
-
-function Analytics() {
-  const [a, setA] = useState(null);
-  useEffect(() => { api.get("/admin/analytics").then((r) => setA(r.data)); }, []);
-  if (!a) return null;
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <Stat label="Users" value={a.total_users} testId="admin-total-users" /><Stat label="Active 7d" value={a.active_7d} accent="neon-green" />
-        <Stat label="Pro subs" value={a.pro_users} /><Stat label="Completions" value={a.completions} />
-        <Stat label="Quiz avg" value={`${a.quiz_avg}%`} /><Stat label="Revenue" value={`₹${a.revenue_total.toLocaleString("en-IN")}`} accent="neon-green" testId="admin-revenue" />
-      </div>
-      <Glass className="p-5 h-80"><div className="font-bold mb-2">Signups & revenue (14 days)</div>
-        <ResponsiveContainer height="88%"><AreaChart data={a.series}><CartesianGrid stroke="rgba(255,255,255,.04)" /><XAxis dataKey="day" tick={{ fill: "#64748B", fontSize: 10 }} /><YAxis yAxisId="l" tick={{ fill: "#64748B", fontSize: 10 }} /><YAxis yAxisId="r" orientation="right" tick={{ fill: "#64748B", fontSize: 10 }} />
-          <Tooltip contentStyle={{ background: "#0B0F1A", border: "1px solid rgba(0,240,255,.3)" }} /><Area yAxisId="l" dataKey="signups" stroke="#00F0FF" fill="#00F0FF" fillOpacity={0.15} /><Area yAxisId="r" dataKey="revenue" stroke="#00FF66" fill="#00FF66" fillOpacity={0.1} /></AreaChart></ResponsiveContainer></Glass>
-      <div className="text-xs font-mono text-slate-500">Roles: {Object.entries(a.roles).map(([k, v]) => `${k} ${v}`).join(" · ")} · {a.quiz_attempts} quiz attempts · {a.payments} payments</div>
-    </div>
-  );
-}
-
-function Users() {
-  const { user: me } = useAuth();
-  const [us, setUs] = useState([]);
-  const [q, setQ] = useState("");
-  const load = () => api.get("/admin/users").then((r) => setUs(r.data));
-  useEffect(() => { load(); }, []);
-  const upd = async (id, body) => { try { await api.patch(`/admin/users/${id}`, body); toast.success("User updated"); load(); } catch (e) { toast.error(errMsg(e)); } };
-  const list = us.filter((u) => `${u.name} ${u.email} ${u.username}`.toLowerCase().includes(q.toLowerCase()));
-  return (
-    <div>
-      <input className="field max-w-sm mb-4" placeholder="Search users..." value={q} onChange={(e) => setQ(e.target.value)} data-testid="admin-user-search" />
-      <Glass className="overflow-x-auto"><table className="w-full text-sm" data-testid="admin-users-table">
-        <thead><tr className="text-left text-xs font-mono text-slate-500 border-b border-cyan-500/15">{["Name", "Email", "Role", "Status", "Plan", "Joined", ""].map((h) => <th key={h} className="px-4 py-3 font-normal">{h}</th>)}</tr></thead>
-        <tbody>{list.map((u) => <tr key={u.id} className="border-b border-white/5" data-testid={`admin-user-row-${u.username}`}>
-          <td className="px-4 py-2.5">{u.name}<div className="text-[10px] font-mono text-slate-500">@{u.username}</div></td><td className="px-4 font-mono text-xs text-slate-400">{u.email}</td>
-          <td className="px-4"><select className="field !py-1 !w-32 text-xs" value={u.role} disabled={u.id === me.id} onChange={(e) => upd(u.id, { role: e.target.value })} data-testid={`admin-role-select-${u.username}`}>{["student", "instructor", "admin"].map((r) => <option key={r}>{r}</option>)}</select></td>
-          <td className={`px-4 text-xs font-mono ${u.status === "active" ? "text-green-400" : "text-red-400"}`}>{u.status}</td><td className="px-4 text-xs font-mono">{u.plan}</td><td className="px-4 text-xs text-slate-500">{u.created_at.slice(0, 10)}</td>
-          <td className="px-4">{u.id !== me.id && <button className={`ghost-btn !py-1 !text-xs ${u.status === "active" ? "!border-red-500/40 !text-red-300" : ""}`} onClick={() => upd(u.id, { status: u.status === "active" ? "suspended" : "active" })} data-testid={`admin-status-toggle-${u.username}`}>{u.status === "active" ? "Suspend" : "Approve"}</button>}</td>
-        </tr>)}</tbody></table></Glass>
-    </div>
-  );
-}
+import AdminAnalytics from "../components/AdminAnalytics";
+import AdminUsers from "../components/AdminUsers";
 
 function Publishing() {
   const [items, setItems] = useState([]);
@@ -108,7 +66,7 @@ function Settings() {
   );
 }
 
-const TABS = [["analytics", "Analytics", Analytics], ["users", "Users", Users], ["publishing", "Publishing", Publishing], ["builder", "Path builder", () => <ContentEditor kind="paths" />],
+const TABS = [["analytics", "Analytics", AdminAnalytics], ["users", "Users", AdminUsers], ["publishing", "Publishing", Publishing], ["builder", "Path builder", () => <ContentEditor kind="paths" />],
   ["categories", "Categories", () => <SimpleList kind="categories" fields={["name"]} />], ["certificates", "Certificates", Certs],
   ["announcements", "Announcements", () => <SimpleList kind="announcements" fields={["title", "body"]} />], ["audit", "Audit logs", Audit], ["settings", "Settings", Settings]];
 
