@@ -33,8 +33,8 @@ function BlogMagazine({ posts }) {
       </div>
       <div className="grid lg:grid-cols-[1.35fr_1fr] gap-5">
         <Link to={`/blog/${lead.slug}`} className="group relative overflow-hidden rounded-sm border border-cyan-500/20 min-h-[420px] flex" data-testid={`landing-blog-lead-${lead.id}`}>
-          {lead.image ? <img src={lead.image} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /> : <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-transparent" />}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F1A] via-[#0B0F1A]/80 to-transparent" />
+          {lead.image ? <img src={lead.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" /> : <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-transparent" />}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F1A] via-[#0B0F1A]/90 to-[#0B0F1A]/20" />
           <div className="relative mt-auto p-7">
             <div className="flex items-center gap-2 text-xs font-mono"><SeverityBadge level={lead.severity} /><span className="text-cyan-300">{lead.category}</span><span className="text-slate-400">· {lead.source} · {ago(lead.published_at)}</span></div>
             <h3 className="text-2xl sm:text-3xl font-extrabold mt-4 leading-tight group-hover:text-cyan-300 transition-colors">{lead.title}</h3>

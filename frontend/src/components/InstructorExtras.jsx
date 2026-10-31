@@ -40,7 +40,7 @@ export function CatalogCourses() {
   const [edit, setEdit] = useState(null);
   const load = () => api.get("/instructor/courses").then((r) => setCs(r.data));
   useEffect(() => { load(); }, []);
-  const del = async (c) => { if (!window.confirm(`Delete "${c.title}"?`)) return; await api.delete(`/instructor/courses/${c.id}`); toast.success("Course deleted"); load(); };
+  const del = async (c) => { if (!window.confirm(`Delete "${c.title}"?`)) return; try { await api.delete(`/instructor/courses/${c.id}`); toast.success("Course deleted"); load(); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between"><p className="text-sm text-slate-400">Courses shown on the landing page and /courses. Synced courses come from socprofessionals.com every morning and are read-only here.</p>

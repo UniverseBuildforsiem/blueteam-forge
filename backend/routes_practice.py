@@ -209,7 +209,8 @@ async def lab_report(lid: str, body: ReportIn, user=Depends(get_current_user)):
     best = max(score, prog.get("report_score") or 0)
     await db.lab_progress.update_one({"user_id": user["id"], "lab_id": lid}, {"$set": {"report": body.report, "report_submitted": True, "report_at": prog.get("report_at") or now_iso(),
                                                                                       "report_score": best, "keywords_hit": hits, "keywords_missed": [k for k in kws if k not in hits],
-                                                                                      "user_name": user["name"], "lab_title": l["title"]}})
+                                                                                      "user_name": user["name"], "lab_title": l["title"],
+                                                                                      **({"review_status": "resubmitted"} if prog.get("report_submitted") else {})}})
     if not prog.get("report_submitted"):
         await award(user["id"], 20 + round(80 * score / 100), f"Final report for lab '{l['title']}' ({score}/100)")
     return {"ok": True, "score": score, "best": best, "keywords_hit": hits, "keywords_missed": [k for k in kws if k not in hits]}

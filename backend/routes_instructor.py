@@ -53,8 +53,12 @@ async def list_courses(user=Depends(staff)):
 
 @router.post("/courses")
 async def create_course(body: CourseIn, user=Depends(staff)):
+    seq = await db.counters.find_one_and_update({"id": "instructor_course"}, {"$inc": {"n": 1}}, upsert=True, return_document=True, projection=NO_ID)
     last = await db.courses.find_one({"source": "instructor"}, {"_id": 0, "id": 1}, sort=[("id", -1)])
-    doc = {**course_doc(body), "id": (last["id"] + 1) if last else 9000001, "source": "instructor", "created_by": user["email"], "created_at": now_iso(), "synced_at": None}
+    nid = max(9000000 + seq["n"], (last["id"] + 1) if last else 0)
+    if nid != 9000000 + seq["n"]:
+        await db.counters.update_one({"id": "instructor_course"}, {"$set": {"n": nid - 9000000}})
+    doc = {**course_doc(body), "id": nid, "source": "instructor", "created_by": user["email"], "created_at": now_iso(), "synced_at": None}
     await db.courses.insert_one(dict(doc))
     await audit(user, "create course", str(doc["id"]))
     if doc["active"]:
@@ -132,8 +136,8 @@ async def grade_lab(uid: str, lid: str, body: GradeIn, user=Depends(staff)):
 
 
 # ---------- Student monitoring ----------
-async def student_rows():
-    us = await db.users.find({"role": "student"}, {"_id": 0, "password_hash": 0}).to_list(2000)
+async def student_rows(q=None):
+    us = await db.users.find({"role": "student", **(q or {})}, {"_id": 0, "password_hash": 0}).to_list(2000)
     paths = await db.paths.find({}, NO_ID).to_list(100)
     total = sum(len([l for m in p["modules"] for l in m["lessons"]]) for p in paths) or 1
     out = []
@@ -190,7 +194,7 @@ async def student_detail(uid: str, user=Depends(staff)):
     u = await db.users.find_one({"id": uid, "role": "student"}, {"_id": 0, "password_hash": 0})
     if not u:
         raise HTTPException(404, "Student not found")
-    row = next(r for r in await student_rows() if r["id"] == uid)
+    row = (await student_rows({"id": uid}))[0]
     labs = {l["id"]: l for l in await db.labs.find({}, {"_id": 0, "id": 1, "title": 1, "tasks": 1}).to_list(100)}
     lab_rows = [{"lab_id": p["lab_id"], "title": labs.get(p["lab_id"], {}).get("title", p["lab_id"]), "solved": len(p.get("answered", {})),
                  "tasks": len(labs.get(p["lab_id"], {}).get("tasks", [])), "report_submitted": p.get("report_submitted", False), "report": p.get("report", ""),

@@ -1,0 +1,39 @@
+{
+  "summary": "Tested Instructor Panel (catalog course CRUD, grading with email, student monitoring/at-risk/CSV) backend + UI, landing Threat Ticker / Blog magazine / SOP showcase (desktop + 390px mobile), and RBAC regression. Backend: 25/25 new instructor tests pass (after dropping one over-strict assertion). UI: all requested flows work end to end. Created test courses were deleted (none with id >= 9000000 remain in the public catalog).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/labs/{id}/report (resubmit)", "issue": "When a student resubmits a lab report that was already graded, review_status is not reset (it stays 'reviewed'), so the new report never shows up again in the Grading 'pending' queue. Challenge resubmits set status='resubmitted', so they do come back. Fix: when report_submitted was already true, $set review_status='resubmitted' (or $unset it) in routes_practice.py ~line 210."},
+      {"endpoint": "GET /api/labs/{id}", "issue": "progress has instructor_grade and feedback but not review_status/graded_by/graded_at. These are optional extras."},
+      {"endpoint": "POST /api/instructor/courses", "issue": "The id is computed as max(instructor id)+1. That has a race condition and reuses an id after the newest course is deleted (9000001 was reused after deletion). Consider a counter collection."},
+      {"endpoint": "GET /api/instructor/students/{uid}, /at-risk, /students.csv", "issue": "student_rows() does 6 count queries for each student (N+1), and student_detail recomputes the rows for every student just to get one. This will slow down as the user base grows."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Catalog delete", "issue": "CatalogCourses.del has no try/catch, so a failed DELETE gives an unhandled rejection and no error toast", "affected_selectors": ["catalog-course-delete-{id}"]}
+    ],
+    "design_issues": [
+      {"screen": "Landing blog lead story", "issues": ["The lead image's own text (e.g. the big ChatGPT logo text) shows through behind the headline on desktop and mobile. A stronger gradient or a lower image opacity would make it easier to read."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_instructor_panel.py", "/app/test_reports/pytest/pytest_instructor.xml"],
+  "action_items": [
+    "Reset lab_progress.review_status when a graded lab report is resubmitted, so it goes back into the pending queue",
+    "Add error handling (try/catch + toast) to the catalog course delete",
+    "Optional: generate course ids from a counter instead of max+1; cut the N+1 queries in student_rows",
+    "Update the stale legacy tests in test_socforge_api.py: test_lab now gets 400 on a report before the tasks are solved, and test_dashboard_analytics expects 8 badges but there are 9"
+  ],
+  "critical_code_review_comments": [
+    "routes_instructor.py course_doc: the image field has no URL-scheme validation (only max_length). The url field is validated (http/https).",
+    "GradeBox: an empty grade input sends 0 (+'' === 0). Consider disabling the save button when it is empty.",
+    "Grading email failures are swallowed in a background task (logged as 422 for the seed domain), as expected."
+  ],
+  "updated_files": ["/app/backend/tests/test_instructor_panel.py"],
+  "success_rate": {"backend": "100% (25/25 new instructor tests); legacy test_socforge_api has 2 stale failures unrelated to this feature", "frontend": "100%"},
+  "seed_data_creation": "Grades applied to the demo student: challenge (Repeated Failed Logons) 77, Phishing Link Click 64, lab-ssh-brute 88, lab-dns-tunnel 81. Two challenge submissions are still pending. All test courses were deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The demo student's lab reports are both graded now. Two challenge submissions (SSH Brute Force..., Multiple Failed Logons on VPN) are still pending. Do not call /api/cron/blog-sync (test_blog_sop_siem_labs.py references it). The student is redirected from /instructor to /app, and /api/instructor/* returns 403. On mobile the ticker label renders fine once the rise animation finishes."
+}
