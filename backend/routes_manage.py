@@ -143,15 +143,6 @@ class GradeIn(BaseModel):
     feedback: str = Field(default="", max_length=2000)
 
 
-@router.post("/instructor/submissions/{sid}/grade")
-async def grade(sid: str, body: GradeIn, user=Depends(staff)):
-    r = await db.challenge_submissions.update_one({"id": sid}, {"$set": {"instructor_grade": body.grade, "feedback": body.feedback, "status": "reviewed", "graded_by": user["name"]}})
-    if not r.matched_count:
-        raise HTTPException(404, "Submission not found")
-    await audit(user, "grade submission", sid)
-    return {"ok": True}
-
-
 @router.get("/instructor/sessions/{sid}/attendees")
 async def attendees(sid: str, user=Depends(staff)):
     return await db.rsvps.find({"session_id": sid}, NO_ID).to_list(1000)

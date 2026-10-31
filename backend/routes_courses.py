@@ -141,7 +141,7 @@ async def sync_courses():
     fresh = [c for c in courses if known and c["id"] not in known]
     for c in courses:
         await db.courses.update_one({"id": c["id"]}, {"$set": {**c, "active": True, "synced_at": ts}}, upsert=True)
-    await db.courses.update_many({"id": {"$nin": [c["id"] for c in courses]}}, {"$set": {"active": False}})
+    await db.courses.update_many({"id": {"$nin": [c["id"] for c in courses]}, "source": {"$ne": "instructor"}}, {"$set": {"active": False}})
     await db.meta.update_one({"key": "course_sync"}, {"$set": {"last_ok": ts, "last_attempt": ts, "last_error": None, "count": len(courses)}}, upsert=True)
     logger.info(f"Course sync ok: {len(courses)} courses, {len(fresh)} new")
     if fresh:

@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { api } from "../lib/api";
 import { Glass, SeverityBadge } from "../components/common";
 import PublicNav, { Footer } from "../components/PublicNav";
-import { LatestPosts } from "./Blog";
+import LandingIntel, { ThreatTicker, useLandingIntel } from "../components/LandingIntel";
 
 const FEED = [
   ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
@@ -163,6 +163,7 @@ export default function Landing() {
   const [paths, setPaths] = useState([]);
   const [stats, setStats] = useState(null);
   const { courses } = useCourses();
+  const intel = useLandingIntel();
   useEffect(() => {
     api.get("/public/paths").then((r) => setPaths(r.data)).catch(() => {});
     api.get("/public/stats").then((r) => setStats(r.data)).catch(() => {});
@@ -182,6 +183,7 @@ export default function Landing() {
         </div>
         <AlertFeed />
       </section>
+      <ThreatTicker posts={intel.posts} />
 
       <section className="border-y border-cyan-500/10 bg-black/30">
         <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-6" data-testid="landing-stats">
@@ -197,7 +199,7 @@ export default function Landing() {
         <FeatureShowcase />
       </section>
 
-      <LatestPosts />
+      <LandingIntel posts={intel.posts} sops={intel.sops} />
 
       <section id="courses" className="max-w-7xl mx-auto px-6 pb-24">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
