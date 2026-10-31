@@ -49,6 +49,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Watched course bonus (2026-06): +100 XP once per course (db.course_bonus unique) when a trackable matching item is completed after watched_at; SIEM/Kali/Tools untracked; evaluated on GET /api/me/courses/progress and /api/dashboard (toasts via awarded/course_bonus)
 - Course badge share card: POST /api/me/courses/{id}/share-card -> /api/public/course-badge/{token}/{id}(.png) PIL card + OG page (LinkedIn)
 - My courses page /app/courses: watched courses, badge, bonus status, matching items done/to finish, share
+- Rebrand (2026-06): SOCForge -> SOCProfessionals Academy everywhere (UI, emails, cards, PDF); logins now @socprofessionals.academy (startup `rebrand` migration in server.py); badge email with card image + LinkedIn button after course bonus (respects course_emails)
+- Badge levels: 4 levels Recruit/Analyst (3D kid style), Hunter (cyber boy), Elite (hooded skull) from user-supplied art; unique AI character per badge in frontend/public/badges; mapping in frontend/src/lib/badges.js; BadgeTile used on dashboard + public profile; landing BadgeShowcase section
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

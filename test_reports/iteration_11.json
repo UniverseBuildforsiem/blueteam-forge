@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only test of the 4-level badge system (Recruit/Analyst/Hunter/Elite). Working: the landing showcase (4 level cards and 8 badges, all images load, round art, CTA goes to /register, no horizontal scroll at 390px), the dashboard BadgeTiles (correct levels, locked badges are greyscale with a lock icon, the course badge shows Recruit with course.jpg), the /u/demo profile tiles, the /app/courses course badge art and the 'Join SOCProfessionals Academy' CTA. All 12 /badges/* files return 200. One open bug: on desktop, 6 of the 8 badge names on the landing showcase are cut off with an ellipsis.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BadgeShowcase LevelCard (landing, desktop 1920px and lg 4-column grid)", "issue": "Badge names are cut off by the `truncate` class: 'First Bl…', 'Triage P…', 'Quiz Mas…', 'Week Wat…', 'Pathfind…', 'Night Sh…'. The review asked for names that are not cut off. The cause is a 2-column grid inside a narrow 4-column card with a 44px image. Fine at 390px.", "selector": "[data-testid^='landing-badge-'] .truncate", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Landing badge showcase", "issues": ["The Recruit level art (level-recruit.jpg) has a plain white background, which clashes with the dark theme next to the other 3 dark cards. The 'LEVEL 01' label (text-slate-500) is hard to read where the gradient meets the white image.", "Analyst level art reuses /badges/triage-pro.jpg, so the Analyst card image is the same as the Triage Pro badge icon. There is no separate Analyst level art."]},
+      {"screen": "Landing header at 390px", "issues": ["'Log in' wraps onto two lines and the 'Sign up' button text wraps as well. The header is crowded on mobile."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "BadgeShowcase.jsx: stop badge names being cut off on desktop. Options: remove `truncate` and allow 2 lines (e.g. line-clamp-2 / break-words), or stack the 2 badges in 1 column inside each level card at lg, or use smaller text.",
+    "Optional: give level-recruit.jpg a dark background (or darken it with a CSS overlay) so it matches the other level cards.",
+    "Optional: make the mobile header buttons compact (whitespace-nowrap, smaller padding)."
+  ],
+  "critical_code_review_comments": [
+    "The served index.html meta description reads 'A product of emergent.sh' on both the public URL and localhost:3000, even though public/index.html has the new SOCProfessionals description. Most likely cause: the @emergentbase/overlay dev-server plugin in craco rewrites it. A production build should be fine; check the deployed build.",
+    "badgeArt() returns both img and img2. Because of the spread, img is overwritten by the level image and img2 is the badge image. This is confusing naming; rename to levelImg/badgeImg.",
+    "MyCourses hardcodes /badges/course.jpg instead of using badgeArt(), so the image path is duplicated."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "92%"},
+  "test_credentials": "student@socprofessionals.academy / Student@123 (works)",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Badge art lives in frontend/src/lib/badges.js (LEVELS, BADGE_ART, SHOWCASE_BADGES). The demo student has first-blood and course-585979 (Wireshark) earned; the rest are locked. Check that landing badge names are no longer cut off at 1920px."
+}

@@ -19,9 +19,9 @@ const LevelCard = ({ name, i }) => {
       </div>
       <div className="p-4 grid grid-cols-2 gap-3">
         {badges.map(([id, n, d]) => (
-          <div key={id} className="flex items-center gap-2" title={d} data-testid={`landing-badge-${id}`}>
-            <img src={BADGE_ART[id][1]} alt={n} loading="lazy" className={`h-11 w-11 rounded-full object-cover border-2 ${l.ring}`} />
-            <div className="min-w-0"><div className="text-xs font-mono font-bold truncate">{n}</div><div className="text-[10px] text-slate-500 line-clamp-2">{d}</div></div>
+          <div key={id} className="flex flex-col items-center text-center gap-1.5" title={d} data-testid={`landing-badge-${id}`}>
+            <img src={BADGE_ART[id][1]} alt={n} loading="lazy" className={`h-14 w-14 rounded-full object-cover border-2 ${l.ring} hover:scale-110 transition-transform`} />
+            <div className="text-xs font-mono font-bold">{n}</div><div className="text-[10px] text-slate-500 leading-tight">{d}</div>
           </div>))}
       </div>
     </motion.div>

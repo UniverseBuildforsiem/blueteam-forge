@@ -1,6 +1,6 @@
 export const LEVELS = {
   Recruit: { img: "/badges/level-recruit.jpg", ring: "border-slate-300/60", text: "text-slate-200", glow: "shadow-[0_0_24px_rgba(226,232,240,.15)]", blurb: "Your first wins on shift." },
-  Analyst: { img: "/badges/triage-pro.jpg", ring: "border-cyan-400/70", text: "text-cyan-300", glow: "shadow-[0_0_24px_rgba(0,240,255,.25)]", blurb: "Consistent, accurate triage." },
+  Analyst: { img: "/badges/level-analyst.jpg", ring: "border-cyan-400/70", text: "text-cyan-300", glow: "shadow-[0_0_24px_rgba(0,240,255,.25)]", blurb: "Consistent, accurate triage." },
   Hunter: { img: "/badges/level-hunter.png", ring: "border-orange-400/70", text: "text-orange-300", glow: "shadow-[0_0_24px_rgba(251,146,60,.25)]", blurb: "Labs and streaks that prove grit." },
   Elite: { img: "/badges/level-elite.jpg", ring: "border-red-500/70", text: "text-red-400", glow: "shadow-[0_0_28px_rgba(239,68,68,.3)]", blurb: "Certified and battle-hardened." },
 };
