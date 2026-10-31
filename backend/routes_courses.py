@@ -1,6 +1,11 @@
+import hashlib
+import hmac
+import os
 import httpx
-from fastapi import APIRouter, Depends, Request, BackgroundTasks
-from core import db, now_iso, logger, get_current_user
+from fastapi import APIRouter, Depends, Request, BackgroundTasks, HTTPException
+from fastapi.responses import HTMLResponse
+from pymongo.errors import DuplicateKeyError
+from core import db, now_iso, logger, get_current_user, send_email, email_template
 
 router = APIRouter(prefix="/api")
 
@@ -98,12 +103,43 @@ async def sync_courses():
         await db.meta.update_one({"key": "course_sync"}, {"$set": {"last_error": str(e)[:300], "last_attempt": now_iso()}}, upsert=True)
         return False
     ts = now_iso()
+    known = set(await db.courses.distinct("id"))
+    fresh = [c for c in courses if known and c["id"] not in known]
     for c in courses:
         await db.courses.update_one({"id": c["id"]}, {"$set": {**c, "active": True, "synced_at": ts}}, upsert=True)
     await db.courses.update_many({"id": {"$nin": [c["id"] for c in courses]}}, {"$set": {"active": False}})
     await db.meta.update_one({"key": "course_sync"}, {"$set": {"last_ok": ts, "last_attempt": ts, "last_error": None, "count": len(courses)}}, upsert=True)
-    logger.info(f"Course sync ok: {len(courses)} courses")
+    logger.info(f"Course sync ok: {len(courses)} courses, {len(fresh)} new")
+    if fresh:
+        await notify_new_courses(fresh)
     return True
+
+
+def unsub_token(uid):
+    return hmac.new(os.environ["JWT_SECRET"].encode(), f"course-unsub:{uid}".encode(), hashlib.sha256).hexdigest()[:32]
+
+
+async def notify_new_courses(fresh):
+    sent = 0
+    async for u in db.users.find({"role": "student", "status": "active", "course_emails": {"$ne": False}}, {"_id": 0, "id": 1, "name": 1, "email": 1}):
+        todo = []
+        for c in fresh:
+            try:
+                await db.course_alerts.insert_one({"user_id": u["id"], "course_id": c["id"], "at": now_iso()})
+                todo.append(c)
+            except DuplicateKeyError:
+                pass
+        if not todo:
+            continue
+        lines = ["A new self-paced course just landed on SOC Professionals:" if len(todo) == 1 else f"{len(todo)} new self-paced courses just landed on SOC Professionals:"]
+        lines += [f"{c['title']} · {c['type']} · ₹{c['price']:,} (was ₹{c['mrp']:,})" for c in todo]
+        lines.append("Open it in SOCForge to see the labs and drills that go with it.")
+        unsub = f"{os.environ['FRONTEND_URL']}/api/public/unsubscribe/course-alerts?u={u['id']}&t={unsub_token(u['id'])}"
+        subject = f"New course: {todo[0]['title']}" if len(todo) == 1 else f"{len(todo)} new SOC courses are live"
+        await send_email(to=u["email"], subject=subject[:120],
+                         html=email_template(u["name"], lines, f"{os.environ['FRONTEND_URL']}/courses", "See the new course" if len(todo) == 1 else "See the new courses", unsub))
+        sent += 1
+    logger.info(f"New course alerts sent: {sent}")
 
 
 async def ensure_courses():
@@ -142,6 +178,38 @@ async def recommended(user=Depends(get_current_user)):
             return {"course": matches[0], "topic": a["topic"], "accuracy": acc_n, "reason": reason}
     return {"course": courses[0], "topic": None, "accuracy": None,
             "reason": "Take a quiz or triage challenge and we'll match a course to your weakest skill. Until then, start with the full bundle."}
+
+
+@router.get("/me/courses")
+async def my_courses(user=Depends(get_current_user)):
+    done = await db.course_completions.distinct("course_id", {"user_id": user["id"]})
+    return {"completed": done, "course_emails": user.get("course_emails") is not False}
+
+
+@router.post("/me/courses/{cid}/complete")
+async def complete_course(cid: int, user=Depends(get_current_user)):
+    c = await db.courses.find_one({"id": cid}, {"_id": 0, "title": 1})
+    if not c:
+        raise HTTPException(404, "Course not found")
+    await db.course_completions.update_one({"user_id": user["id"], "course_id": cid},
+                                           {"$setOnInsert": {"user_id": user["id"], "course_id": cid, "title": c["title"], "at": now_iso()}}, upsert=True)
+    return {"completed": True}
+
+
+@router.delete("/me/courses/{cid}/complete")
+async def uncomplete_course(cid: int, user=Depends(get_current_user)):
+    await db.course_completions.delete_one({"user_id": user["id"], "course_id": cid})
+    return {"completed": False}
+
+
+@router.get("/public/unsubscribe/course-alerts", response_class=HTMLResponse)
+async def unsubscribe(u: str = "", t: str = ""):
+    ok = bool(u and t) and hmac.compare_digest(t, unsub_token(u))
+    if ok:
+        await db.users.update_one({"id": u}, {"$set": {"course_emails": False}})
+    msg = "You're unsubscribed from new course emails. You can turn them back on from your SOCForge dashboard." if ok else "This unsubscribe link is invalid or has expired."
+    return HTMLResponse(f"<html><body style='background:#0B0F1A;color:#E2E8F0;font-family:monospace;padding:60px'><h2 style='color:#00F0FF'>SOCForge</h2><p>{msg}</p>"
+                        f"<a style='color:#00FF66' href='{os.environ['FRONTEND_URL']}/app'>Open dashboard</a></body></html>", status_code=200 if ok else 400)
 
 
 @router.post("/cron/course-sync")

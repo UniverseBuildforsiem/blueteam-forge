@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Flame, Trophy, Zap, CalendarClock, Award, Lock } from "lucide-react";
+import { Flame, Trophy, Zap, CalendarClock, Award, Lock, GraduationCap } from "lucide-react";
 import { api, fmtDate } from "../../lib/api";
 import RecommendedCourse from "../../components/RecommendedCourse";
 import { Glass, PageHeader, ProgressRing, Empty, Stat, SeverityBadge, ProfileLink } from "../../components/common";
@@ -74,7 +74,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-3 gap-3">
             {d.badges.map((b) => (
               <div key={b.id} title={b.description} data-testid={`badge-${b.id}`} className={`p-3 text-center border rounded-sm ${b.earned ? "border-green-400/50 bg-green-500/10" : "border-white/5 opacity-50"}`}>
-                {b.earned ? <Zap className="h-5 w-5 mx-auto text-green-400" /> : <Lock className="h-5 w-5 mx-auto text-slate-500" />}
+                {b.earned ? (b.kind === "course" ? <GraduationCap className="h-5 w-5 mx-auto text-cyan-300" /> : <Zap className="h-5 w-5 mx-auto text-green-400" />) : <Lock className="h-5 w-5 mx-auto text-slate-500" />}
                 <div className="text-[10px] font-mono mt-2 leading-tight">{b.name}</div>
               </div>))}
           </div>

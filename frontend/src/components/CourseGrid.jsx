@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowUpRight, PlayCircle, ClipboardCheck, FileText, FlaskConical, Flag, Flame, Terminal, BookOpen, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
+import { ArrowUpRight, PlayCircle, ClipboardCheck, FileText, FlaskConical, Flag, Flame, Terminal, BookOpen, ShieldCheck, CheckCircle2, GraduationCap } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../lib/api";
 
 const TYPE_ICON = { Videos: PlayCircle, Tests: ClipboardCheck, Files: FileText };
 const KIND_ICON = { Lab: FlaskConical, CTF: Flag, Drill: Flame, Tool: Terminal, Path: BookOpen, Challenge: ShieldCheck, Quiz: ClipboardCheck };
@@ -27,7 +29,14 @@ export const PracticeList = ({ c }) => {
   );
 };
 
-const CourseDialog = ({ c, onClose }) => (
+const WatchButton = ({ c, done, toggle }) => (
+  <button onClick={() => toggle(c)} data-testid="course-dialog-watched"
+    className={`flex items-center justify-center gap-2 px-4 py-2.5 border font-mono text-sm rounded-sm transition-colors ${done ? "border-green-400/60 bg-green-500/10 text-green-300" : "border-white/15 text-slate-300 hover:border-green-400/60"}`}>
+    {done ? <><CheckCircle2 className="h-4 w-4" />Watched · badge earned</> : <><GraduationCap className="h-4 w-4" />Mark as watched · earn badge</>}
+  </button>
+);
+
+const CourseDialog = ({ c, onClose, done, toggle }) => (
   <Dialog open onOpenChange={(v) => !v && onClose()}>
     <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-2xl" data-testid="course-dialog">
       <div className="grid sm:grid-cols-[220px_1fr] gap-5">
@@ -42,12 +51,15 @@ const CourseDialog = ({ c, onClose }) => (
         <div className="eyebrow mb-3">// practise it in socforge</div>
         <PracticeList c={c} />
       </div>
-      <a href={c.url} target="_blank" rel="noopener noreferrer" className="glow-btn justify-center" data-testid="course-dialog-open">Open course page <ArrowUpRight className="h-4 w-4" /></a>
+      <div className={`grid gap-3 ${toggle ? "sm:grid-cols-2" : ""}`}>
+        {toggle && <WatchButton c={c} done={done} toggle={toggle} />}
+        <a href={c.url} target="_blank" rel="noopener noreferrer" className="glow-btn justify-center" data-testid="course-dialog-open">Open course page <ArrowUpRight className="h-4 w-4" /></a>
+      </div>
     </DialogContent>
   </Dialog>
 );
 
-export const CourseCard = ({ c, i = 0, onOpen }) => {
+export const CourseCard = ({ c, i = 0, onOpen, done }) => {
   const Icon = TYPE_ICON[c.type] || PlayCircle;
   return (
     <motion.button type="button" onClick={() => onOpen(c)} data-testid={`course-card-${c.id}`}
@@ -61,6 +73,7 @@ export const CourseCard = ({ c, i = 0, onOpen }) => {
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded-sm" data-testid={`course-type-${c.id}`}><Icon className="h-3 w-3" />{c.type}</span>
           {c.tags.map((t) => <span key={t} className="text-[10px] font-mono uppercase tracking-wider text-red-300 border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 rounded-sm">{t}</span>)}
+          {done && <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-green-300 border border-green-500/40 bg-green-500/10 px-1.5 py-0.5 rounded-sm" data-testid={`course-watched-${c.id}`}><CheckCircle2 className="h-3 w-3" />Watched</span>}
         </div>
         <h3 className="mt-3 text-sm font-bold leading-snug line-clamp-2 group-hover:text-cyan-200 transition-colors" data-testid={`course-title-${c.id}`}>{c.title}</h3>
         <div className="mt-auto pt-4 flex items-baseline gap-2 font-mono">
@@ -78,12 +91,25 @@ export const CourseCard = ({ c, i = 0, onOpen }) => {
 
 export const CourseGrid = ({ courses, testId = "course-grid" }) => {
   const [open, setOpen] = useState(null);
+  const { user } = useAuth();
+  const [done, setDone] = useState(new Set());
+  useEffect(() => {
+    if (user) api.get("/me/courses").then((r) => setDone(new Set(r.data.completed))).catch(() => {});
+  }, [user]);
+  const toggle = async (c) => {
+    const on = done.has(c.id);
+    try {
+      await (on ? api.delete(`/me/courses/${c.id}/complete`) : api.post(`/me/courses/${c.id}/complete`));
+      setDone((s) => { const n = new Set(s); on ? n.delete(c.id) : n.add(c.id); return n; });
+      toast.success(on ? "Marked as not watched" : "Course badge earned");
+    } catch { toast.error("Couldn't update the course"); }
+  };
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" data-testid={testId}>
-        {courses.map((c, i) => <CourseCard key={c.id} c={c} i={i} onOpen={setOpen} />)}
+        {courses.map((c, i) => <CourseCard key={c.id} c={c} i={i} onOpen={setOpen} done={done.has(c.id)} />)}
       </div>
-      {open && <CourseDialog c={open} onClose={() => setOpen(null)} />}
+      {open && <CourseDialog c={open} onClose={() => setOpen(null)} done={done.has(open.id)} toggle={user ? toggle : null} />}
     </>
   );
 };

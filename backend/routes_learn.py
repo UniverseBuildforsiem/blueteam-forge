@@ -276,7 +276,20 @@ async def compute_badges(u):
         "on-fire": (u.get("streak") or 0) >= 3,
         "lab-rat": await db.lab_progress.count_documents({"user_id": uid, "report_submitted": True}) > 0,
     }
-    return [{"id": i, "name": n, "description": d, "earned": earned[i]} for i, n, d in BADGES]
+    return [{"id": i, "name": n, "description": d, "earned": earned[i]} for i, n, d in BADGES] + await course_badges(uid)
+
+
+def short_title(t):
+    for sep in (" - ", " | ", ":", " ("):
+        t = t.split(sep)[0]
+    t = t.strip()
+    return t if len(t) <= 30 else t[:30].rsplit(" ", 1)[0]
+
+
+async def course_badges(uid):
+    done = await db.course_completions.find({"user_id": uid}, {"_id": 0}).sort("at", 1).to_list(100)
+    return [{"id": f"course-{c['course_id']}", "name": short_title(c["title"]), "description": f"Completed '{c['title']}' on SOC Professionals",
+             "earned": True, "kind": "course"} for c in done]
 
 
 @router.get("/leaderboard")

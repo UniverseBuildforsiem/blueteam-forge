@@ -214,10 +214,11 @@ async def send_email(*, to: str, subject: str, html: str):
         return None
 
 
-def email_template(name, lines, link=None, link_text=None):
+def email_template(name, lines, link=None, link_text=None, unsubscribe=None):
     brand = escape(os.environ["EMAIL_FROM_NAME"])
     body = "".join(f"<p style='margin:0 0 12px'>{escape(line)}</p>" for line in lines)
     btn = (f"<p><a href='{escape(link)}' style='background:#00F0FF;color:#0B0F1A;padding:10px 18px;text-decoration:none;font-weight:bold'>{escape(link_text)}</a></p>" if link else "")
+    unsub = f" <a href='{escape(unsubscribe)}' style='color:#64748B'>Unsubscribe from these emails</a>." if unsubscribe else ""
     return (f"<table role='presentation' width='100%' style='background:#0B0F1A'><tr><td style='padding:28px;font-family:Arial,sans-serif;color:#E2E8F0'>"
             f"<h2 style='color:#00F0FF;font-family:monospace'>{brand}</h2><p>Hi {escape(name)},</p>{body}{btn}"
-            f"<p style='font-size:12px;color:#64748B'>Sent by {brand}. We never ask for your password by email.</p></td></tr></table>")
+            f"<p style='font-size:12px;color:#64748B'>Sent by {brand}. We never ask for your password by email.{unsub}</p></td></tr></table>")

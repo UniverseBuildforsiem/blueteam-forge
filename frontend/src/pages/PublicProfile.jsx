@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Award, Flame, Zap, BadgeCheck, ExternalLink, Briefcase, MapPin, Send } from "lucide-react";
+import { Award, Flame, Zap, BadgeCheck, ExternalLink, Briefcase, MapPin, Send, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
@@ -88,7 +88,7 @@ export default function PublicProfile() {
             <SkillChart data={p.skill_scores} />
             <h2 className="text-lg font-bold mt-12 mb-4 flex items-center gap-2"><Zap className="h-5 w-5 text-green-400" />Badges</h2>
             {p.badges.length ? <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="profile-badges">
-              {p.badges.map((b) => <Glass key={b.id} className="p-4 !border-green-400/40" data-testid={`profile-badge-${b.id}`}><Zap className="h-5 w-5 text-green-400" /><div className="font-mono text-sm mt-2">{b.name}</div><div className="text-xs text-slate-500">{b.description}</div></Glass>)}
+              {p.badges.map((b) => <Glass key={b.id} className="p-4 !border-green-400/40" data-testid={`profile-badge-${b.id}`}>{b.kind === "course" ? <GraduationCap className="h-5 w-5 text-cyan-300" /> : <Zap className="h-5 w-5 text-green-400" />}<div className="font-mono text-sm mt-2">{b.name}</div><div className="text-xs text-slate-500">{b.description}</div></Glass>)}
             </div> : <p className="text-sm font-mono text-slate-500">// no badges yet</p>}
             <h2 className="text-lg font-bold mt-12 mb-4 flex items-center gap-2"><Award className="h-5 w-5 text-cyan-400" />Certificates</h2>
             {p.certificates.length ? <div className="grid md:grid-cols-2 gap-3" data-testid="profile-certificates">
