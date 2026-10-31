@@ -72,7 +72,7 @@ export default function Badges() {
       {Object.keys(LEVELS).map((lvl, i) => (
         <section key={lvl} className="mb-10" data-testid={`collection-level-${lvl.toLowerCase()}`}>
           <div className="flex flex-wrap items-baseline gap-3 mb-4"><span className="font-mono text-xs text-slate-500">LEVEL 0{i + 1}</span><h2 className={`text-2xl font-extrabold font-mono ${LEVELS[lvl].text}`}>{lvl}</h2><span className="text-sm text-slate-500">{LEVELS[lvl].blurb}</span></div>
-          <div className="grid sm:grid-cols-2 gap-4">{std.filter((b) => b.level === lvl).map((b) => <BadgeCard key={b.id} b={b} />)}</div>
+          <div className={`grid gap-4 ${std.filter((b) => b.level === lvl).length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>{std.filter((b) => b.level === lvl).map((b) => <BadgeCard key={b.id} b={b} />)}</div>
         </section>))}
       </div>
       <section data-testid="collection-course-badges">

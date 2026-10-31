@@ -62,12 +62,12 @@ const SampleBox = () => {
           <h2 className="text-xl font-bold mt-1">Read the first 10 pages free</h2>
           <p className="text-sm text-slate-400">{user ? "See how the questions and answers are laid out before you buy." : "Create a free account to read the sample. No payment needed."}</p>
         </div>
-        {user ? <button className="ghost-btn" onClick={() => setOpen(!open)} data-testid="book-sample-toggle">{open ? "Hide sample" : "Read free sample"}</button>
+        {user ? <button className="ghost-btn" onClick={async () => { if (!open) await api.get("/me/book").catch(() => {}); setOpen(!open); }} data-testid="book-sample-toggle">{open ? "Hide sample" : "Read free sample"}</button>
           : <div className="flex gap-2"><Link to="/register" className="glow-btn" data-testid="book-sample-signup">Sign up free</Link><Link to="/login" state={{ from: "/book" }} className="ghost-btn" data-testid="book-sample-login">Log in</Link></div>}
       </Glass>
       {user && open && <>
         <iframe title="Free sample: first 10 pages" src={`${process.env.REACT_APP_BACKEND_URL}/api/me/book/sample`} className="mt-4 w-full h-[75vh] border border-cyan-500/20 bg-white" data-testid="book-sample-frame" />
-        <a href={`${process.env.REACT_APP_BACKEND_URL}/api/me/book/sample`} target="_blank" rel="noopener noreferrer" className="ghost-btn mt-3" data-testid="book-sample-open-tab">Open sample in new tab</a>
+        <button onClick={async () => { await api.get("/me/book").catch(() => {}); window.open(`${process.env.REACT_APP_BACKEND_URL}/api/me/book/sample`, "_blank", "noopener"); }} className="ghost-btn mt-3" data-testid="book-sample-open-tab">Open sample in new tab</button>
       </>}
     </section>
   );

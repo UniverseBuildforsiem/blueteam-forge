@@ -61,6 +61,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Rank-up email (core.award -> routes_share.send_rank_email, db.rank_emails unique) + rank share cards /api/public/rank/{token}/{rank}(.png); share button on rank-up reveal
 - Dashboard "next badge to chase" (NextBadge); landing Elite Hall of Fame (GET /api/public/hall-of-fame, all Elite; private ones not linked)
 - PENDING: RAZORPAY_KEY_ID/SECRET and CASHFREE_CLIENT_ID/SECRET not yet provided — pay buttons disabled until set
+- Free ebook sample (2026-06): first 10 pages (backend/assets/book/sample.pdf) at GET /api/me/book/sample, free account required; SampleBox on /book
+- Interview Ready badge (Analyst, interview-ready.jpg) earned via db.purchases; dashboard EbookCard links to /book
 
 ## Backlog
 - P0: Add Razorpay/Cashfree keys and test live checkout; webhooks

@@ -1,0 +1,29 @@
+{
+  "summary": "Iteration 15: tested the ebook free sample (GET /api/me/book/sample and the /book SampleBox) and the Interview Ready badge (Analyst level, earned from a purchase) across /api/me/badges, /api/dashboard, the share card, the dashboard EbookCard, /app/badges and the landing showcase. Also re-checked /book price, Udemy link and the disabled pay buttons. Backend: 6/6 pytest passed, plus 1 skipped because no PDF library is installed; the 10-page count was confirmed by parsing the PDF directly (/Count 10). Frontend: all flows passed. No functional bugs found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Sample iframe / open-tab link", "issue": "Like the full reader (see iteration 14), the iframe src and the open-tab href call /api/me/book/sample directly with the cookie only. If the 15-min access token has expired they return 401 JSON instead of the PDF. Low priority.", "affected_selectors": ["[data-testid='book-sample-frame']", "[data-testid='book-sample-open-tab']"]}
+    ],
+    "design_issues": [
+      {"screen": "/app/badges collection-level-analyst", "issues": ["The Analyst section is a 2-column grid, so the 3rd card (Interview Ready) sits alone on a second row. Acceptable, but uneven next to Recruit."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_ebook_sample_badge.py", "/app/test_reports/pytest/pytest_iter15.xml"],
+  "action_items": [
+    "Optional: refresh the token, or fetch as a blob, before loading the sample/full PDF in the iframe or new tab"
+  ],
+  "critical_code_review_comments": [
+    "routes_book.book_sample: auth-gated through get_current_user, so any logged-in user can read it. Serves a separate 10-page sample.pdf (2.56MB, inline, no-store), so the full book is never exposed. Non-buyers still get 402 on /me/book/file (verified).",
+    "compute_badges: interview-ready comes only from db.purchases. Admins own the book through their role but correctly do NOT earn the badge (verified).",
+    "The share card PNG renders at 1200px with the interview-ready character, the 'ANALYST LEVEL' label and the description 'Buy the SOC Interview Preparation ebook'. The public OG page includes 'Interview Ready' and 'Analyst'.",
+    "Not caused by this feature: the demo student has lab-rat earned and levelups_seen=[], so the Hunter LevelUpReveal overlay shows on every dashboard visit until dismissed. Tests have to close it ([data-testid=level-up-close] / Escape) before clicking the dashboard."
+  ],
+  "updated_files": ["/app/backend/tests/test_ebook_sample_badge.py"],
+  "success_rate": {"backend": "100% (6/6, 1 skipped - page count verified manually)", "frontend": "100%"},
+  "seed_data_creation": "Inserted db.purchases rows temporarily (TEST_purchase in pytest, TEST_ui_purchase for UI); both removed, so purchases is empty again. A TEST_ user created in pytest was deleted. Student levelups_seen was reset back to [] after closing the reveal.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Payment keys are intentionally unconfigured (disabled buttons expected). Headless Chromium shows PDF iframes as blank white; the network shows 200 application/pdf. Login from /book's sample login link returns to /book. Next badge for the demo student is On Fire, so interview-ready only becomes 'next' once first-blood, on-fire, triage-pro and quiz-master are all earned (ORDER logic checked in code). The demo student shows a Hunter level-up reveal overlay on /app; close it first."
+}
