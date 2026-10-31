@@ -87,3 +87,18 @@
 @media (prefers-reduced-motion: reduce) {
     .rise, .cursor-blink::after { animation: none; }
 }
+
+.avatar-frame { position: relative; display: inline-flex; border-radius: 9999px; padding: 2px; isolation: isolate; }
+.avatar-frame::before { content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1; }
+.frame-ember::before { background: radial-gradient(circle, #ff6a3d, #b91c1c); animation: ember 1.6s ease-in-out infinite; }
+@keyframes ember { 0%,100% { box-shadow: 0 0 4px 1px rgba(239,68,68,.6); } 50% { box-shadow: 0 0 14px 4px rgba(251,146,60,.85); } }
+.frame-neon::before { background: conic-gradient(#00F0FF, transparent 30%, #00FF66 50%, transparent 80%, #00F0FF); animation: neon-spin 2.2s linear infinite; box-shadow: 0 0 10px rgba(0,240,255,.6); }
+@keyframes neon-spin { to { transform: rotate(360deg); } }
+.frame-glitch::before { background: #fff; animation: glitch 1.2s steps(2, end) infinite; }
+@keyframes glitch {
+  0%,100% { box-shadow: -2px 0 0 #ff004c, 2px 0 0 #00e5ff; }
+  25% { box-shadow: 3px 1px 0 #ff004c, -3px -1px 0 #00e5ff; opacity: .85; }
+  50% { box-shadow: -1px -2px 0 #ff004c, 1px 2px 0 #00e5ff; }
+  75% { box-shadow: 2px 0 0 #ff004c, -2px 0 0 #00e5ff; opacity: .6; }
+}
+@media (prefers-reduced-motion: reduce) { .avatar-frame::before { animation: none; } }

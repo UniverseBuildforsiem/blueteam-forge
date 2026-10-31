@@ -1,10 +1,11 @@
 import io
 import os
 from collections import defaultdict
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
-from core import db, now, now_iso, new_id, get_current_user, award, rank_for, send_email, email_template
+from core import db, now, now_iso, new_id, get_current_user, award, rank_for, send_email, email_template, frame_for, RANKS, FRAMES
 
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
@@ -316,8 +317,46 @@ async def course_badges(uid):
 
 @router.get("/leaderboard")
 async def leaderboard(user=Depends(get_current_user)):
-    us = await db.users.find({"role": "student", "status": "active"}, {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1, "public_profile": 1}).sort("xp", -1).to_list(10)
-    return [{**u, "rank": rank_for(u.get("xp", 0)), "public": u.pop("public_profile", True) is not False} for u in us]
+    us = await db.users.find({"role": "student", "status": "active"}, {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1, "public_profile": 1, "avatar_frame": 1}).sort("xp", -1).to_list(10)
+    return [{**{k: v for k, v in u.items() if k != "avatar_frame"}, "rank": rank_for(u.get("xp", 0)), "frame": frame_for(u), "public": u.pop("public_profile", True) is not False} for u in us]
+
+
+def pending_rank_up(user):
+    rank = rank_for(user.get("xp", 0))
+    if rank == "Recruit" or rank in (user.get("rankups_seen") or []):
+        return None
+    return {"rank": rank, "xp": user.get("xp", 0)}
+
+
+@router.post("/me/rank-up/{rank}/seen")
+async def rank_up_seen(rank: str, user=Depends(get_current_user)):
+    names = [n for _, n in RANKS]
+    if rank not in names[1:]:
+        raise HTTPException(400, "Unknown rank")
+    await db.users.update_one({"id": user["id"]}, {"$addToSet": {"rankups_seen": {"$each": names[1:names.index(rank) + 1]}}})
+    return {"ok": True}
+
+
+class FrameIn(BaseModel):
+    frame: Optional[str] = None
+
+
+@router.patch("/me/avatar-frame")
+async def set_frame(body: FrameIn, user=Depends(get_current_user)):
+    if rank_for(user.get("xp", 0)) != "Elite":
+        raise HTTPException(403, "Avatar frames unlock at Elite rank")
+    if body.frame is not None and body.frame not in FRAMES:
+        raise HTTPException(400, "Unknown frame")
+    await db.users.update_one({"id": user["id"]}, {"$set": {"avatar_frame": body.frame}})
+    return {"frame": body.frame}
+
+
+@router.get("/me/badges")
+async def my_badges(user=Depends(get_current_user)):
+    badges = await compute_badges(user)
+    for b in badges:
+        b["level"] = BADGE_LEVEL.get(b["id"], ("Recruit",))[0]
+    return {"badges": badges, "rank": rank_for(user.get("xp", 0)), "xp": user.get("xp", 0), "frame": user.get("avatar_frame"), "frames": list(FRAMES)}
 
 
 @router.get("/dashboard")
@@ -331,7 +370,7 @@ async def dashboard(user=Depends(get_current_user)):
     nxt = next((t for t in (500, 1500, 3000) if xp < t), None)
     upcoming = [s for s in await list_sessions(user) if not s["is_past"]][:3]
     return {"user": user, "xp": xp, "rank": rank_for(xp), "next_rank_xp": nxt, "streak": user.get("streak", 0), "course_bonus": bonus["awarded"], "bonus_xp": bonus["bonus_xp"],
-            "badges": badges, "level_up": pending_level_up(user, badges), "paths": paths, "current_path": next((p for p in paths if p["id"] == user.get("current_path")), paths[0] if paths else None),
+            "badges": badges, "level_up": pending_level_up(user, badges), "rank_up": pending_rank_up(user), "paths": paths, "current_path": next((p for p in paths if p["id"] == user.get("current_path")), paths[0] if paths else None),
             "upcoming_sessions": upcoming, "activity": await db.activity.find({"user_id": user["id"]}, NO_ID).sort("created_at", -1).to_list(8),
             "leaderboard": await leaderboard(user),
             "counts": {"ctf": await db.ctf_solves.count_documents({"user_id": user["id"]}), "challenges": await db.challenge_submissions.count_documents({"user_id": user["id"]}),

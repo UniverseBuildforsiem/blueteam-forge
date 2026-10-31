@@ -113,6 +113,13 @@ def rank_for(xp):
     return r
 
 
+FRAMES = ("ember", "neon", "glitch")
+
+
+def frame_for(u):
+    return u.get("avatar_frame") if rank_for(u.get("xp", 0)) == "Elite" and u.get("avatar_frame") in FRAMES else None
+
+
 async def award(user_id, xp, activity):
     today = now().date().isoformat()
     u = await db.users.find_one({"id": user_id}, {"_id": 0, "last_active": 1, "streak": 1})

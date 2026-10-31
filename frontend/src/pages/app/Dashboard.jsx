@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Flame, Trophy, Zap, CalendarClock, Award } from "lucide-react";
 import { BadgeTile } from "../../components/BadgeTile";
 import { RankAvatar } from "../../components/RankAvatar";
 import ShareCardButton from "../../components/ShareCardButton";
-import LevelUpReveal from "../../components/LevelUpReveal";
+import LevelUpReveal, { badgeReveal, rankReveal } from "../../components/LevelUpReveal";
 import { api, fmtDate } from "../../lib/api";
 import RecommendedCourse from "../../components/RecommendedCourse";
 import { toast } from "sonner";
@@ -32,11 +32,15 @@ function DrillBanner() {
 
 export default function Dashboard() {
   const [d, setD] = useState(null);
-  const [lu, setLu] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const shown = useRef(false);
   useEffect(() => {
     const load = () => api.get("/dashboard").then((r) => {
       setD(r.data);
-      if (r.data.level_up) setLu((cur) => cur || r.data.level_up);
+      if (!shown.current && (r.data.level_up || r.data.rank_up)) {
+        shown.current = true;
+        setQueue([r.data.level_up && badgeReveal(r.data.level_up), r.data.rank_up && rankReveal(r.data.rank_up)].filter(Boolean));
+      }
       r.data.course_bonus.forEach((t) => toast.success(`+${r.data.bonus_xp} XP course bonus: ${t}`));
     }).catch(() => {});
     load();
@@ -47,7 +51,7 @@ export default function Dashboard() {
   const xpPct = d.next_rank_xp ? Math.round((100 * d.xp) / d.next_rank_xp) : 100;
   return (
     <div>
-      {lu && <LevelUpReveal lu={lu} onDone={() => setLu(false)} />}
+      {queue[0] && <LevelUpReveal key={queue[0].seen} r={queue[0]} onDone={() => setQueue((q) => q.slice(1))} />}
       <PageHeader eyebrow={`// shift start · ${d.user.goal || "SOC L1"} track`} title={`Welcome back, ${d.user.name.split(" ")[0]}`}
         right={<Link to={`/app/paths/${d.current_path?.id}`} className="glow-btn" data-testid="dashboard-continue-button">Continue path</Link>} />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -75,7 +79,7 @@ export default function Dashboard() {
           <ol className="space-y-2" data-testid="dashboard-leaderboard">
             {d.leaderboard.map((u, i) => (
               <li key={u.id} className={`flex items-center gap-3 text-sm px-2 py-1.5 ${u.id === d.user.id ? "bg-cyan-500/10" : ""}`}>
-                <span className="font-mono text-slate-500 w-5">{i + 1}</span><RankAvatar rank={u.rank} size="xs" testId={`leaderboard-avatar-${u.username}`} /><ProfileLink username={u.username} isPublic={u.public} className="flex-1 truncate" testId={`leaderboard-profile-${u.username}`}>{u.name}</ProfileLink>
+                <span className="font-mono text-slate-500 w-5">{i + 1}</span><RankAvatar rank={u.rank} frame={u.frame} size="xs" testId={`leaderboard-avatar-${u.username}`} /><ProfileLink username={u.username} isPublic={u.public} className="flex-1 truncate" testId={`leaderboard-profile-${u.username}`}>{u.name}</ProfileLink>
                 <span className="text-[10px] font-mono text-slate-400">{u.rank}</span><span className="font-mono text-green-400">{u.xp}</span>
               </li>))}
           </ol>
