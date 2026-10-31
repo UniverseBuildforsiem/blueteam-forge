@@ -18,6 +18,7 @@ import { Quizzes, QuizPlayer } from "./pages/app/Quizzes";
 import Progress from "./pages/app/Progress";
 import Challenges from "./pages/app/Challenges";
 import Drill from "./pages/app/Drill";
+import MyCourses from "./pages/app/MyCourses";
 import CTF from "./pages/app/CTF";
 import { Labs, LabRunner, KaliPage } from "./pages/app/Labs";
 import Siem from "./pages/app/Siem";
@@ -52,6 +53,7 @@ function App() {
               <Route path="quizzes/:id" element={<QuizPlayer />} />
               <Route path="progress" element={<Progress />} />
               <Route path="drill" element={<Drill />} />
+              <Route path="courses" element={<MyCourses />} />
               <Route path="challenges" element={<Challenges />} />
               <Route path="ctf" element={<CTF />} />
               <Route path="labs" element={<Labs />} />

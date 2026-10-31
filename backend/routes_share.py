@@ -78,6 +78,106 @@ async def streak_png(token: str):
     return StreamingResponse(render(u["name"], current, longest, total, u.get("xp"), u["username"] if u.get("public_profile") is not False else None), media_type="image/png", headers={"Cache-Control": "public, max-age=600"})
 
 
+async def ensure_token(user):
+    token = user.get("share_token")
+    if not token:
+        token = secrets.token_urlsafe(10)
+        await db.users.update_one({"id": user["id"]}, {"$set": {"share_token": token}})
+    return token
+
+
+@router.post("/me/courses/{cid}/share-card")
+async def course_share_card(cid: int, user=Depends(get_current_user)):
+    if not await db.course_completions.find_one({"user_id": user["id"], "course_id": cid}):
+        raise HTTPException(404, "Mark this course as watched first")
+    share_url = f"{api_base()}/public/course-badge/{await ensure_token(user)}/{cid}"
+    return {"share_url": share_url, "image_url": f"{share_url}.png"}
+
+
+async def badge_data(token, cid):
+    from routes_learn import short_title
+    u = await db.users.find_one({"share_token": token}, {"_id": 0, "id": 1, "name": 1, "username": 1, "public_profile": 1})
+    done = u and await db.course_completions.find_one({"user_id": u["id"], "course_id": cid}, {"_id": 0})
+    if not done:
+        raise HTTPException(404, "Badge not found")
+    return u, done, short_title(done["title"])
+
+
+def wrap(d, text, fnt, width):
+    lines, cur = [], ""
+    for w in text.split():
+        nxt = f"{cur} {w}".strip()
+        if d.textlength(nxt, font=fnt) > width and cur:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = nxt
+    return lines + [cur] if cur else lines
+
+
+def render_badge(name, badge, full_title, date, handle=None):
+    w, h = 1200, 627
+    img = Image.new("RGB", (w, h), NAVY)
+    d = ImageDraw.Draw(img)
+    for x in range(0, w, 40):
+        d.line([(x, 0), (x, h)], fill=(15, 24, 38))
+    for y in range(0, h, 40):
+        d.line([(0, y), (w, y)], fill=(15, 24, 38))
+    d.rectangle([24, 24, w - 24, h - 24], outline=CYAN, width=3)
+    logo = font("LiberationMono-Bold.ttf", 40)
+    d.text((64, 60), "> SOC", font=logo, fill=(248, 250, 252))
+    d.text((64 + d.textlength("> SOC", font=logo), 60), "Forge", font=logo, fill=GREEN)
+    d.text((w - 64, 66), "course badge", font=font("LiberationSans-Regular.ttf", 22), fill=MUTED, anchor="ra")
+    cx, cy, r = 980, 330, 120
+    hexagon = [(cx + r * c, cy + r * s) for c, s in ((0, -1), (0.87, -0.5), (0.87, 0.5), (0, 1), (-0.87, 0.5), (-0.87, -0.5))]
+    d.polygon(hexagon, outline=GREEN, width=6)
+    d.polygon([(cx + 0.72 * (x - cx), cy + 0.72 * (y - cy)) for x, y in hexagon], outline=CYAN, width=3)
+    d.line([(cx - 40, cy + 4), (cx - 10, cy + 36), (cx + 46, cy - 30)], fill=GREEN, width=12)
+    d.text((64, 140), "BADGE EARNED", font=font("LiberationMono-Bold.ttf", 22), fill=CYAN)
+    big = font("LiberationSans-Bold.ttf", 64)
+    y = 180
+    for line in wrap(d, badge, big, 720)[:2]:
+        d.text((64, y), line, font=big, fill=(248, 250, 252))
+        y += 76
+    small = font("LiberationSans-Regular.ttf", 24)
+    for line in wrap(d, f"Completed '{full_title}' on SOC Professionals", small, 720)[:2]:
+        d.text((64, y + 12), line, font=small, fill=MUTED)
+        y += 32
+    d.text((64, 478), "ANALYST", font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
+    d.text((64, 504), name[:28], font=font("LiberationMono-Bold.ttf", 34), fill=(248, 250, 252))
+    d.text((560, 478), "WATCHED", font=font("LiberationMono-Bold.ttf", 18), fill=MUTED)
+    d.text((560, 504), date, font=font("LiberationMono-Bold.ttf", 34), fill=GREEN)
+    if handle:
+        d.text((w - 64, 560), f"socforge · /u/{handle}", font=font("LiberationMono-Bold.ttf", 20), fill=CYAN, anchor="ra")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+
+@router.get("/public/course-badge/{token}/{cid}.png")
+async def course_badge_png(token: str, cid: int):
+    u, done, badge = await badge_data(token, cid)
+    handle = u["username"] if u.get("public_profile") is not False else None
+    return StreamingResponse(render_badge(u["name"], badge, done["title"], done["at"][:10], handle), media_type="image/png", headers={"Cache-Control": "public, max-age=600"})
+
+
+@router.get("/public/course-badge/{token}/{cid}", response_class=HTMLResponse)
+async def course_badge_page(token: str, cid: int):
+    u, done, badge = await badge_data(token, cid)
+    title = escape(f"{u['name']} earned the {badge} course badge on SOCForge")
+    desc = escape(f"Completed '{done['title']}' on SOC Professionals and practised it in SOCForge labs.")
+    img = f"{api_base()}/public/course-badge/{escape(token)}/{cid}.png"
+    base = os.environ["FRONTEND_URL"].rstrip("/")
+    home = escape(f"{base}/u/{u['username']}" if u.get("public_profile") is not False else f"{base}/courses")
+    return f"""<!doctype html><html><head><meta charset="utf-8"><title>{title}</title>
+<meta property="og:type" content="website"><meta property="og:title" content="{title}"><meta property="og:description" content="{desc}">
+<meta property="og:image" content="{img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="627">
+<meta property="og:url" content="{api_base()}/public/course-badge/{escape(token)}/{cid}"><meta name="twitter:card" content="summary_large_image">
+<meta http-equiv="refresh" content="0; url={home}"></head>
+<body style="background:#0B0F1A;color:#fff;font-family:monospace"><a href="{home}" style="color:#00F0FF">{title}</a></body></html>"""
+
+
 async def skill_scores(uid):
     topics = {}
     for a in await db.quiz_attempts.find({"user_id": uid}, {"_id": 0, "topics": 1}).to_list(1000):

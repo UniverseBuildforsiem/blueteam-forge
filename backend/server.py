@@ -62,6 +62,7 @@ async def startup():
     await ensure_courses()
     await db.course_alerts.create_index([("user_id", 1), ("course_id", 1)], unique=True)
     await db.course_completions.create_index([("user_id", 1), ("course_id", 1)], unique=True)
+    await db.course_bonus.create_index([("user_id", 1), ("course_id", 1)], unique=True)
     await seed_collection("categories", [{"id": c, "name": c} for c in ["Foundations", "Analyst", "Response", "Career"]])
     await seed_collection("announcements", [{"id": "ann-1", "title": "New lab: Phishing to Ransomware is live", "body": "Reconstruct a full kill chain in the Kali + SIEM simulators.", "active": True, "created_at": now_iso()}])
     for q in [("Failed logons", "event_id=4625 | stats count by src_ip"), ("Beacon hunting", "sourcetype=proxy url=*gate.php*"), ("Shadow copy deletion", "vssadmin")]:

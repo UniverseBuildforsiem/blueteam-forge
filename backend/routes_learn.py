@@ -300,6 +300,9 @@ async def leaderboard(user=Depends(get_current_user)):
 
 @router.get("/dashboard")
 async def dashboard(user=Depends(get_current_user)):
+    from routes_courses import courses_progress
+    await courses_progress(user)
+    user = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password_hash": 0})
     paths = await list_paths(user)
     xp = user.get("xp", 0)
     nxt = next((t for t in (500, 1500, 3000) if xp < t), None)

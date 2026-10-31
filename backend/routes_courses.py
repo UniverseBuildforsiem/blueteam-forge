@@ -5,7 +5,7 @@ import httpx
 from fastapi import APIRouter, Depends, Request, BackgroundTasks, HTTPException
 from fastapi.responses import HTMLResponse
 from pymongo.errors import DuplicateKeyError
-from core import db, now_iso, logger, get_current_user, send_email, email_template
+from core import db, now_iso, logger, get_current_user, send_email, email_template, award
 
 router = APIRouter(prefix="/api")
 
@@ -60,6 +60,36 @@ RULES = [
     (("itil",), ["path-ir", "lab-phish", "drill"], ["Incident Response", "Ransomware"]),
     (("jn0", "juniper", "jncia"), ["ctf-net", "siem"], ["Network"]),
 ]
+
+
+BONUS_XP = 100
+UNTRACKED = {"siem", "kali", "tools"}
+CTF_CATS = {"ctf-log": "Log Analysis", "ctf-net": "Network", "ctf-web": "Web", "ctf-for": "Forensics"}
+LABS = {"lab-phish": "lab-phish-ransom", "lab-brute": "lab-bruteforce"}
+PATHS = {"path-ir": "incident-response", "path-int": "interview-prep"}
+
+
+async def _latest(coll, q, field="created_at"):
+    d = await db[coll].find_one(q, {"_id": 0, field: 1}, sort=[(field, -1)])
+    return (d or {}).get(field)
+
+
+async def last_done(uid, key):
+    if key == "drill":
+        return await _latest("drill_submissions", {"user_id": uid})
+    if key == "triage":
+        return await _latest("challenge_submissions", {"user_id": uid})
+    if key == "quizzes":
+        return await _latest("quiz_attempts", {"user_id": uid})
+    if key in LABS:
+        d = await db.lab_progress.find_one({"user_id": uid, "lab_id": LABS[key], "report_submitted": True}, {"_id": 0, "report_at": 1})
+        return (d.get("report_at") or "0") if d else None
+    if key in CTF_CATS:
+        ids = await db.ctfs.distinct("id", {"category": CTF_CATS[key]})
+        return await _latest("ctf_solves", {"user_id": uid, "ctf_id": {"$in": ids}})
+    if key in PATHS:
+        return await _latest("lesson_progress", {"user_id": uid, "path_id": PATHS[key]})
+    return None
 
 
 def enrich(c):
@@ -178,6 +208,34 @@ async def recommended(user=Depends(get_current_user)):
             return {"course": matches[0], "topic": a["topic"], "accuracy": acc_n, "reason": reason}
     return {"course": courses[0], "topic": None, "accuracy": None,
             "reason": "Take a quiz or triage challenge and we'll match a course to your weakest skill. Until then, start with the full bundle."}
+
+
+@router.get("/me/courses/progress")
+async def courses_progress(user=Depends(get_current_user)):
+    from routes_learn import short_title
+    rows, awarded = [], []
+    for done in await db.course_completions.find({"user_id": user["id"]}, {"_id": 0}).sort("at", -1).to_list(100):
+        c = await db.courses.find_one({"id": done["course_id"]}, {"_id": 0})
+        if not c:
+            continue
+        c = enrich(c)
+        items = []
+        for p in c["practice"]:
+            ts = await last_done(user["id"], p["key"])
+            items.append({**p, "trackable": p["key"] not in UNTRACKED, "done": bool(ts), "done_after_watch": bool(ts) and ts >= done["at"]})
+        paid = await db.course_bonus.find_one({"user_id": user["id"], "course_id": c["id"]})
+        if not paid and any(i["done_after_watch"] for i in items):
+            try:
+                await db.course_bonus.insert_one({"user_id": user["id"], "course_id": c["id"], "at": now_iso()})
+                await award(user["id"], BONUS_XP, f"Course bonus: practised '{short_title(c['title'])}'")
+                awarded.append(c["title"])
+                paid = True
+            except DuplicateKeyError:
+                paid = True
+        track = [i for i in items if i["trackable"]]
+        rows.append({"course": c, "badge_name": short_title(c["title"]), "watched_at": done["at"], "items": items, "bonus_paid": bool(paid),
+                     "done_count": sum(i["done"] for i in track), "trackable_count": len(track)})
+    return {"courses": rows, "bonus_xp": BONUS_XP, "awarded": awarded}
 
 
 @router.get("/me/courses")
