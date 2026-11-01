@@ -30,8 +30,9 @@ def series_html(name, p, nxt, total, uid):
 
 
 async def send_series_week(only_user=None):
-    posts = await all_posts({"published": True, "status": "ready"}, {"_id": 0, "body": 0})
-    total = await db.series_posts.count_documents({"published": True})
+    allp = await all_posts({"published": True}, {"_id": 0, "body": 0})
+    posts = [p for p in allp if p["status"] == "ready"]
+    total = len(allp)
     if not posts:
         return 0
     week = now().strftime("%G-W%V")
@@ -48,7 +49,10 @@ async def send_series_week(only_user=None):
                 await db.series_sends.insert_one({"user_id": u["id"], "week": week, "post_id": p["id"], "at": now_iso()})
             except DuplicateKeyError:
                 continue
-        await send_email(to=u["email"], subject=f"SOC Series #{p['number']:03d}: {p['title'][:80]}", html=series_html(u["name"], p, nxt, total, u["id"]))
+        if not await send_email(to=u["email"], subject=f"SOC Series #{p['number']:03d}: {p['title'][:80]}", html=series_html(u["name"], p, nxt, total, u["id"])):
+            if not only_user:
+                await db.series_sends.delete_one({"user_id": u["id"], "week": week})
+            continue
         sent += 1
     logger.info(f"Weekly series email sent: {sent}")
     return sent
@@ -61,7 +65,7 @@ async def email_test(user=Depends(admin_only)):
 
 @router.get("/me/series/next")
 async def my_next(user=Depends(get_current_user)):
-    posts = await all_posts({"published": True, "status": "ready"}, {"_id": 0, "id": 1, "slug": 1, "title": 1, "section": 1, "order": 1})
+    posts = [p for p in await all_posts({"published": True}, {"_id": 0, "id": 1, "slug": 1, "title": 1, "section": 1, "order": 1, "status": 1}) if p["status"] == "ready"]
     done = set(await db.series_sends.distinct("post_id", {"user_id": user["id"]}))
     left = [p for p in posts if p["id"] not in done]
     return {"next": left[0] if left else None, "received": len(done), "on": user.get("series_emails") is not False}

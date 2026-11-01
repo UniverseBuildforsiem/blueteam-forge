@@ -165,3 +165,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 
 ## Backlog
 - P2: per-post AI cover images; bulk "write next 10"; meeting link per booking (user skipped for now)
+
+## Series cover art + weekly series email (2026-06)
+- series_cover.py: Gemini Nano Banana cover per post (webp in Emergent Object Storage socpro/series-covers/, field ai_cover, cover_status); made for all ready posts at startup and automatically after each AI write; admin "New AI cover"; served via GET /api/public/series-cover/{id}?v=; admin cover link overrides
+- series_email.py: every Monday 9am IST (piggybacks weekly-digest cron; 5-cron limit reached) each active student gets their next unsent ready post in series order (db.series_sends unique user+week, rolled back if send fails); users.series_emails toggle on /soc-series; signed unsubscribe /api/public/unsubscribe/series; GET /api/me/series/next; POST /api/admin/series/email-test
+- Known: AI covers occasionally contain small text labels despite prompt (regenerate per post)

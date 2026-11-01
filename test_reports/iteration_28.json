@@ -1,0 +1,36 @@
+{
+  "summary": "Tested the SOC Series AI cover art and the weekly series email on both backend and frontend. Backend: 12/12 pytest tests passed. Covered: AI covers on all 15 written posts (each a unique, valid 200 image/webp); unwritten posts keep the section image; an admin cover link overrides the AI cover; auth on POST /admin/series/{id}/cover; /me/series/next and the series_emails preference toggle; admin email-test returns {sent:1} and writes no send record; unsubscribe with a bad token (400) and a valid HMAC token (200, sets the flag false); cron weekly-digest (401 without auth, 200 ack in under 1s, 9 series_sends for 9 active students all set to post #001, no duplicates on a second run in the same week, a reused run_id is flagged duplicate, next post moves to #002). Frontend: all 125 series cards and the post-page cover load with no broken images, and the 15 AI covers are unique. The student toggle shows ON with the next-email link, switches to OFF, stays OFF after reload and was turned back ON. Admin: 125 row thumbnails load; the test-email toast appears; on post #015 'New AI cover' showed 'Making cover...' and the preview changed to a new version (1280px) after about 15s. Not tested: the optional 'write with AI' then auto-cover flow (skipped to save LLM credits and keep post state; checked by code review only). Cleanup done: series_sends emptied, new digest_sends records and TEST_ cron_runs deleted, no users with series_emails=false, so real Monday sends start at #001. The cron test also sent the weekly threat digest once to seed users (expected).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "series_email.send_series_week / GET /api/me/series/next", "issue": "The post number comes from all_posts() over READY posts only, so it is the post's place among written posts, not its series number. The public list counts all published posts. If a later post (for example #040) is written before #016-#039, the email subject and the 'Your next email' link show #016 while the card shows #040."},
+      {"endpoint": "series_email.send_series_week", "issue": "The series_sends record is written before send_email, and send_email swallows errors. If the email provider fails, the student never gets that post but it is marked as sent, and the 'sent' count still goes up."},
+      {"endpoint": "series_cover.make_cover", "issue": "The prompt says 'no text', but some covers contain text (post #005 shows labels 'Security Events / Alerts / Incident / Case'). Also, old cover files are never deleted from object storage when a cover is remade."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SeriesEmailToggle.flip", "issue": "No try/catch around the PATCH call, so a failed call shows no error toast (unhandled promise rejection).", "selector": "[data-testid='series-email-toggle']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_series_cover_email.py", "/app/test_reports/pytest/series_cover_email.xml"],
+  "action_items": [
+    "Use the global series number (from the list of all published posts) in send_series_week and /me/series/next, not the index among ready posts.",
+    "Optional: only record series_sends after a successful send_email, or delete the record if the send fails.",
+    "Optional: add try/catch with an error toast to SeriesEmailToggle.flip.",
+    "Optional: remake cover #005 (it has visible text) and delete old storage objects when a cover is remade."
+  ],
+  "critical_code_review_comments": [
+    "Post numbers for emails and 'next' are computed from ready posts only, so they drift from the public numbering once posts are written out of order.",
+    "Send records are written before delivery, so a failed send still consumes the post.",
+    "Covers are cached in process memory (CACHE, up to 61 entries). This is fine for now, but each worker keeps its own copy."
+  ],
+  "updated_files": ["/app/backend/tests/test_series_cover_email.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None kept. Remade the AI cover for post #015 'How to Perform an Effective SOC Investigation' (id 39f1e1543789, new v=110ef144). Temporary cron and series_sends data was cleaned up.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_series_cover_email.py. Its cron test deletes ALL series_sends and any digest_sends created during the run, so do not run it after real Monday sends exist in prod data. The 'write with AI' then auto-cover flow is still untested end-to-end."
+}

@@ -16,7 +16,9 @@ function SeriesEmailToggle() {
   const [d, setD] = useState(null);
   useEffect(() => { if (user) api.get("/me/series/next").then((r) => setD(r.data)).catch(() => {}); }, [user]);
   if (!user || !d) return null;
-  const flip = async () => { const { data } = await api.patch("/me/preferences", { series_emails: !d.on }); setD({ ...d, on: data.series_emails }); toast.success(data.series_emails ? "Weekly series email on" : "Weekly series email off"); };
+  const flip = async () => {
+    try { const { data } = await api.patch("/me/preferences", { series_emails: !d.on }); setD({ ...d, on: data.series_emails }); toast.success(data.series_emails ? "Weekly series email on" : "Weekly series email off"); } catch { toast.error("Could not update, try again"); }
+  };
   return (
     <div className="mt-6 flex flex-wrap items-center gap-3" data-testid="series-email">
       <button onClick={flip} className={`inline-flex items-center gap-2 text-xs font-mono border px-3 py-2 rounded-sm transition-colors ${d.on ? "border-green-500/40 text-green-300" : "border-white/10 text-slate-400"}`} data-testid="series-email-toggle">
