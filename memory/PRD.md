@@ -112,3 +112,13 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - POST /api/builder/suggest {title, content} (staff): keyword + synonym matching over labs, quizzes, challenges, SOPs; top 2 per type, max 6.
 - POST /api/builder/write-lesson (staff) → background job (Claude Sonnet via Emergent LLM key, 600-900 words plain text) in `lesson_jobs`; poll GET /api/builder/write-lesson/{job_id}. Background job avoids ingress timeout.
 - PathBuilder: "Suggest practice" + "Attach all" chips, "Write this lesson" (draft into editor, confirm before replacing). setMods/upL are functional so edits made while the AI writes are preserved.
+
+## 2026-06 Lesson Quiz Generator + Networking/Linux Practice (DONE — iteration_21 backend 22/22, frontend 100%)
+- Path Builder: "Generate 5-question quiz" per lesson (Claude Sonnet via Emergent LLM key, POST /api/builder/lesson-quiz, poll GET /api/builder/jobs/{id}); admin edits questions/options/correct answer/explanations, then attaches (lesson.quiz). Validated on path save.
+- Students: "Check your understanding" block in lessons — MCQ, instant feedback + explanations, retry, practice only (no XP).
+- New content in backend/practice_extra.py: 4 labs (Networking: port scan→SMB, C2 beaconing; Linux: cron persistence, sudo privesc), 10 challenges (5 Networking, 5 Linux), 4 quizzes (Networking, Linux, SOC Workflow, Security Foundations). Expanded suggest keyword map → every SOC L1 30-day template lesson + seeded soc-l1 lessons get a practice match (backend/tests/check_l1_matches.py).
+
+## Backlog (current)
+- P1: Extra investigation tools (VirusTotal-style lookup, sandbox report viewer, CyberChef decoder, threat-intel panel, case management)
+- P2: Per-user cooldown on AI quiz/lesson generation; graded lesson quizzes (would need server-side answer hiding)
+

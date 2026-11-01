@@ -387,7 +387,7 @@ def parse_quiz(text):
     qs = json.loads(m.group(0))["questions"] if m else []
     out = [{"id": f"lq-{new_id()[:7]}", "text": str(q["text"]).strip(), "options": [str(o).strip() for o in q["options"]][:4],
             "answer": int(q["answer"]), "explanation": str(q.get("explanation", "")).strip()} for q in qs[:5]]
-    if len(out) != 5 or any(len(q["options"]) != 4 or not 0 <= q["answer"] < 4 for q in out):
+    if len(out) != 5 or any(not q["text"] or len(set(q["options"])) != 4 or not all(q["options"]) or not 0 <= q["answer"] < 4 for q in out):
         raise ValueError("the AI returned an incomplete quiz — please try again")
     return out
 

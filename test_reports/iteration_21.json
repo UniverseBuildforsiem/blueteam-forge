@@ -1,0 +1,26 @@
+{
+  "summary": "Tested AI Lesson Quiz Generator (backend + admin builder UI + student practice quiz) and new Networking/Linux practice content (labs, challenges, quizzes, suggest coverage). Backend 22/22 pytest passed (real AI generation returned 5 valid MCQs in ~15s). Frontend: generate disabled/need-content hint with short content, generate -> draft of 5 editable questions, edit text/option/explanation, set correct circle, attach, status '5-question practice quiz attached', edit->discard keeps quiz, empty option blocks attach, remove + save clears quiz, save+reload persists, Student preview shows quiz. Student: lesson-quiz shows PRACTICE ONLY · NO XP, check disabled until 5 answered, 3/5 correct score with green/red feedback + explanations, retry resets, XP unchanged (822 -> 822). Labs: all 4 new labs load Kali terminal with ~/evidence files (ls ~/evidence, ls ~/evidence/cron, cat firewall.log, head proxy.log), task p1 answered correctly in UI. Challenges category filter shows Networking (5) and Linux (5). No bugs found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin Path Builder", "issues": ["Sonner toasts (top-right) briefly overlap the Save / Published controls of the builder header; cosmetic only"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_lesson_quiz_practice.py", "/app/test_reports/pytest/pytest_iter21.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Lesson quiz answers are shipped to students in GET /api/paths/{id} (lesson.quiz.questions[].answer). Acceptable since practice-only/no XP, but note it if quizzes ever become graded.",
+    "parse_quiz does not reject empty question text/options or duplicate options from the AI; the attach button and the path validator catch empties, so low risk.",
+    "/api/builder/lesson-quiz has no rate limit; each click triggers an LLM call (consider a per-user cooldown).",
+    "Challenge hint unlock returns 400 for users with <25 XP (admin had <25 XP); this is by design but staff testing hints need XP."
+  ],
+  "updated_files": ["/app/backend/tests/test_lesson_quiz_practice.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Temporary path test-lq-path created and deleted; TEST_LessonQuiz Path created/deleted by pytest. Student unlocked hint 0 on ch-lnx-01 (-25 XP) and solved lab tasks p1/p3 (lab-net-portscan) and r1 (lab-linux-cron); instructor solved lab-net-portscan p1; student submitted quiz-networking once.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_lesson_quiz_practice.py (pytest.ini uses xdist). Builder: Admin > admin-tab-builder > content-edit-{pathId} > builder-lesson-{mi}-{li}. Challenge category filter testid is challenge-filter-cat. Lesson quiz 'practice only · no XP' label is CSS-uppercased.",
+  "rca of the issue": ""
+}
