@@ -5,6 +5,7 @@ import { api, errMsg, fmtDate } from "../lib/api";
 import { waLink } from "../lib/pay";
 import { Glass, Empty } from "./common";
 import { BatchSeats, Consultations, waNum } from "./AdminConsults";
+import { ConsultCalendar, ReviewModeration } from "./AdminCalendar";
 
 const STATUS = ["new", "contacted", "enrolled", "closed"];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -62,7 +63,9 @@ export default function AdminLive() {
         </table></div>}
       </Glass>
       <BatchSeats />
+      <ConsultCalendar />
       <Consultations />
+      <ReviewModeration />
       <Settings />
     </div>);
 }

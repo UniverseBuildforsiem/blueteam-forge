@@ -30,6 +30,7 @@ import Siem from "./pages/app/Siem";
 import Tools from "./pages/app/Tools";
 import { Certificates, Billing, AccountSettings } from "./pages/app/Account";
 import Consultation from "./pages/Consultation";
+import ReviewPage from "./pages/ReviewPage";
 import Instructor from "./pages/Instructor";
 import Admin from "./pages/Admin";
 
@@ -44,6 +45,7 @@ function App() {
             <Route path="/courses" element={<Courses />} />
             <Route path="/book" element={<Book />} />
             <Route path="/consultation" element={<Consultation />} />
+            <Route path="/review/:token" element={<ReviewPage />} />
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/sops" element={<SopList />} />

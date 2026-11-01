@@ -35,7 +35,7 @@ function MyBookings() {
       <div className="font-bold text-sm mb-2">Your bookings</div>
       {bs.map((b, i) => <div key={b.id} className="flex justify-between gap-3 text-xs font-mono py-1.5 border-b border-white/5" data-testid={`consult-my-booking-${i}`}>
         <span>{dayLbl(b.slot_at.slice(0, 10))} · {tLbl(b.slot_at)} IST · {b.topic}</span>
-        <span className={b.status === "paid" ? "text-green-400" : b.status === "needs_reschedule" ? "text-orange-300" : "text-slate-400"}>{b.status === "needs_reschedule" ? "we'll call to reschedule" : b.status === "paid" ? "confirmed" : b.status}</span></div>)}
+        <span className={b.status === "paid" ? "text-green-400" : b.status === "needs_reschedule" ? "text-orange-300" : "text-slate-400"}>{b.review_token ? <Link to={`/review/${b.review_token}`} className="text-yellow-300 hover:underline" data-testid={`consult-rate-${i}`}>rate session</Link> : b.status === "needs_reschedule" ? "we'll call to reschedule" : b.status === "paid" ? "confirmed" : b.status}</span></div>)}
     </Glass>);
 }
 

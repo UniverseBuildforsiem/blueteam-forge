@@ -17,6 +17,7 @@ import LandingIntel, { ThreatTicker, useLandingIntel } from "../components/Landi
 import PromoSpotlight from "../components/PromoSpotlight";
 import LiveClasses from "../components/LiveClasses";
 import ConsultationPromo from "../components/ConsultationPromo";
+import ConsultReviews from "../components/ConsultReviews";
 
 const FEED = [
   ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
@@ -205,6 +206,7 @@ export default function Landing() {
       <PromoSpotlight />
       <LiveClasses />
       <ConsultationPromo />
+      <ConsultReviews />
 
       <LandingIntel posts={intel.posts} sops={intel.sops} />
 

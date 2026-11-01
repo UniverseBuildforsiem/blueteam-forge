@@ -92,4 +92,6 @@ async def session_reminders(request: Request, background: BackgroundTasks):
     if not await accept(request, "session-reminders"):
         return {"ok": True, "duplicate": True}
     background.add_task(send_session_reminders)
+    from routes_consult import send_review_requests
+    background.add_task(send_review_requests)
     return {"ok": True}

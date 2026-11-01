@@ -1,3 +1,5 @@
+import os
+import secrets
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -127,4 +129,74 @@ async def consultation_status(cid: str, body: CStatusIn, user=Depends(admin_only
     if not (await db.consultations.update_one({"id": cid, "status": {"$nin": ["pending", "abandoned"]}}, {"$set": {"status": body.status}})).matched_count:
         raise HTTPException(404, "Consultation not found")
     await audit(user, f"consultation {body.status}", cid)
+    return {"ok": True}
+
+
+# ---------- Reviews ----------
+def display_name(name):
+    parts = (name or "Student").split()
+    return f"{parts[0].title()} {parts[-1][0].upper()}." if len(parts) > 1 else parts[0].title()
+
+
+async def send_review_requests():
+    for c in await db.consultations.find({"status": {"$in": ["paid", "completed"]}, "review_requested": {"$ne": True}}, NO_ID).to_list(500):
+        if datetime.fromisoformat(c["slot_at"]) > now() - timedelta(minutes=90):
+            continue
+        token = secrets.token_urlsafe(24)
+        claimed = await db.consultations.update_one({"id": c["id"], "review_requested": {"$ne": True}}, {"$set": {"review_requested": True, "review_token": token}})
+        if not claimed.modified_count:
+            continue
+        await safe_send(c["email"], "How was your SOC consultation?", email_template(c["name"], [
+            f"Thanks for joining your Cyber & SOC consultation on {fmt_ist(c['slot_at'])}.", "Could you take 30 seconds to rate the session? Your feedback helps other learners and our experts."],
+            f"{os.environ['FRONTEND_URL']}/review/{token}", "Rate your session"))
+
+
+async def by_token(token):
+    c = await db.consultations.find_one({"review_token": token}, NO_ID) if len(token) > 10 else None
+    if not c:
+        raise HTTPException(404, "This review link is invalid or has expired")
+    return c
+
+
+@router.get("/public/reviews/{token}")
+async def review_info(token: str):
+    c = await by_token(token)
+    r = await db.consult_reviews.find_one({"consultation_id": c["id"]}, NO_ID)
+    return {"name": display_name(c["name"]), "when": fmt_ist(c["slot_at"]), "topic": c["topic"], "review": r}
+
+
+class ReviewIn(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    comment: str = Field(default="", max_length=600)
+
+
+@router.post("/public/reviews/{token}")
+async def submit_review(token: str, body: ReviewIn):
+    c = await by_token(token)
+    doc = {"rating": body.rating, "comment": body.comment.strip(), "display_name": display_name(c["name"]), "topic": c["topic"], "updated_at": now_iso()}
+    await db.consult_reviews.update_one({"consultation_id": c["id"]}, {"$set": doc, "$setOnInsert": {"id": new_id(), "consultation_id": c["id"], "user_id": c["user_id"], "hidden": False, "created_at": now_iso()}}, upsert=True)
+    return {"ok": True}
+
+
+@router.get("/public/reviews")
+async def public_reviews():
+    rows = await db.consult_reviews.find({"hidden": False}, NO_ID).sort("created_at", -1).to_list(500)
+    best = [{k: r[k] for k in ("id", "rating", "comment", "display_name", "topic", "created_at")} for r in rows if r["rating"] >= 4 and len(r["comment"]) >= 10][:9]
+    return {"count": len(rows), "average": round(sum(r["rating"] for r in rows) / len(rows), 1) if rows else None, "reviews": best}
+
+
+@router.get("/admin/consult-reviews")
+async def admin_reviews(user=Depends(admin_only)):
+    return await db.consult_reviews.find({}, NO_ID).sort("created_at", -1).to_list(1000)
+
+
+class HideIn(BaseModel):
+    hidden: bool
+
+
+@router.patch("/admin/consult-reviews/{rid}")
+async def hide_review(rid: str, body: HideIn, user=Depends(admin_only)):
+    if not (await db.consult_reviews.update_one({"id": rid}, {"$set": {"hidden": body.hidden}})).matched_count:
+        raise HTTPException(404, "Review not found")
+    await audit(user, "hide review" if body.hidden else "show review", rid)
     return {"ok": True}
