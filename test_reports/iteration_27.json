@@ -1,0 +1,36 @@
+{
+  "summary": "Tested the SOC Analyst Technical Blog Series end to end. Backend: 11/11 pytest pass covering the public list and post, 404s, RBAC, admin list/create/get/update/delete, slug handling, cover/section validation, publish toggle, move and AI write. Frontend: /blog <-> /soc-series tabs, stats, search, track filters, ready cards vs coming-soon cards, post page (markdown h2/tables/code blocks, copy plus try-in-siem for spl/kql, cover, MITRE/tag chips, TOC anchors, prev/next, #num/total, not-found state, mobile table scroll), and the admin 'Security blog' tab (counts, search, status filter, 7 grouped sections, create with preview, edit with bad cover rejected then valid cover saved, up/down reorder, publish toggle, delete confirm). AI write on one TEST post: generating -> ready (2864 words, tags parsed) in about 2-3 minutes. All 15 seeded posts are now ready. Test data cleaned up (125 posts, all published, order restored).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "startup ensure_series / POST /api/admin/series/{id}/generate", "issue": "Seeded posts waiting for the semaphore stay status 'planned' while queued, so the admin sees 'write with AI' on them (seen on #13-#15). Clicking it queues a second write_post task for the same post, which writes it twice and wastes credits. Fix: set status 'generating' (or 'queued') in ensure_series before queue(), and/or have write_post skip posts that are already ready."},
+      {"endpoint": "PUT /api/admin/series/{id}", "issue": "The admin form always sends body. Saving the edit form of a post that is 'generating' (body empty) sets status back to 'planned' while the background task is still running. The task later overwrites it to ready, and any manual edits made during that window are lost. Consider blocking edits or leaving status unchanged while generating."},
+      {"endpoint": "POST /api/admin/series/{id}/move", "issue": "Renumbers the whole section's order to 1..k, which drops the original global order values (e.g. 86..105). Harmless today because sorting is by section first, but worth knowing."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin > Security blog rows", "issues": ["The publish switch and action icons don't line up in a column across rows, because the status badge width changes (READY · 16M vs PLANNED vs GENERATING) and the 'write with AI' button is only on some rows. Give the status badge a fixed width."]},
+      {"screen": "/soc-series cards", "issues": ["Every card in a track uses the same section cover image, so the grid looks repetitive. Per-post covers would help."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_soc_series.py", "/app/test_reports/pytest/pytest_iter27.xml"],
+  "action_items": [
+    "Mark queued seeded posts as 'generating' when queued (or guard write_post against duplicate runs), so 'write with AI' isn't offered on posts that are already queued",
+    "Optional: stop PUT from resetting status while a post is generating",
+    "Optional: give the status badge in admin rows a fixed width so the columns line up"
+  ],
+  "critical_code_review_comments": [
+    "routes_series.py: duplicate generation is possible (no in-flight guard per post id; TASKS is not checked)",
+    "routes_series.py public_post runs 3 DB queries plus 2 full-collection sorts per request. Fine for 125 posts.",
+    "Admin form busy state: on save errors the form correctly stays open with a toast."
+  ],
+  "updated_files": ["/app/backend/tests/test_soc_series.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created TEST_ posts only, all deleted. Seed #1 publish toggle restored; Advanced SOC Operations order restored.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_soc_series.py (set KEEP_GEN=1 to keep the AI-generating TEST post for observation, then delete it manually). test_generate uses LLM credits (one post). All 15 seeded posts are ready; seeds 16-125 are planned."
+}

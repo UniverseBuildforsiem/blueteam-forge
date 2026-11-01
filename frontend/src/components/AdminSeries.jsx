@@ -52,7 +52,7 @@ function Row({ p, i, n, act, onEdit }) {
     <div className="flex flex-wrap items-center gap-3 px-3 py-2.5 border-b border-white/5 hover:bg-white/[0.02]" data-testid={`series-row-${p.id}`}>
       <span className="font-mono text-[11px] text-slate-500 w-10">#{String(p.number).padStart(3, "0")}</span>
       <div className="flex-1 min-w-[220px]"><div className="text-sm">{p.title}</div>{p.error && p.status === "failed" && <div className="text-[11px] text-red-300 mt-0.5">{p.error}</div>}</div>
-      <span className={`text-[10px] font-mono uppercase border px-2 py-0.5 inline-flex items-center gap-1 ${STATUS[p.status]}`} data-testid={`series-status-${p.id}`}>{p.status === "generating" && <Loader2 className="h-3 w-3 animate-spin" />}{p.status === "ready" ? `ready · ${p.read_min}m` : p.status}</span>
+      <span className={`text-[10px] font-mono uppercase border px-2 py-0.5 w-28 justify-center inline-flex items-center gap-1 ${STATUS[p.status]}`} data-testid={`series-status-${p.id}`}>{p.status === "generating" && <Loader2 className="h-3 w-3 animate-spin" />}{p.status === "ready" ? `ready · ${p.read_min}m` : p.status}</span>
       <Switch checked={p.published} onCheckedChange={(v) => act("put", p, { published: v })} data-testid={`series-publish-${p.id}`} />
       <div className="flex items-center gap-1 text-slate-400">
         <button disabled={i === 0} onClick={() => act("move", p, { dir: -1 })} className="p-1 hover:text-cyan-300 disabled:opacity-20" data-testid={`series-up-${p.id}`}><ChevronUp className="h-4 w-4" /></button>

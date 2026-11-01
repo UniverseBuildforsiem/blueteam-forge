@@ -53,7 +53,7 @@ def read_min(body):
 async def write_post(pid):
     async with SEM:
         p = await db.series_posts.find_one({"id": pid}, {"_id": 0})
-        if not p:
+        if not p or p["status"] == "ready":
             return
         await db.series_posts.update_one({"id": pid}, {"$set": {"status": "generating", "error": None}})
         try:
@@ -84,6 +84,7 @@ async def ensure_series():
             "cover": "", "body": "", "status": "planned", "published": True, "created_at": now_iso(), "updated_at": now_iso()}}, upsert=True)
     await db.series_posts.update_many({"status": "generating"}, {"$set": {"status": "planned"}})
     async for p in db.series_posts.find({"seed": {"$lte": AUTO_WRITE}, "status": "planned"}, {"_id": 0, "id": 1}):
+        await db.series_posts.update_one({"id": p["id"]}, {"$set": {"status": "generating"}})
         queue(p["id"])
 
 
@@ -195,6 +196,9 @@ async def admin_create(body: PostIn, user=Depends(admin_only)):
 async def admin_update(pid: str, body: PostPatch, user=Depends(admin_only)):
     d = body.model_dump(exclude_none=True)
     check(d)
+    cur = await db.series_posts.find_one({"id": pid}, {"_id": 0, "status": 1})
+    if cur and cur["status"] == "generating" and "body" in d:
+        raise HTTPException(409, "AI is still writing this post. Try again in a minute.")
     if "title" in d:
         d["slug"] = await unique_slug(d["title"], pid)
     if "section" in d:

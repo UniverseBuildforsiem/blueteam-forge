@@ -155,3 +155,13 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - P2: Per-user cooldown on AI quiz/lesson generation
 - P2: Lesson quiz analytics for instructors (pass rates per lesson)
 
+
+## SOC Analyst Technical Blog Series (2026-06)
+- 125-title series in 7 tracks (backend/series_data.py, section cover images); db.series_posts {id, seed, section, order, title, slug, excerpt, tags, mitre, cover, body(markdown), status planned|generating|ready|failed, published, read_min}
+- AI (Claude Sonnet via Emergent key) writes 2,000-3,000-word Markdown posts (logs, SPL/KQL, playbooks, real-world example, checklist); first 15 auto-written at startup, rest on demand via admin "write with AI"
+- Public: /soc-series (tracks, search, coming-soon cards) and /soc-series/:slug (markdown, TOC, copy + try-in-SIEM code blocks, prev/next); Threat news / Series tabs on /blog
+- Admin > Security blog tab (AdminSeries.jsx): add/edit/delete, markdown preview, publish toggle, reorder within track, cover link, AI write; edits blocked (409) while AI is writing
+- Endpoints: GET /api/public/series, /api/public/series/{slug}; /api/admin/series CRUD, /{id}/move, /{id}/generate (routes_series.py)
+
+## Backlog
+- P2: per-post AI cover images; bulk "write next 10"; meeting link per booking (user skipped for now)
