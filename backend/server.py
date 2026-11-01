@@ -16,6 +16,8 @@ from routes_interview import router as interview_router
 from routes_sop import router as sop_router
 from routes_blog import router as blog_router, ensure_blog
 from routes_series import router as series_router, ensure_series
+from series_cover import router as cover_router
+from series_email import router as series_email_router, ensure_series_email
 from routes_instructor import router as instructor_router
 from routes_admin import router as admin_router
 from routes_promo import router as promo_router, ensure_promos
@@ -23,7 +25,7 @@ from routes_consult import router as consult_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCProfessionals Academy API")
-for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])
@@ -102,6 +104,7 @@ async def startup():
             await db.saved_searches.insert_one({"id": new_id(), "user_id": "system", "name": q[0], "query": q[1], "created_at": now_iso()})
     await ensure_blog()
     await ensure_series()
+    await ensure_series_email()
     await ensure_promos()
     logger.info("Seed complete")
 

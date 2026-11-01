@@ -243,7 +243,9 @@ async def cron_digest(request: Request, background: BackgroundTasks):
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
     if not await accept(request, "weekly-digest"):
         return {"ok": True, "duplicate": True}
+    from series_email import send_series_week
     background.add_task(send_digest)
+    background.add_task(send_series_week)
     return {"ok": True}
 
 

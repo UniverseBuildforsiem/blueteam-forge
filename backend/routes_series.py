@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from core import db, now_iso, new_id, logger, admin_only, audit
 from series_data import CATALOG, SECTION_NAMES, SECTION_COVER
+from series_cover import queue_cover, cover_url, ensure_covers
 
 router = APIRouter(prefix="/api")
 AUTO_WRITE = 15
@@ -64,6 +65,8 @@ async def write_post(pid):
                 raise ValueError("article came back too short")
             await db.series_posts.update_one({"id": pid}, {"$set": {**d, "read_min": read_min(d["body"]), "status": "ready", "updated_at": now_iso(), "written_at": now_iso()}})
             logger.info(f"Series post written: {p['title']}")
+            if not p.get("ai_cover"):
+                queue_cover(pid)
         except Exception as e:
             logger.warning(f"Series write failed '{p['title']}': {e}")
             await db.series_posts.update_one({"id": pid}, {"$set": {"status": "failed", "error": str(e)[:200]}})
@@ -86,6 +89,7 @@ async def ensure_series():
     async for p in db.series_posts.find({"seed": {"$lte": AUTO_WRITE}, "status": "planned"}, {"_id": 0, "id": 1}):
         await db.series_posts.update_one({"id": p["id"]}, {"$set": {"status": "generating"}})
         queue(p["id"])
+    await ensure_covers()
 
 
 def sort_key(p):
@@ -96,7 +100,7 @@ async def all_posts(q, proj=LIST):
     posts = sorted(await db.series_posts.find(q, proj).to_list(1000), key=sort_key)
     for i, p in enumerate(posts, 1):
         p["number"] = i
-        p["cover"] = p.get("cover") or SECTION_COVER.get(p["section"], "")
+        p["cover"] = cover_url(p, SECTION_COVER.get(p["section"], ""))
     return posts
 
 
@@ -117,7 +121,7 @@ async def public_post(slug: str):
     allp = await all_posts({"published": True}, {"_id": 0, "slug": 1, "section": 1, "order": 1})
     p["number"] = next(x["number"] for x in allp if x["slug"] == slug)
     p["total"] = len(allp)
-    p["cover"] = p.get("cover") or SECTION_COVER.get(p["section"], "")
+    p["cover"] = cover_url(p, SECTION_COVER.get(p["section"], ""))
     p["prev"] = ready[idx - 1] if idx > 0 else None
     p["next"] = ready[idx + 1] if idx + 1 < len(ready) else None
     return p
@@ -177,6 +181,7 @@ async def admin_get(pid: str, user=Depends(admin_only)):
     p = await db.series_posts.find_one({"id": pid}, {"_id": 0})
     if not p:
         raise HTTPException(404, "Post not found")
+    p["cover_preview"] = cover_url({**p, "cover": ""}, SECTION_COVER.get(p["section"], ""))
     return p
 
 

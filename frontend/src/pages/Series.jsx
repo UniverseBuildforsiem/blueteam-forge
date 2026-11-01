@@ -1,12 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, BookOpen, Clock, Lock, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Clock, Lock, Search, Mail } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 import PublicNav, { Footer } from "../components/PublicNav";
 import { Glass, Empty } from "../components/common";
 import Markdown, { headingId } from "../components/Markdown";
 import { api } from "../lib/api";
 
 const num = (n) => String(n).padStart(3, "0");
+export const imgSrc = (u) => (u?.startsWith("/") ? process.env.REACT_APP_BACKEND_URL + u : u);
+
+function SeriesEmailToggle() {
+  const { user } = useAuth();
+  const [d, setD] = useState(null);
+  useEffect(() => { if (user) api.get("/me/series/next").then((r) => setD(r.data)).catch(() => {}); }, [user]);
+  if (!user || !d) return null;
+  const flip = async () => { const { data } = await api.patch("/me/preferences", { series_emails: !d.on }); setD({ ...d, on: data.series_emails }); toast.success(data.series_emails ? "Weekly series email on" : "Weekly series email off"); };
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-3" data-testid="series-email">
+      <button onClick={flip} className={`inline-flex items-center gap-2 text-xs font-mono border px-3 py-2 rounded-sm transition-colors ${d.on ? "border-green-500/40 text-green-300" : "border-white/10 text-slate-400"}`} data-testid="series-email-toggle">
+        <Mail className="h-3.5 w-3.5" />One series post every Monday: {d.on ? "ON" : "OFF"}</button>
+      {d.on && d.next && <span className="text-xs text-slate-400" data-testid="series-email-next">Your next email: <Link to={`/soc-series/${d.next.slug}`} className="text-cyan-300 hover:text-cyan-200">#{num(d.next.number)} {d.next.title}</Link></span>}
+    </div>);
+}
 
 export const BlogTabs = ({ active }) => (
   <div className="inline-flex border border-white/10 bg-black/40 rounded-sm p-1 mb-8" data-testid="blog-tabs">
@@ -18,7 +35,7 @@ function SeriesCard({ p }) {
   const ready = p.status === "ready";
   const inner = (
     <Glass className={`overflow-hidden h-full flex flex-col transition-transform duration-300 ${ready ? "group-hover:-translate-y-1" : "opacity-50"}`}>
-      <div className="relative h-32 overflow-hidden"><img src={p.cover} alt="" loading="lazy" className="w-full h-full object-cover" />
+      <div className="relative h-32 overflow-hidden"><img src={imgSrc(p.cover)} alt="" loading="lazy" className="w-full h-full object-cover" />
         <span className="absolute top-2 left-2 font-mono text-[11px] bg-black/70 border border-cyan-500/30 text-cyan-300 px-2 py-0.5">#{num(p.number)}</span></div>
       <div className="p-4 flex flex-col flex-1">
         <h3 className={`font-bold text-sm leading-snug ${ready ? "group-hover:text-cyan-300 transition-colors" : "text-slate-400"}`}>{p.title}</h3>
@@ -46,6 +63,7 @@ export function SeriesList() {
         <div className="eyebrow mb-3">// soc analyst technical blog series</div>
         <h1 className="text-4xl sm:text-5xl font-extrabold max-w-3xl">{d?.total || "120+"} hands-on guides, <span className="neon-text">from L1 to threat hunter.</span></h1>
         <p className="text-slate-400 mt-4 max-w-2xl text-sm md:text-base">Real log samples, Splunk SPL and Sentinel KQL detections, step-by-step investigation playbooks and real-world incidents for SOC analysts, threat hunters and incident responders.</p>
+        <SeriesEmailToggle />
         {d && <div className="flex flex-wrap gap-6 mt-6 font-mono text-xs" data-testid="series-stats"><span><span className="text-green-400 text-lg font-bold">{d.written}</span> <span className="text-slate-500">published</span></span><span><span className="text-cyan-300 text-lg font-bold">{d.total}</span> <span className="text-slate-500">in the series</span></span><span><span className="text-slate-200 text-lg font-bold">{d.sections.length}</span> <span className="text-slate-500">tracks</span></span></div>}
         <div className="flex flex-wrap items-center gap-2 mt-8" data-testid="series-filters">
           <div className="flex items-center gap-2 bg-black/40 border border-white/10 px-3 rounded-sm"><Search className="h-4 w-4 text-slate-500" />
@@ -89,7 +107,7 @@ export function SeriesPost() {
             <div className="flex flex-wrap items-center gap-3 text-xs font-mono"><span className="text-cyan-300 border border-cyan-500/30 px-2 py-0.5">#{num(p.number)} / {p.total}</span><span className="text-green-400">{p.section}</span><span className="text-slate-500 flex items-center gap-1"><Clock className="h-3 w-3" />{p.read_min} min read</span></div>
             <h1 className="text-3xl sm:text-4xl font-extrabold mt-4 leading-tight" data-testid="series-post-title">{p.title}</h1>
             {p.excerpt && <p className="text-slate-400 mt-4 text-base">{p.excerpt}</p>}
-            <img src={p.cover} alt="" className="w-full h-56 sm:h-72 object-cover mt-8 rounded-sm border border-white/10" data-testid="series-post-cover" />
+            <img src={imgSrc(p.cover)} alt="" className="w-full h-56 sm:h-72 object-cover mt-8 rounded-sm border border-white/10" data-testid="series-post-cover" />
             {(p.mitre?.length > 0 || p.tags?.length > 0) && <div className="flex flex-wrap gap-2 mt-6" data-testid="series-post-tags">
               {p.mitre?.map((m) => <code key={m} className="text-[11px] font-mono bg-black/40 border border-cyan-500/20 text-cyan-300 px-2 py-0.5">{m}</code>)}
               {p.tags?.map((t) => <span key={t} className="text-[11px] font-mono text-slate-400 border border-white/10 px-2 py-0.5">#{t}</span>)}</div>}

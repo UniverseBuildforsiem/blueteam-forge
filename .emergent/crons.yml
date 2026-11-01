@@ -31,7 +31,7 @@ crons:
     method: POST
     enabled: true
   - name: weekly-digest
-    description: "Emails students the week's 5 most severe security stories with SOC action items every Monday 9am IST"
+    description: "Monday 9am IST: weekly threat digest plus each student's next SOC Analyst Series post"
     cron: "0 9 * * 1"
     timezone: "Asia/Kolkata"
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.

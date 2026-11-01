@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Sparkles, Eye, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, Sparkles, Eye, ExternalLink, Loader2, Image as ImageIcon, Mail } from "lucide-react";
+import { imgSrc } from "../pages/Series";
 import { api, errMsg } from "../lib/api";
 import { Glass, Empty } from "./common";
 import { Switch } from "./ui/switch";
@@ -10,6 +11,25 @@ const F = ({ l, children }) => <label className="block"><span className="text-[1
 const STATUS = { ready: "text-green-400 border-green-500/30", planned: "text-slate-400 border-white/10", generating: "text-amber-300 border-amber-500/30", failed: "text-red-300 border-red-500/30" };
 const csv = (a) => (a || []).join(", ");
 const list = (s) => s.split(",").map((x) => x.trim()).filter(Boolean);
+
+function CoverPicker({ f, setF }) {
+  const [busy, setBusy] = useState(f.cover_status === "generating");
+  useEffect(() => {
+    if (!busy || !f.id) return undefined;
+    const t = setInterval(async () => { const { data } = await api.get(`/admin/series/${f.id}`); if (data.cover_status !== "generating") { setBusy(false); setF((x) => ({ ...x, cover_preview: data.cover_preview, cover_status: data.cover_status })); if (data.cover_status === "failed") toast.error("Cover could not be made, try again"); } }, 5000);
+    return () => clearInterval(t);
+  }, [busy, f.id, setF]);
+  const regen = async () => { await api.post(`/admin/series/${f.id}/cover`); setBusy(true); toast.success("Making a new AI cover - about 30 seconds"); };
+  const src = f.cover || f.cover_preview;
+  return (
+    <div className="flex items-center gap-4">
+      {src && <img src={imgSrc(src)} alt="" className="h-24 w-44 object-cover border border-white/10" data-testid="series-form-cover-preview" />}
+      <div className="text-xs text-slate-400 space-y-2">
+        <div>{f.cover ? "Using your cover link." : f.cover_preview?.startsWith("/api") ? "Using the AI cover." : "Using the section image until an AI cover is made."}</div>
+        {f.id && <button type="button" onClick={regen} disabled={busy} className="ghost-btn !text-xs" data-testid="series-form-regen-cover">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}{busy ? "Making cover..." : "New AI cover"}</button>}
+      </div>
+    </div>);
+}
 
 function PostForm({ init, sections, onSaved, onCancel }) {
   const [f, setF] = useState({ ...init, tags: csv(init.tags), mitre: csv(init.mitre) });
@@ -33,7 +53,7 @@ function PostForm({ init, sections, onSaved, onCancel }) {
         <F l="Tags (comma separated)"><input className="field text-xs" value={f.tags} onChange={up("tags")} data-testid="series-form-tags" /></F>
         <F l="MITRE techniques (comma separated)"><input className="field text-xs" value={f.mitre} onChange={up("mitre")} data-testid="series-form-mitre" /></F>
       </div>
-      {f.cover && <img src={f.cover} alt="" className="h-24 w-48 object-cover border border-white/10" data-testid="series-form-cover-preview" />}
+      <CoverPicker f={f} setF={setF} />
       <div className="flex items-center gap-3"><span className="text-[11px] font-mono uppercase text-slate-500">Article (Markdown: ## headings, ```spl / ```kql code blocks, tables)</span>
         <button className="ml-auto text-xs font-mono text-cyan-300" onClick={() => setPreview(!preview)} data-testid="series-form-preview-toggle">{preview ? "edit" : "preview"}</button></div>
       {preview ? <div className="border border-white/10 p-4 max-h-[60vh] overflow-y-auto" data-testid="series-form-preview"><Markdown>{f.body}</Markdown></div>
@@ -51,6 +71,7 @@ function Row({ p, i, n, act, onEdit }) {
   return (
     <div className="flex flex-wrap items-center gap-3 px-3 py-2.5 border-b border-white/5 hover:bg-white/[0.02]" data-testid={`series-row-${p.id}`}>
       <span className="font-mono text-[11px] text-slate-500 w-10">#{String(p.number).padStart(3, "0")}</span>
+      <img src={imgSrc(p.cover)} alt="" className="h-8 w-14 object-cover border border-white/10" data-testid={`series-thumb-${p.id}`} />
       <div className="flex-1 min-w-[220px]"><div className="text-sm">{p.title}</div>{p.error && p.status === "failed" && <div className="text-[11px] text-red-300 mt-0.5">{p.error}</div>}</div>
       <span className={`text-[10px] font-mono uppercase border px-2 py-0.5 w-28 justify-center inline-flex items-center gap-1 ${STATUS[p.status]}`} data-testid={`series-status-${p.id}`}>{p.status === "generating" && <Loader2 className="h-3 w-3 animate-spin" />}{p.status === "ready" ? `ready · ${p.read_min}m` : p.status}</span>
       <Switch checked={p.published} onCheckedChange={(v) => act("put", p, { published: v })} data-testid={`series-publish-${p.id}`} />
@@ -93,7 +114,8 @@ export default function AdminSeries() {
         <div className="text-sm"><span className="text-green-400 font-bold">{count("ready")}</span> written · <span className="text-amber-300 font-bold">{count("generating")}</span> writing · <span className="text-slate-300 font-bold">{count("planned") + count("failed")}</span> to write · {d.posts.length} total</div>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search titles" className="field !w-48 text-xs" data-testid="series-admin-search" />
         <select value={st} onChange={(e) => setSt(e.target.value)} className="field !w-36 text-xs" data-testid="series-admin-status">{["", "ready", "planned", "generating", "failed"].map((s) => <option key={s} value={s}>{s || "all statuses"}</option>)}</select>
-        <a href="/soc-series" target="_blank" rel="noreferrer" className="ghost-btn !text-xs ml-auto" data-testid="series-admin-open"><Eye className="h-3.5 w-3.5" />View blog</a>
+        <button className="ghost-btn !text-xs ml-auto" onClick={async () => { const { data } = await api.post("/admin/series/email-test"); data.sent ? toast.success("Test series email sent to you") : toast.error("No written posts to send yet"); }} data-testid="series-email-test"><Mail className="h-3.5 w-3.5" />Send me a test email</button>
+        <a href="/soc-series" target="_blank" rel="noreferrer" className="ghost-btn !text-xs" data-testid="series-admin-open"><Eye className="h-3.5 w-3.5" />View blog</a>
         <button className="glow-btn !text-xs" onClick={() => setEdit({ title: "", section: d.sections[0], excerpt: "", cover: "", tags: [], mitre: [], body: "", published: true })} data-testid="series-new"><Plus className="h-3.5 w-3.5" />New post</button>
       </Glass>
       {d.sections.map((s) => {
