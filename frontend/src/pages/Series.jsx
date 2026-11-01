@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, BookOpen, Clock, Lock, Search, Mail } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Clock, Lock, Search, Mail, Share2, Linkedin, Twitter, MessageCircle, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import PublicNav, { Footer } from "../components/PublicNav";
@@ -84,6 +84,36 @@ export function SeriesList() {
     </div>);
 }
 
+const shareUrl = (slug) => `${process.env.REACT_APP_BACKEND_URL}/api/public/series-share/${slug}`;
+
+function ShareBar({ p, place }) {
+  const url = shareUrl(p.slug);
+  const text = `${p.title} — SOC Analyst Series #${num(p.number)} on SOCProfessionals Academy`;
+  const links = [
+    ["linkedin", "LinkedIn", `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, Linkedin],
+    ["x", "X", `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, Twitter],
+    ["whatsapp", "WhatsApp", `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, MessageCircle],
+  ];
+  const copy = () => { navigator.clipboard.writeText(url); toast.success("Link copied"); };
+  return (
+    <div className="flex flex-wrap items-center gap-2" data-testid={`series-share-${place}`}>
+      <span className="text-[11px] font-mono uppercase text-slate-500 mr-1 flex items-center gap-1"><Share2 className="h-3.5 w-3.5" />share</span>
+      {links.map(([k, l, href, I]) => <a key={k} href={href} target="_blank" rel="noopener noreferrer" data-testid={`series-share-${place}-${k}`}
+        className="inline-flex items-center gap-1.5 text-xs font-mono border border-white/10 px-3 py-1.5 rounded-sm text-slate-300 hover:border-cyan-400 hover:text-cyan-300 transition-colors"><I className="h-3.5 w-3.5" />{l}</a>)}
+      <button onClick={copy} data-testid={`series-share-${place}-copy`} className="inline-flex items-center gap-1.5 text-xs font-mono border border-white/10 px-3 py-1.5 rounded-sm text-slate-300 hover:border-cyan-400 hover:text-cyan-300 transition-colors"><Link2 className="h-3.5 w-3.5" />Copy link</button>
+    </div>);
+}
+
+function ShareCard({ p }) {
+  return (
+    <Glass className="p-5 mt-12 grid md:grid-cols-[320px_1fr] gap-5 items-center border-cyan-500/20" data-testid="series-share-card">
+      <img src={`${shareUrl(p.slug)}.png`} alt="Share card" loading="lazy" className="w-full border border-white/10" data-testid="series-share-card-img" />
+      <div><div className="font-bold">Found this useful? Share it with your network.</div>
+        <div className="text-sm text-slate-400 mt-1 mb-4">Your post shows this card with the title and series number.</div>
+        <ShareBar p={p} place="bottom" /></div>
+    </Glass>);
+}
+
 const NavCard = ({ p, dir }) => p ? (
   <Link to={`/soc-series/${p.slug}`} className="group flex-1" data-testid={`series-${dir}`}>
     <Glass className={`p-4 h-full transition-colors group-hover:border-cyan-500/40 ${dir === "next" ? "text-right" : ""}`}>
@@ -110,11 +140,13 @@ export function SeriesPost() {
             <h1 className="text-3xl sm:text-4xl font-extrabold mt-4 leading-tight" data-testid="series-post-title">{p.title}</h1>
             {p.excerpt && <p className="text-slate-400 mt-4 text-base">{p.excerpt}</p>}
             <img src={imgSrc(p.cover)} alt="" className="w-full h-56 sm:h-72 object-cover mt-8 rounded-sm border border-white/10" data-testid="series-post-cover" />
+            <div className="mt-6"><ShareBar p={p} place="top" /></div>
             {(p.mitre?.length > 0 || p.tags?.length > 0) && <div className="flex flex-wrap gap-2 mt-6" data-testid="series-post-tags">
               {p.mitre?.map((m) => <code key={m} className="text-[11px] font-mono bg-black/40 border border-cyan-500/20 text-cyan-300 px-2 py-0.5">{m}</code>)}
               {p.tags?.map((t) => <span key={t} className="text-[11px] font-mono text-slate-400 border border-white/10 px-2 py-0.5">#{t}</span>)}</div>}
             <div className="mt-6" data-testid="series-post-body"><Markdown>{p.body}</Markdown></div>
-            <Glass className="p-6 mt-12 flex flex-wrap items-center gap-4 border-green-500/20">
+            <ShareCard p={p} />
+            <Glass className="p-6 mt-4 flex flex-wrap items-center gap-4 border-green-500/20">
               <div className="flex-1"><div className="font-bold">Practise this on a real shift</div><div className="text-sm text-slate-400 mt-1">Run these queries in our SIEM simulator and work live alerts in the triage labs.</div></div>
               <Link to="/register" className="glow-btn" data-testid="series-cta">Start practising <ArrowRight className="h-4 w-4" /></Link>
             </Glass>
