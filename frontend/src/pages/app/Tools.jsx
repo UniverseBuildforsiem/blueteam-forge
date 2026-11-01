@@ -4,24 +4,18 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { api, errMsg, fmtDate } from "../../lib/api";
 import { Glass, PageHeader, SeverityBadge, Empty } from "../../components/common";
-
-const VCOL = { malicious: "text-red-400", suspicious: "text-orange-300", clean: "text-green-400", unknown: "text-slate-400" };
+import { IntelReport, SandboxReport } from "../../components/InvestigationKit";
 
 function Intel() {
   const [q, setQ] = useState("");
   const [r, setR] = useState(null);
-  const go = async (v = q) => { const { data } = await api.get("/tools/intel", { params: { q: v } }); setR(data); };
+  const go = async (v = q) => { try { const { data } = await api.get("/tools/intel", { params: { q: v } }); setR(data); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <div className="space-y-4">
       <div className="flex gap-2"><input className="field font-mono" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && go()} placeholder="IP, domain, URL or file hash" data-testid="intel-input" />
         <button className="glow-btn" onClick={() => go()} data-testid="intel-lookup-button">Lookup</button></div>
       <div className="flex flex-wrap gap-2 text-xs font-mono">{["185.220.101.45", "cdn-update.top", "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", "8.8.8.8"].map((x) => <button key={x} onClick={() => { setQ(x); go(x); }} className="text-slate-500 hover:text-cyan-300 truncate max-w-[220px]">{x}</button>)}</div>
-      {r && <Glass className="p-6" data-testid="intel-result">
-        <div className="flex items-center justify-between flex-wrap gap-3"><div className="font-mono break-all">{r.indicator}</div>
-          <div className={`font-mono text-2xl font-bold ${VCOL[r.verdict]}`}>{r.detections} <span className="text-sm uppercase">{r.verdict}</span></div></div>
-        <div className="grid sm:grid-cols-3 gap-3 mt-5 text-sm">{Object.entries(r).filter(([k]) => !["indicator", "verdict", "detections", "tags"].includes(k)).map(([k, v]) => <div key={k}><div className="text-xs font-mono text-slate-500">{k}</div><div>{v}</div></div>)}</div>
-        <div className="flex flex-wrap gap-2 mt-4">{r.tags.map((t) => <span key={t} className="px-2 py-0.5 text-xs font-mono border border-cyan-500/30 text-cyan-300">{t}</span>)}</div>
-      </Glass>}
+      {r && <IntelReport r={r} onPivot={(v) => { setQ(v); go(v); }} />}
     </div>
   );
 }
@@ -54,12 +48,7 @@ function Header() {
 function Sandbox() {
   const [s, setS] = useState([]);
   useEffect(() => { api.get("/tools/sandbox").then((r) => setS(r.data)); }, []);
-  return <div className="grid lg:grid-cols-2 gap-4">{s.map((x) => (
-    <Glass key={x.id} className="p-5 font-mono text-xs space-y-3" data-testid={`sandbox-report-${x.id}`}>
-      <div className="flex justify-between items-center"><span className="text-sm font-bold">{x.file}</span><span className="text-red-400 text-lg">{x.score}/100</span></div>
-      <div className="text-slate-500 break-all">{x.sha256}</div>
-      {[["process tree", x.processes], ["network", x.network], ["dropped files", x.files], ["mitre att&ck", x.mitre]].map(([k, v]) => <div key={k}><div className="eyebrow mb-1">{k}</div>{v.map((l) => <div key={l} className="text-slate-300 whitespace-pre">{l}</div>)}</div>)}
-    </Glass>))}</div>;
+  return <div className="grid lg:grid-cols-2 gap-4">{s.map((x) => <SandboxReport key={x.id} x={x} />)}</div>;
 }
 
 const OPS = {

@@ -3,10 +3,11 @@ import shlex
 from typing import Optional
 from collections import Counter
 from email.parser import Parser
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 from core import db, now_iso, new_id, get_current_user, award, rank_for, frame_for
 from seed_data import gen_logs, INTEL, SANDBOX, THREAT_FEED
+from toolkit import intel_report, alert_iocs, sandbox_report
 from siem_engine import run as siem_run, match, QueryError, timeline
 
 router = APIRouter(prefix="/api")
@@ -457,13 +458,24 @@ async def saved_delete(sid: str, user=Depends(get_current_user)):
 
 # ---------- Investigation tools ----------
 @router.get("/tools/intel")
-async def intel(q: str, user=Depends(get_current_user)):
-    k = q.strip().lower().replace("[.]", ".").replace("hxxp", "http")
-    k = re.sub(r"^https?://", "", k).split("/")[0] if not re.fullmatch(r"[a-f0-9]{32,64}", k) else k
-    r = INTEL.get(k)
+async def intel(q: str = Query(min_length=3, max_length=300), kind: Optional[str] = None, id: Optional[str] = None, user=Depends(get_current_user)):
+    return await intel_report(q, kind, id)
+
+
+@router.get("/tools/alert-iocs")
+async def iocs_for_alert(kind: str = Query(pattern="^(challenge|lab)$"), id: str = Query(max_length=80), user=Depends(get_current_user)):
+    r = await alert_iocs(kind, id)
     if not r:
-        return {"indicator": k, "verdict": "unknown", "detections": "0/90", "tags": [], "note": "No records in the simulated intel database."}
-    return {"indicator": k, **r}
+        raise HTTPException(404, "Alert not found")
+    return r
+
+
+@router.get("/tools/sandbox/report")
+async def sandbox_for_file(file: str = Query(max_length=300), kind: str = Query(pattern="^(challenge|lab)$"), id: str = Query(max_length=80), user=Depends(get_current_user)):
+    r = await sandbox_report(file, kind, id)
+    if not r:
+        raise HTTPException(404, "File not found in this alert")
+    return r
 
 
 @router.get("/tools/sandbox")

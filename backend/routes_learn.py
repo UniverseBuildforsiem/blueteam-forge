@@ -107,20 +107,63 @@ async def get_path(pid: str, user=Depends(get_current_user)):
     final = await db.quizzes.find_one({"path_id": pid}, {"_id": 0, "id": 1, "title": 1, "pass_mark": 1})
     cert = await db.certificates.find_one({"user_id": user["id"], "path_id": pid}, NO_ID)
     ids = lesson_ids(p)
+    for m in p["modules"]:
+        for l in m["lessons"]:
+            if (l.get("quiz") or {}).get("required"):
+                l["quiz"] = {"required": True, "pass_count": pass_count(l["quiz"]), "questions": [{"id": q.get("id"), "text": q["text"], "options": q["options"]} for q in l["quiz"]["questions"]]}
     return {**p, "completed_lessons": [i for i in ids if i in done], "final_quiz": final, "certificate": cert,
             "percent": round(100 * len([i for i in ids if i in done]) / len(ids)) if ids else 0}
 
 
+def pass_count(quiz):
+    return -(-len(quiz["questions"]) * 3 // 5)
+
+
+async def find_lesson(pid, lid):
+    p = await db.paths.find_one({"id": pid}, NO_ID)
+    l = next((l for m in (p or {}).get("modules", []) for l in m["lessons"] if l["id"] == lid), None)
+    if not l:
+        raise HTTPException(404, "Lesson not found")
+    return p, l
+
+
+async def mark_complete(uid, pid, l):
+    if await db.lesson_progress.find_one({"user_id": uid, "lesson_id": l["id"]}):
+        return False
+    await db.lesson_progress.insert_one({"user_id": uid, "lesson_id": l["id"], "path_id": pid, "minutes": 10, "created_at": now_iso()})
+    await award(uid, 10, f"Completed lesson: {l['title']}")
+    return True
+
+
 @router.post("/paths/{pid}/lessons/{lid}/complete")
 async def complete_lesson(pid: str, lid: str, user=Depends(get_current_user)):
-    p = await db.paths.find_one({"id": pid}, NO_ID)
-    if not p or lid not in lesson_ids(p):
-        raise HTTPException(404, "Lesson not found")
-    if not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}):
-        await db.lesson_progress.insert_one({"user_id": user["id"], "lesson_id": lid, "path_id": pid, "minutes": 10, "created_at": now_iso()})
-        title = next(l["title"] for m in p["modules"] for l in m["lessons"] if l["id"] == lid)
-        await award(user["id"], 10, f"Completed lesson: {title}")
+    p, l = await find_lesson(pid, lid)
+    if (l.get("quiz") or {}).get("required") and not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}):
+        raise HTTPException(400, "Pass this lesson's quiz to complete it")
+    await mark_complete(user["id"], pid, l)
     return {"ok": True}
+
+
+class LessonQuizIn(BaseModel):
+    answers: list[int]
+
+
+@router.post("/paths/{pid}/lessons/{lid}/quiz")
+async def lesson_quiz_submit(pid: str, lid: str, body: LessonQuizIn, user=Depends(get_current_user)):
+    p, l = await find_lesson(pid, lid)
+    q = l.get("quiz") or {}
+    if not q.get("required"):
+        raise HTTPException(400, "This lesson has no graded quiz")
+    qs = q["questions"]
+    if len(body.answers) != len(qs):
+        raise HTTPException(422, f"Answer all {len(qs)} questions")
+    marks = [a == int(x["answer"]) for a, x in zip(body.answers, qs)]
+    score, need = sum(marks), pass_count(q)
+    passed = score >= need
+    await db.lesson_quiz_attempts.insert_one({"id": new_id(), "user_id": user["id"], "path_id": pid, "lesson_id": lid, "score": score, "total": len(qs), "passed": passed, "created_at": now_iso()})
+    newly = passed and await mark_complete(user["id"], pid, l)
+    return {"score": score, "total": len(qs), "pass_count": need, "passed": passed, "completed": newly, "xp": 10 if newly else 0,
+            "results": [{"correct": ok, **({"answer": int(x["answer"]), "explanation": x.get("explanation", "")} if passed or ok else {})} for ok, x in zip(marks, qs)]}
 
 
 @router.get("/resources/{name}")

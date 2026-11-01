@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../components/ui/sheet";
 import { api, errMsg } from "../../lib/api";
 import { Glass, PageHeader, SeverityBadge } from "../../components/common";
+import { AlertToolkit } from "../../components/InvestigationKit";
 
 export function Investigate({ c, onDone, submitUrl }) {
   const [verdict, setVerdict] = useState(c.submission?.verdict || "");
@@ -23,6 +24,7 @@ export function Investigate({ c, onDone, submitUrl }) {
       </div>
       <div><div className="eyebrow mb-2">evidence</div>
         <div className="space-y-1.5">{c.evidence.map((e, i) => <div key={i} className="font-mono text-xs bg-black/30 border-l-2 border-green-500/40 px-3 py-2 text-slate-300 break-words"><span className="text-slate-500 mr-2">#{i + 1}</span>{e}</div>)}</div></div>
+      {!submitUrl && <AlertToolkit kind="challenge" id={c.id} />}
       {c.hints && <Hints c={c} onDone={onDone} />}
       <div><div className="eyebrow mb-2">verdict</div>
         <div className="flex gap-2">

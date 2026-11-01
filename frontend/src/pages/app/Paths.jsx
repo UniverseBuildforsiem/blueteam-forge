@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CheckCircle2, Circle, PlayCircle, Download, Award, ChevronRight, FileText } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, Download, Award, ChevronRight, FileText, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { api, API, errMsg } from "../../lib/api";
 import { Glass, PageHeader } from "../../components/common";
@@ -30,13 +30,13 @@ export function Paths() {
 const ATTACH = { quiz: ["Quiz", (a) => `/app/quizzes/${a.id}`], lab: ["Lab", (a) => `/app/labs/${a.id}`], challenge: ["SOC challenge", (a) => `/app/challenges?case=${a.id}`],
   ctf: ["CTF", () => "/app/ctf"], course: ["Course", (a) => a.url], sop: ["SOP", (a) => `/sops/${a.id}`] };
 
-export function LessonBody({ lesson }) {
+export function LessonBody({ lesson, grade, completed }) {
   return (<>
     <div className="eyebrow mb-2">// lesson · {lesson.minutes} min</div>
     <h2 className="text-2xl font-bold mb-6">{lesson.title || "Untitled lesson"}</h2>
     {lesson.video_url && <div className="aspect-video mb-6 border border-cyan-500/20"><iframe title={lesson.title} src={lesson.video_url} className="w-full h-full" allowFullScreen data-testid="lesson-video" /></div>}
     <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[15px]">{lesson.content}</div>
-    <LessonQuiz key={lesson.id} quiz={lesson.quiz} />
+    <LessonQuiz key={lesson.id} quiz={lesson.quiz} grade={grade} completed={completed} />
     {lesson.attachments?.length > 0 && <div className="mt-8" data-testid="lesson-practice"><div className="eyebrow mb-3">practice this lesson</div>
       <div className="grid sm:grid-cols-2 gap-2">{lesson.attachments.map((a) => { const [label, to] = ATTACH[a.type] || ["Item", () => "#"]; const href = to(a); const ext = /^https?:/.test(href || "");
         return <a key={`${a.type}-${a.id}`} href={href} {...(ext ? { target: "_blank", rel: "noreferrer" } : {})} className="glass rounded-sm p-3 hover:border-cyan-400/50 transition-colors flex items-center gap-3" data-testid={`lesson-attachment-${a.type}-${a.id}`}>
@@ -46,11 +46,13 @@ export function LessonBody({ lesson }) {
   </>);
 }
 
-function LessonView({ lesson, done, onComplete }) {
+function LessonView({ lesson, done, onComplete, grade }) {
+  const req = lesson.quiz?.required;
   return (
     <Glass className="p-6 sm:p-8" data-testid="lesson-view">
-      <LessonBody lesson={lesson} />
-      <button className="glow-btn mt-8" disabled={done} onClick={onComplete} data-testid="lesson-complete-button">{done ? <><CheckCircle2 className="h-4 w-4" /> Completed</> : "Mark as complete (+10 XP)"}</button>
+      <LessonBody lesson={lesson} grade={grade} completed={done} />
+      {req && !done ? <div className="mt-8 text-xs font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="lesson-complete-locked"><Lock className="h-3.5 w-3.5" />Pass the lesson quiz above to complete this lesson (+10 XP)</div>
+        : <button className="glow-btn mt-8" disabled={done} onClick={onComplete} data-testid="lesson-complete-button">{done ? <><CheckCircle2 className="h-4 w-4" /> Completed</> : "Mark as complete (+10 XP)"}</button>}
     </Glass>
   );
 }
@@ -91,7 +93,8 @@ export function PathDetail() {
             {p.certificate && <a href={`${API}/public/certificates/${p.certificate.id}/pdf`} target="_blank" rel="noreferrer" className="glow-btn w-full justify-center mt-3" data-testid="path-certificate-button"><Award className="h-4 w-4" />Certificate</a>}
           </Glass>
         </div>
-        {cur && <LessonView lesson={cur} done={p.completed_lessons.includes(cur.id)} onComplete={complete} />}
+        {cur && <LessonView key={cur.id} lesson={cur} done={p.completed_lessons.includes(cur.id)} onComplete={complete}
+          grade={async (answers) => { const { data } = await api.post(`/paths/${id}/lessons/${cur.id}/quiz`, { answers }); if (data.passed) load(); return data; }} />}
       </div>
     </div>
   );

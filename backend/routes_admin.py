@@ -19,7 +19,7 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$")
 GRANTS = {"sop": "sop-bundle", "book": "soc-interview-ebook"}
 USER_COLLECTIONS = ["lesson_progress", "quiz_attempts", "lab_progress", "challenge_submissions", "challenge_hints", "drill_submissions", "drill_practice", "drill_freezes",
                     "drill_rescue", "ctf_solves", "ctf_hints", "activity", "certificates", "course_completions", "course_bonus", "course_alerts", "rsvps", "saved_searches",
-                    "purchases", "interviews", "digest_sends", "rank_emails", "password_reset_tokens", "cases"]
+                    "purchases", "interviews", "digest_sends", "rank_emails", "password_reset_tokens", "cases", "lesson_quiz_attempts"]
 
 
 # ---------- Users ----------

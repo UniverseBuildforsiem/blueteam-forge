@@ -5,6 +5,7 @@ import { api, errMsg } from "../lib/api";
 import { Glass, Empty } from "./common";
 import { LessonBody } from "../pages/app/Paths";
 import { LessonQuizBuilder } from "./LessonQuizBuilder";
+import { BulkQuiz } from "./BulkQuiz";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const Lbl = ({ l, children }) => <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
@@ -140,6 +141,7 @@ function Outline({ mods, setMods, sel, setSel }) {
               <div key={l.id} draggable onDragStart={(e) => { e.stopPropagation(); drag.current = { type: "lesson", mi, li }; }} {...dz({ type: "lesson", mi, li }, `l${mi}-${li}`)} onClick={() => setSel(l.id)}
                 className={`flex items-center gap-1.5 px-2 py-1.5 text-xs cursor-pointer border-l-2 transition-colors ${sel === l.id ? "border-green-400 bg-green-500/5 text-slate-100" : "border-transparent text-slate-400 hover:bg-white/5"} ${over === `l${mi}-${li}` ? "border-t border-t-cyan-400" : ""}`} data-testid={`builder-lesson-${mi}-${li}`}>
                 <GripVertical className="h-3.5 w-3.5 text-slate-600 cursor-grab shrink-0" /><FileText className="h-3.5 w-3.5 shrink-0" /><span className="truncate flex-1">{l.title || "Untitled lesson"}</span>
+                {l.quiz?.questions?.length > 0 && <span className={`font-mono text-[10px] ${l.quiz.required ? "text-yellow-300" : "text-slate-500"}`} title={l.quiz.required ? "required quiz" : "practice quiz"}>Q{l.quiz.required ? "*" : ""}</span>}
                 {l.attachments?.length > 0 && <span className="font-mono text-[10px] text-green-400">+{l.attachments.length}</span>}
                 <button disabled={li === 0} onClick={(e) => { e.stopPropagation(); upMod(mi, { ...m, lessons: move(m.lessons, li, li - 1) }); }} className="hover:text-cyan-300 disabled:opacity-30" data-testid={`builder-lesson-up-${mi}-${li}`}><ChevronUp className="h-3.5 w-3.5" /></button>
                 <button disabled={li === m.lessons.length - 1} onClick={(e) => { e.stopPropagation(); upMod(mi, { ...m, lessons: move(m.lessons, li, li + 1) }); }} className="hover:text-cyan-300 disabled:opacity-30" data-testid={`builder-lesson-down-${mi}-${li}`}><ChevronDown className="h-3.5 w-3.5" /></button>
@@ -173,7 +175,8 @@ export default function PathBuilder({ d, set }) {
         <Lbl l="Category"><input className="field" value={d.category} onChange={(e) => set({ ...d, category: e.target.value })} data-testid="builder-path-category" /></Lbl>
         <div className="sm:col-span-3"><Lbl l="Description"><input className="field" value={d.description} onChange={(e) => set({ ...d, description: e.target.value })} data-testid="builder-path-description" /></Lbl></div>
       </div>
-      <div className="text-[11px] font-mono text-slate-500" data-testid="builder-summary">{mods.length} modules · {total} lessons · {mods.reduce((n, m) => n + m.lessons.reduce((k, l) => k + (+l.minutes || 0), 0), 0)} min · {mods.reduce((n, m) => n + m.lessons.reduce((k, l) => k + (l.attachments?.length || 0), 0), 0)} practice items</div>
+      <div className="flex flex-wrap items-center gap-3"><div className="text-[11px] font-mono text-slate-500 flex-1" data-testid="builder-summary">{mods.length} modules · {total} lessons · {mods.reduce((n, m) => n + m.lessons.reduce((k, l) => k + (+l.minutes || 0), 0), 0)} min · {mods.reduce((n, m) => n + m.lessons.reduce((k, l) => k + (l.attachments?.length || 0), 0), 0)} practice items</div>
+        <BulkQuiz mods={mods} level={d.level || "Beginner"} updateLesson={(lid, fn) => setMods((ms) => ms.map((m) => ({ ...m, lessons: m.lessons.map((x) => (x.id === lid ? fn(x) : x)) })))} /></div>
       <div className="grid lg:grid-cols-[340px_1fr] gap-4 items-start">
         <Outline mods={mods} setMods={setMods} sel={sel} setSel={setSel} />
         {lesson ? <LessonEditor key={lesson.id} l={lesson} upL={upL} assets={assets} ctx={{ path_title: d.title || "", module_title: mods[pos.mi].title || "", level: d.level || "Beginner" }} /> : <Glass className="p-8"><Empty text="add or select a lesson to edit it" /></Glass>}

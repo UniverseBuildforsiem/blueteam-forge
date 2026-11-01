@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CheckCircle2, Lightbulb, FlaskConical, NotebookPen, Wrench, ListChecks } from "lucide-react";
+import { CheckCircle2, Lightbulb, FlaskConical, NotebookPen, Wrench, ListChecks, Search } from "lucide-react";
+import { AlertToolkit } from "../../components/InvestigationKit";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { api, errMsg } from "../../lib/api";
@@ -127,12 +128,14 @@ export function LabRunner() {
         <Glass className="p-4">
           <Tabs defaultValue="tasks">
             <TabsList className="bg-black/40 w-full"><TabsTrigger value="tasks" className="flex-1" data-testid="lab-tab-tasks"><ListChecks className="h-4 w-4" /></TabsTrigger>
-              <TabsTrigger value="tools" className="flex-1" data-testid="lab-tab-tools"><Wrench className="h-4 w-4" /></TabsTrigger><TabsTrigger value="notes" className="flex-1" data-testid="lab-tab-notes"><NotebookPen className="h-4 w-4" /></TabsTrigger></TabsList>
+              <TabsTrigger value="tools" className="flex-1" data-testid="lab-tab-tools"><Wrench className="h-4 w-4" /></TabsTrigger><TabsTrigger value="investigate" className="flex-1" data-testid="lab-tab-investigate"><Search className="h-4 w-4" /></TabsTrigger>
+              <TabsTrigger value="notes" className="flex-1" data-testid="lab-tab-notes"><NotebookPen className="h-4 w-4" /></TabsTrigger></TabsList>
             <TabsContent value="tasks" className="space-y-2 mt-3 max-h-[560px] overflow-y-auto pr-1">
               <Phases lab={lab} onSolved={load} />
               <Report lab={lab} id={id} report={report} setReport={setReport} onDone={load} />
             </TabsContent>
             <TabsContent value="tools" className="mt-3"><ToolsSidebar onPick={(c) => term.current?.insert(c)} /></TabsContent>
+            <TabsContent value="investigate" className="mt-3 max-h-[560px] overflow-y-auto pr-1"><AlertToolkit kind="lab" id={id} /></TabsContent>
             <TabsContent value="notes" className="mt-3"><Notes storageKey={`notes-${id}`} /></TabsContent>
           </Tabs>
         </Glass>
