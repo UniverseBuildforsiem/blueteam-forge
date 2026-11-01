@@ -45,19 +45,20 @@ def verify_password(p: str, h: str) -> bool:
     return bcrypt.checkpw(p.encode(), h.encode())
 
 
-def create_access_token(uid: str, email: str) -> str:
-    return jwt.encode({"sub": uid, "email": email, "type": "access", "exp": now() + timedelta(minutes=15)},
+def create_access_token(uid: str, email: str, tv: int = 0) -> str:
+    return jwt.encode({"sub": uid, "email": email, "type": "access", "tv": tv, "exp": now() + timedelta(minutes=15)},
                       os.environ["JWT_SECRET"], algorithm=JWT_ALGORITHM)
 
 
-def create_refresh_token(uid: str) -> str:
-    return jwt.encode({"sub": uid, "type": "refresh", "exp": now() + timedelta(days=7)},
+def create_refresh_token(uid: str, tv: int = 0) -> str:
+    return jwt.encode({"sub": uid, "type": "refresh", "tv": tv, "exp": now() + timedelta(days=7)},
                       os.environ["JWT_SECRET"], algorithm=JWT_ALGORITHM)
 
 
 def set_auth_cookies(response, user):
-    response.set_cookie("access_token", create_access_token(user["id"], user["email"]), httponly=True, secure=True, samesite="none", max_age=900, path="/")
-    response.set_cookie("refresh_token", create_refresh_token(user["id"]), httponly=True, secure=True, samesite="none", max_age=604800, path="/")
+    tv = user.get("token_version", 0)
+    response.set_cookie("access_token", create_access_token(user["id"], user["email"], tv), httponly=True, secure=True, samesite="none", max_age=900, path="/")
+    response.set_cookie("refresh_token", create_refresh_token(user["id"], tv), httponly=True, secure=True, samesite="none", max_age=604800, path="/")
 
 
 PUBLIC_USER_FIELDS = {"_id": 0, "password_hash": 0}
@@ -81,6 +82,8 @@ async def get_current_user(request: Request) -> dict:
     user = await db.users.find_one({"id": payload["sub"]}, PUBLIC_USER_FIELDS)
     if not user:
         raise HTTPException(401, "User not found")
+    if payload.get("tv", 0) != user.pop("token_version", 0):
+        raise HTTPException(401, "Session ended — please sign in again")
     if user.get("status") == "suspended":
         raise HTTPException(403, "Account suspended")
     return user

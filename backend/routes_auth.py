@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request, Response, HTTPException, Depends
 from pydantic import BaseModel, Field
 import jwt
 from core import (db, now, now_iso, new_id, hash_password, verify_password, set_auth_cookies, get_current_user,
-                  create_access_token, JWT_ALGORITHM, PUBLIC_USER_FIELDS, send_email, email_template)
+                  create_access_token, JWT_ALGORITHM, PUBLIC_USER_FIELDS, send_email, email_template, audit)
 
 router = APIRouter(prefix="/api/auth")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$")
@@ -41,6 +41,7 @@ class GoalIn(BaseModel):
 def clean(u):
     u.pop("_id", None)
     u.pop("password_hash", None)
+    u.pop("token_version", None)
     return u
 
 
@@ -110,7 +111,10 @@ async def refresh(request: Request, response: Response):
     user = await db.users.find_one({"id": payload["sub"]}, PUBLIC_USER_FIELDS)
     if not user:
         raise HTTPException(401, "User not found")
-    response.set_cookie("access_token", create_access_token(user["id"], user["email"]), httponly=True, secure=True, samesite="none", max_age=900, path="/")
+    tv = user.pop("token_version", 0)
+    if payload.get("tv", 0) != tv:
+        raise HTTPException(401, "Session ended — please sign in again")
+    response.set_cookie("access_token", create_access_token(user["id"], user["email"], tv), httponly=True, secure=True, samesite="none", max_age=900, path="/")
     return clean(user)
 
 
@@ -139,8 +143,32 @@ async def reset(body: ResetIn):
         exp = exp.replace(tzinfo=now().tzinfo)
     if exp < now():
         raise HTTPException(400, "Reset link expired")
-    await db.users.update_one({"id": rec["user_id"]}, {"$set": {"password_hash": hash_password(body.password)}, "$unset": {"invite_pending": ""}})
+    await db.users.update_one({"id": rec["user_id"]}, {"$set": {"password_hash": hash_password(body.password)}, "$unset": {"invite_pending": ""}, "$inc": {"token_version": 1}})
     await db.password_reset_tokens.update_one({"token": body.token}, {"$set": {"used": True}})
+    return {"ok": True}
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+@router.post("/change-password")
+async def change_password(body: ChangePasswordIn, response: Response, user=Depends(get_current_user)):
+    full = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    if not verify_password(body.current_password, full["password_hash"]):
+        raise HTTPException(400, "Current password is incorrect")
+    pw = body.new_password
+    if pw == body.current_password:
+        raise HTTPException(400, "New password must be different from the current one")
+    if not (re.search(r"[A-Za-z]", pw) and re.search(r"\d", pw)) or pw.lower() in (full["email"].split("@")[0], full.get("username", "")):
+        raise HTTPException(400, "Use at least 8 characters with letters and numbers, not your username")
+    await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": hash_password(pw), "password_changed_at": now_iso()}, "$inc": {"token_version": 1}})
+    set_auth_cookies(response, await db.users.find_one({"id": user["id"]}, {"_id": 0, "id": 1, "email": 1, "token_version": 1}))
+    await audit(user, "change own password", user["id"])
+    await send_email(to=full["email"], subject="Your SOCProfessionals Academy password was changed",
+                     html=email_template(full["name"], ["Your password was just changed and all other devices were signed out.",
+                                                        "If this wasn't you, reset your password immediately using the button below."], f"{os.environ['FRONTEND_URL']}/forgot-password", "Reset password"))
     return {"ok": True}
 
 

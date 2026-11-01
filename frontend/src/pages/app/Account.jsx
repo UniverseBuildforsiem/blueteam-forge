@@ -7,6 +7,16 @@ import { toast } from "sonner";
 import { api, API, errMsg, fmtDate } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { Glass, PageHeader, Empty } from "../../components/common";
+import ChangePasswordCard from "../../components/ChangePasswordCard";
+
+export function AccountSettings() {
+  const { user } = useAuth();
+  return (
+    <div className="max-w-4xl">
+      <PageHeader eyebrow="// account" title="Account settings" sub={`Signed in as ${user.email} · ${user.role}`} />
+      <ChangePasswordCard />
+    </div>);
+}
 
 const linkedInUrl = (c) => {
   const d = new Date(c.issued_at);

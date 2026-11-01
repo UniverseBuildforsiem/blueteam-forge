@@ -1,6 +1,7 @@
 import io
 import os
 from collections import defaultdict
+from datetime import timedelta
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, StreamingResponse
@@ -366,6 +367,26 @@ async def course_badges(uid):
     done = await db.course_completions.find({"user_id": uid}, {"_id": 0}).sort("at", 1).to_list(100)
     return [{"id": f"course-{c['course_id']}", "name": short_title(c["title"]), "description": f"Completed '{c['title']}' on SOC Professionals",
              "earned": True, "kind": "course"} for c in done]
+
+
+@router.get("/leaderboard/investigators")
+async def investigator_board(user=Depends(get_current_user)):
+    today = now().date()
+    start = today - timedelta(days=today.weekday())
+    prev = start - timedelta(days=7)
+
+    async def week(a, b):
+        rows = await db.challenge_submissions.aggregate([{"$match": {"investigated": True, "created_at": {"$gte": a.isoformat(), "$lt": b.isoformat()}}},
+                                                         {"$group": {"_id": "$user_id", "n": {"$sum": 1}, "last": {"$max": "$created_at"}}}, {"$sort": {"n": -1, "last": 1}}]).to_list(500)
+        us = {u["id"]: u for u in await db.users.find({"id": {"$in": [r["_id"] for r in rows]}, "role": "student", "status": "active"},
+                                                      {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1, "public_profile": 1, "avatar_frame": 1}).to_list(500)}
+        return [{"id": k, "name": u["name"], "username": u["username"], "count": r["n"], "rank": rank_for(u.get("xp", 0)), "frame": frame_for(u),
+                 "public": u.get("public_profile", True) is not False} for r in rows if (k := r["_id"]) in us and (u := us[k])]
+    cur, last = await week(start, start + timedelta(days=7)), await week(prev, start)
+    pos = next((i for i, r in enumerate(cur) if r["id"] == user["id"]), None)
+    return {"week_start": start.isoformat(), "resets_on": (start + timedelta(days=7)).isoformat(), "top": cur[:10],
+            "me": {"count": cur[pos]["count"] if pos is not None else 0, "position": pos + 1 if pos is not None else None},
+            "last_champion": last[0] if last else None}
 
 
 @router.get("/leaderboard")

@@ -28,7 +28,7 @@ import CTF from "./pages/app/CTF";
 import { Labs, LabRunner, KaliPage } from "./pages/app/Labs";
 import Siem from "./pages/app/Siem";
 import Tools from "./pages/app/Tools";
-import { Certificates, Billing } from "./pages/app/Account";
+import { Certificates, Billing, AccountSettings } from "./pages/app/Account";
 import Instructor from "./pages/Instructor";
 import Admin from "./pages/Admin";
 
@@ -75,6 +75,7 @@ function App() {
               <Route path="tools" element={<Tools />} />
               <Route path="certificates" element={<Certificates />} />
               <Route path="billing" element={<Billing />} />
+              <Route path="account" element={<AccountSettings />} />
             </Route>
             <Route path="/instructor" element={<ProtectedRoute roles={["instructor", "admin"]}><AppShell /></ProtectedRoute>}>
               <Route index element={<Instructor />} />

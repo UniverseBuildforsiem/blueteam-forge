@@ -7,6 +7,7 @@ import ShareCardButton from "../../components/ShareCardButton";
 import LevelUpReveal, { badgeReveal, rankReveal } from "../../components/LevelUpReveal";
 import { api, fmtDate } from "../../lib/api";
 import RecommendedCourse from "../../components/RecommendedCourse";
+import InvestigatorBoard from "../../components/InvestigatorBoard";
 import NextBadge, { EbookCard } from "../../components/NextBadge";
 import { toast } from "sonner";
 import { Glass, PageHeader, ProgressRing, Empty, Stat, SeverityBadge, ProfileLink } from "../../components/common";
@@ -87,6 +88,7 @@ export default function Dashboard() {
               </li>))}
           </ol>
         </Glass>
+        <InvestigatorBoard meId={d.user.id} />
         <Glass className="p-6">
           <h3 className="font-bold flex items-center gap-2 mb-4"><Award className="h-4 w-4 text-cyan-300" />Badges</h3>
           <div className="grid grid-cols-3 gap-2">
