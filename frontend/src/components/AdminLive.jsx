@@ -30,7 +30,7 @@ export default function AdminLive() {
   const [f, setF] = useState("all");
   const load = () => api.get("/admin/live-enquiries").then((r) => setEs(r.data));
   useEffect(() => { load(); }, []);
-  const set = async (e, status) => { await api.patch(`/admin/live-enquiries/${e.id}`, { status }); setEs(es.map((x) => (x.id === e.id ? { ...x, status } : x))); };
+  const set = async (e, status) => { try { await api.patch(`/admin/live-enquiries/${e.id}`, { status }); setEs(es.map((x) => (x.id === e.id ? { ...x, status } : x))); } catch (err) { toast.error(errMsg(err)); } };
   const shown = (es || []).filter((e) => f === "all" || e.kind === f);
   const csv = () => {
     const rows = [["Type", "Session (IST)", "Name", "Email", "Phone", "Experience", "Message", "Status", "Received"], ...shown.map((e) => [e.kind, ist(e.session_at), e.name, e.email, e.phone, e.experience, e.message, e.status, e.created_at])];

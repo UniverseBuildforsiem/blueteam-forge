@@ -136,6 +136,11 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 ## 2026-06 Landing Promo Spotlight (DONE — self-tested screenshot)
 - components/PromoSpotlight.jsx above the Blog section: rotating spotlight (6s timer bar, pauses on hover, prev/next + named tabs) for Udemy Qualys Guard VMDR ₹499, Udemy Certified SOC Analyst ₹499 (same referral link), SOCProfessionals Android app (Google Play), SOC Learning Paths (/catalog), SOC Interview Preparation book (/book).
 
+## 2026-06 Editable Promotions + Offer Countdown + SOC Live Classes (DONE — iteration_24, fixes self-tested)
+- backend/routes_promo.py: db.promos (seeded from the 5 spotlight cards) with admin CRUD/reorder/hide + optional ends_at countdown (expired cards hidden). Public GET /api/public/promos.
+- SOC Live Classes (landing, after the spotlight): free demo every Friday 16:00 IST (next 4), new batches on 2nd & 4th Fridays (next 4). Enquiry form (name/email/phone/experience/message) -> db.live_enquiries; background emails: confirmation to visitor (Teams join link for demos) + copy to notify_email (default hr@socprofessionals.com). 5/day per email limit.
+- Admin tabs: "Live classes" (enquiries table, status, filters, CSV, settings: demo link/times/notify email/title) and "Promotions".
+
 ## Backlog (current)
 - P2: Per-user cooldown on AI quiz/lesson generation
 - P2: Lesson quiz analytics for instructors (pass rates per lesson)

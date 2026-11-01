@@ -1,0 +1,42 @@
+{
+  "summary": "Tested Editable Promotions (public + admin CRUD/reorder/toggle/countdown/expiry) and SOC Live Classes (schedule, enquiry, rate limit, admin list/status/filters/CSV/settings) end-to-end. Backend 24/25 pass after 1 fix by testing agent; frontend landing + admin flows 100% working. Found and FIXED: '3+ years IT' experience always rejected (422) due to unescaped regex '+'. Remaining: enquiry returns 500 if message contains a phrase from the email safety scanner list (e.g. 'CVV'), even though the enquiry is already saved.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/public/live-classes/enquiry", "issue": "FIXED by testing agent: EnquiryIn.experience pattern had unescaped '+' in '3+ years IT', so it matched '3 years IT'/'33 years IT' but never the real dropdown value. Every visitor picking '3+ years IT' got 422. Changed it to '3\\+ years IT' in routes_promo.py and verified through the UI.", "priority": "HIGH"},
+      {"endpoint": "POST /api/public/live-classes/enquiry", "issue": "Returns 500 when the user's message (or name) contains a phrase from core._CRED_ASK (e.g. 'Do I need to share my CVV for fee payment?'). The cause is that _assert_safe_email raises ValueError OUTSIDE send_email's try/except. The admin-copy email includes the message. The enquiry is already inserted and the visitor email already sent, so the user sees an error and retries, which creates duplicates and uses up the 5/day limit. Same risk if an admin sets demo_link to a host that _host_ok rejects (link shortener): every demo enquiry would 500. Fix: wrap both send_email calls in try/except (or move _assert_safe_email inside the try in core.send_email), and/or validate demo_link host on settings PUT.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/admin/promos/reorder", "issue": "ids list is not validated (unknown ids silently ignored; a partial list leaves duplicate order values)."},
+      {"endpoint": "POST /api/public/live-classes/enquiry", "issue": "Two emails are sent one after another inside the request (each with a 30s httpx timeout), so a slow provider can hold the response up to 60s. Consider BackgroundTasks."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "AdminPromos move/delete, AdminLive status change", "issue": "move(), del() and set() have no try/catch, so an API failure is an unhandled promise rejection with no toast.", "affected_selectors": ["promo-up-i", "promo-down-i", "promo-delete-i", "live-enquiry-status-i"]}
+    ],
+    "design_issues": [
+      {"screen": "Landing promo spotlight", "issues": ["If an offer expires while the page is open, the card shows 'offer ended' until reload instead of hiding (only the server filters expired cards). Minor."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_promos_live_classes.py", "/app/test_reports/pytest/pytest_iter24.xml"],
+  "action_items": [
+    "Make live enquiry email sending non-fatal: catch ValueError from _assert_safe_email (or move it inside the try in core.send_email) so the enquiry never 500s after it is saved",
+    "Optionally validate demo_link host with _host_ok in PUT /api/admin/live-classes/settings",
+    "Add try/catch + toast to AdminPromos move/del and AdminLive status set",
+    "Clean up test enquiries: db.live_enquiries.deleteMany({email: /^test_/}) (all 24 current enquiries are test data, emails TEST_*@example.com lowercased)"
+  ],
+  "critical_code_review_comments": [
+    "routes_promo.py regex for experience had a quantifier bug (fixed); review other enum-style patterns for regex metacharacters, or use Literal[...] instead of pattern",
+    "send_email safety assertion runs outside the try block, so any user-supplied text can turn into a 500 on endpoints that put user input into emails",
+    "public_promos compares ends_at by ISO string. It works because both sides are UTC '+00:00' isoformat, but comparing datetimes would be safer",
+    "Tests must run with -n0 (sequential): the settings test changes demo_time, which invalidates session_at for enquiry tests running in parallel"
+  ],
+  "updated_files": ["/app/backend/routes_promo.py (escaped '+' in experience regex)", "/app/backend/tests/test_promos_live_classes.py"],
+  "success_rate": {"backend": "96% (24/25 after fix)", "frontend": "100%"},
+  "seed_data_creation": "Created 24 test live enquiries (emails test_*@example.com, incl. test_ui_batch/test_ui_demo); NOT deleted (no delete endpoint). Test promo cards were deleted. Seeded promo order/visibility (orders 0-4, all active, ends_at null) and live settings (title, Teams link, 16:00, hr@socprofessionals.com) are verified restored.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: pytest tests/test_promos_live_classes.py -n0. Email provider returned 429 during tests (handled gracefully). Server time is Nov 2026; demos 6/13/20/27 Nov, batches 13 Nov, 27 Nov, 11 Dec, 25 Dec. test_message_with_sensitive_word_no_500 is expected to fail until the CVV/_assert_safe_email fix lands.",
+  "rca of the issue": "1) Pydantic pattern '^(...|3+ years IT|...)$': '+' means 'one or more 3', so the literal '3+ years IT' does not match. Fixed with '3\\+'. 2) core.send_email calls _assert_safe_email(subject, html) before its try block. The admin email html contains the user message, so 'cvv' etc. raises ValueError, giving an unhandled 500 after db insert. Reproduce: POST enquiry with message containing 'CVV'. Mitigate: put the assertion inside the try, or catch it in live_enquiry."
+}

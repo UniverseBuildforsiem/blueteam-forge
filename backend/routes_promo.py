@@ -1,9 +1,11 @@
+import asyncio
 import re
+from urllib.parse import urlparse
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
-from core import db, now, now_iso, new_id, admin_only, audit, send_email, email_template
+from core import db, now, now_iso, new_id, admin_only, audit, send_email, email_template, _host_ok
 
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
@@ -96,6 +98,8 @@ class OrderIn(BaseModel):
 
 @router.post("/admin/promos/reorder")
 async def reorder_promos(body: OrderIn, user=Depends(admin_only)):
+    if sorted(body.ids) != sorted(await db.promos.distinct("id")):
+        raise HTTPException(400, "Send every promotion id exactly once")
     for i, pid in enumerate(body.ids):
         await db.promos.update_one({"id": pid}, {"$set": {"order": i}})
     return await db.promos.find({}, NO_ID).sort("order", 1).to_list(100)
@@ -141,7 +145,7 @@ class EnquiryIn(BaseModel):
     name: str = Field(min_length=2, max_length=80)
     email: str = Field(max_length=120)
     phone: str = Field(min_length=7, max_length=20, pattern=r"^[0-9+()\-\s]+$")
-    experience: str = Field(pattern="^(Student / fresher|0-1 years IT|1-3 years IT|3+ years IT|Already in a SOC)$")
+    experience: str = Field(pattern="^(Student / fresher|0-1 years IT|1-3 years IT|3\+ years IT|Already in a SOC)$")
     message: str = Field(default="", max_length=1000)
 
 
@@ -149,8 +153,33 @@ def fmt_ist(iso):
     return datetime.fromisoformat(iso).astimezone(IST).strftime("%A, %d %B %Y, %I:%M %p IST")
 
 
+async def safe_send(to, subject, html, fallback_html=None):
+    try:
+        await send_email(to=to, subject=subject, html=html)
+    except ValueError:
+        if fallback_html:
+            try:
+                await send_email(to=to, subject=subject, html=fallback_html)
+            except ValueError:
+                pass
+
+
+async def enquiry_emails(e, s, when, what):
+    demo = e["kind"] == "demo"
+    lines = ([f"You're registered for the SOC Live Classes free demo on {when}.", "Join from the button below at the scheduled time. It opens Microsoft Teams in your browser or app."]
+             if demo else [f"Thanks for your interest in the SOC Live Classes batch starting {when}.", "Our team will contact you shortly with the schedule, fees and enrolment steps."])
+    link = s.get("demo_link") if demo and s.get("demo_link", "").startswith("https://") else None
+    await safe_send(e["email"], f"SOC Live Classes — {what} on {when[:-4]}", email_template(e["name"], lines, link, "Join the demo" if link else None),
+                    email_template(e["name"], lines[:1] + ["The joining link will be shared before the session."]))
+    await asyncio.sleep(2)
+    base = [f"Type: {what}", f"Session: {when}", f"Name: {e['name']}", f"Email: {e['email']}", f"Phone: {e['phone']}", f"Experience: {e['experience']}"]
+    subj = f"New live class {e['kind']} enquiry: {e['name']}"
+    await safe_send(s["notify_email"], subj, email_template("team", base + [f"Message: {e['message'] or '—'}"]),
+                    email_template("team", base + ["Message: (hidden by the email safety filter — open Admin Panel › Live classes to read it)"]))
+
+
 @router.post("/public/live-classes/enquiry")
-async def live_enquiry(body: EnquiryIn):
+async def live_enquiry(body: EnquiryIn, bg: BackgroundTasks):
     email = body.email.strip().lower()
     if not EMAIL_RE.match(email):
         raise HTTPException(400, "Please enter a valid email address")
@@ -163,14 +192,7 @@ async def live_enquiry(body: EnquiryIn):
     e = {"id": new_id(), **body.model_dump(), "email": email, "name": body.name.strip(), "status": "new", "created_at": now_iso()}
     await db.live_enquiries.insert_one(dict(e))
     when = fmt_ist(body.session_at)
-    what = "free demo class" if body.kind == "demo" else "new batch"
-    lines = ([f"You're registered for the SOC Live Classes free demo on {when}.", "Join from the button below at the scheduled time. It opens Microsoft Teams in your browser or app."]
-             if body.kind == "demo" else [f"Thanks for your interest in the SOC Live Classes batch starting {when}.", "Our team will contact you shortly with the schedule, fees and enrolment steps."])
-    await send_email(to=email, subject=f"SOC Live Classes — {what} on {when[:-4]}",
-                     html=email_template(e["name"], lines, s["demo_link"] if body.kind == "demo" and s.get("demo_link", "").startswith("https://") else None, "Join the demo" if body.kind == "demo" else None))
-    await send_email(to=s["notify_email"], subject=f"New live class {body.kind} enquiry: {e['name']}",
-                     html=email_template("team", [f"Type: {what}", f"Session: {when}", f"Name: {e['name']}", f"Email: {email}", f"Phone: {body.phone}",
-                                                  f"Experience: {body.experience}", f"Message: {body.message or '—'}"]))
+    bg.add_task(enquiry_emails, e, s, when, "free demo class" if body.kind == "demo" else "new batch")
     return {"ok": True, "when": when}
 
 
@@ -208,6 +230,8 @@ async def get_live_settings(user=Depends(admin_only)):
 async def put_live_settings(body: LiveSettingsIn, user=Depends(admin_only)):
     if not EMAIL_RE.match(body.notify_email.strip()):
         raise HTTPException(400, "Invalid notification email")
+    if body.demo_link and not _host_ok(urlparse(body.demo_link).hostname or ""):
+        raise HTTPException(400, "That meeting link can't be used in emails — paste the full Teams/Meet/Zoom link")
     await db.settings.update_one({"id": "live_classes"}, {"$set": body.model_dump()}, upsert=True)
     await audit(user, "update live class settings", "live_classes")
     return await live_settings()

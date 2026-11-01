@@ -50,9 +50,9 @@ export default function AdminPromos() {
   const save = async (f) => {
     try { if (f.id) await api.put(`/admin/promos/${f.id}`, f); else await api.post("/admin/promos", f); toast.success("Card saved"); setEdit(null); load(); } catch (e) { toast.error(errMsg(e)); }
   };
-  const move = async (i, d) => { const ids = ps.map((p) => p.id); [ids[i], ids[i + d]] = [ids[i + d], ids[i]]; setPs((await api.post("/admin/promos/reorder", { ids })).data); };
+  const move = async (i, d) => { const ids = ps.map((p) => p.id); [ids[i], ids[i + d]] = [ids[i + d], ids[i]]; try { setPs((await api.post("/admin/promos/reorder", { ids })).data); } catch (e) { toast.error(errMsg(e)); load(); } };
   const toggle = async (p) => { try { await api.put(`/admin/promos/${p.id}`, { ...p, active: !p.active }); load(); } catch (e) { toast.error(errMsg(e)); } };
-  const del = async (p) => { if (!window.confirm(`Delete "${p.title}"?`)) return; await api.delete(`/admin/promos/${p.id}`); load(); };
+  const del = async (p) => { if (!window.confirm(`Delete "${p.title}"?`)) return; try { await api.delete(`/admin/promos/${p.id}`); toast.success("Card deleted"); } catch (e) { toast.error(errMsg(e)); } load(); };
   return (
     <div className="space-y-4" data-testid="admin-promos">
       <div className="flex items-center justify-between"><p className="text-sm text-slate-400">Cards in the landing page spotlight, in display order. Expired offers hide automatically.</p>

@@ -34,10 +34,11 @@ export default function PromoSpotlight() {
   const [paused, setPaused] = useState(false);
   const [tick, setTick] = useState(0);
   useEffect(() => { api.get("/public/promos").then((r) => setSlides(r.data)).catch(() => {}); }, []);
-  if (!slides.length) return null;
-  const n = slides.length;
+  const live = slides.filter((x) => !x.ends_at || new Date(x.ends_at).getTime() > Date.now());
+  if (!live.length) return null;
+  const n = live.length;
   const go = (k) => { setI((k + n) % n); setTick((x) => x + 1); };
-  const s = slides[i % n];
+  const s = live[i % n];
   const Icon = ICONS[s.icon] || ShieldCheck;
   return (
     <section className="max-w-7xl mx-auto px-6 pb-16" data-testid="promo-spotlight">
@@ -57,7 +58,7 @@ export default function PromoSpotlight() {
         </div>
         {n > 1 && <div className="flex items-center gap-2 px-8 sm:px-10 pb-6 flex-wrap">
           <button onClick={() => go(i - 1)} className="text-slate-500 hover:text-cyan-300" aria-label="Previous" data-testid="promo-prev"><ChevronLeft className="h-5 w-5" /></button>
-          {slides.map((x, k) => <button key={x.id} onClick={() => go(k)} data-testid={`promo-dot-${x.id}`}
+          {live.map((x, k) => <button key={x.id} onClick={() => go(k)} data-testid={`promo-dot-${x.id}`}
             className={`text-[11px] font-mono px-2.5 py-1 border rounded-sm transition-colors ${k === i % n ? "border-cyan-400/60 text-cyan-200 bg-cyan-500/10" : "border-white/10 text-slate-500 hover:text-slate-200"}`}>{x.title}</button>)}
           <button onClick={() => go(i + 1)} className="text-slate-500 hover:text-cyan-300" aria-label="Next" data-testid="promo-next"><ChevronRight className="h-5 w-5" /></button>
         </div>}

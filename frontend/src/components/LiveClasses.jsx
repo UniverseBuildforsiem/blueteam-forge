@@ -62,7 +62,7 @@ export default function LiveClasses() {
       <p className="text-slate-400 text-sm mt-2 max-w-2xl">{d.description}</p>
       <div className="grid lg:grid-cols-2 gap-4 mt-8">
         <div className="glass rounded-sm p-6" data-testid="live-demo-card">
-          <div className="flex items-center gap-2 font-bold"><Radio className="h-4 w-4 text-red-400" />Free demo · every Friday 4:00 PM IST</div>
+          <div className="flex items-center gap-2 font-bold"><Radio className="h-4 w-4 text-red-400" />Free demo · every Friday {d.demos[0] ? istTime(d.demos[0]) : ""} IST</div>
           <p className="text-xs text-slate-400 mt-1 mb-4">A live 1-hour walkthrough of the course on Microsoft Teams. Pick a Friday to register.</p>
           <Dates items={d.demos.map((at) => ({ at }))} kind="demo" onPick={setPick} accent="#F87171" />
         </div>
