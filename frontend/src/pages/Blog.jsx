@@ -6,6 +6,7 @@ import PublicNav, { Footer } from "../components/PublicNav";
 import { Glass, SeverityBadge, Empty } from "../components/common";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
+import { BlogTabs } from "./Series";
 
 const day = (iso) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
@@ -66,6 +67,7 @@ export function BlogList() {
     <div className="grid-bg min-h-screen">
       <PublicNav />
       <section className="max-w-7xl mx-auto px-6 pt-14 pb-20">
+        <BlogTabs active="news" />
         <div className="eyebrow mb-3">// security blog</div>
         <h1 className="text-4xl sm:text-5xl font-extrabold max-w-3xl">Today's threats, <span className="neon-text">turned into SOC action.</span></h1>
         <p className="text-slate-400 mt-4 max-w-2xl text-sm md:text-base">Fresh stories from The Hacker News and BleepingComputer every morning, summarised for analysts with the hunts, detections and fixes to run on your shift.</p>

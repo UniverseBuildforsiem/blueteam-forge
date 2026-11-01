@@ -8,6 +8,7 @@ import Catalog from "./pages/Catalog";
 import Courses from "./pages/Courses";
 import Book from "./pages/Book";
 import { BlogList, BlogPost } from "./pages/Blog";
+import { SeriesList, SeriesPost } from "./pages/Series";
 import { SopList, SopDetail } from "./pages/Sops";
 import { Login, Register, ForgotPassword, ResetPassword } from "./pages/AuthPages";
 import Onboarding from "./pages/Onboarding";
@@ -48,6 +49,8 @@ function App() {
             <Route path="/review/:token" element={<ReviewPage />} />
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/soc-series" element={<SeriesList />} />
+            <Route path="/soc-series/:slug" element={<SeriesPost />} />
             <Route path="/sops" element={<SopList />} />
             <Route path="/sops/:id" element={<SopDetail />} />
             <Route path="/login" element={<Login />} />
