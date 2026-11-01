@@ -98,3 +98,7 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Frontend: `components/InstructorExtras.jsx` (CatalogCourses, StudentsPanel + StudentDetail sheet + CSV, GradingPanel with pending/reviewed filters). Instructor tabs: Content, Catalog courses, Students, Quiz analytics, Grading, Attendance.
 - Landing: `components/LandingIntel.jsx` — live threat ticker under hero, magazine blog section, SOP showcase (live SPL/KQL preview, 12-tile grid, ₹499 offer).
 - Backlog: Admin panel (users, analytics, learning path builder), cover image upload for catalog courses (object storage).
+
+## 2026-06 Admin Panel v2 (DONE — iteration_21 backend 20/20 + self-tested builder)
+- `routes_admin.py`: invite users (72h single-use set-password email via password_reset_tokens kind=invite, `invite_pending` cleared on reset), resend invite, user detail, plan/SOP/ebook access grants + reset XP, hard delete (user data collections; payments kept for accounting; self/last-admin protected), full analytics (/api/admin/analytics/full?days=7|30|90: KPIs w/ change, daily series, revenue by product, engagement, 6-stage funnel, top performers, popular content), /api/builder/assets.
+- Frontend: `AdminAnalytics.jsx`, `AdminUsers.jsx` (invite dialog, detail sheet, type-email-to-delete), `PathBuilder.jsx` (drag & drop + arrows for modules/lessons incl. cross-module, lesson editor, attachments to quiz/lab/challenge/ctf/course/sop, student preview). Students see "practice this lesson" links (Paths.jsx LessonBody).

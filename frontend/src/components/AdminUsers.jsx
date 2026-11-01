@@ -36,7 +36,7 @@ function DeleteBox({ u, onDeleted }) {
   return (
     <div className="border border-red-500/30 bg-red-500/5 p-4 mt-6" data-testid="user-delete-box">
       <div className="text-sm font-bold text-red-300">Delete user permanently</div>
-      <p className="text-xs text-slate-400 mt-1">Removes the account and all of their progress, submissions, purchases and activity. This cannot be undone. Type <span className="font-mono text-slate-200">{u.email}</span> to confirm.</p>
+      <p className="text-xs text-slate-400 mt-1">Removes the account and all of their progress, submissions, purchases and activity (payment records are kept for accounting). This cannot be undone. Type <span className="font-mono text-slate-200">{u.email}</span> to confirm.</p>
       <div className="flex gap-2 mt-3"><input className="field" value={txt} onChange={(e) => setTxt(e.target.value)} data-testid="user-delete-confirm-input" />
         <button className="ghost-btn !border-red-500/40 !text-red-300 disabled:opacity-40" disabled={txt.trim().toLowerCase() !== u.email} onClick={del} data-testid="user-delete-button"><Trash2 className="h-4 w-4" />Delete</button></div>
     </div>);
@@ -47,7 +47,7 @@ function UserDetail({ uid, onClose, onChanged }) {
   const [d, setD] = useState(null);
   const load = () => api.get(`/admin/users/${uid}`).then((r) => setD(r.data));
   useEffect(() => { setD(null); if (uid) load(); }, [uid]); // eslint-disable-line
-  const patch = async (body, msg) => { try { await api.patch(`/admin/users/${uid}/access`, body); toast.success(msg); load(); onChanged(); } catch (e) { toast.error(errMsg(e)); } };
+  const patch = async (body, msg) => { try { await api.patch(`/admin/users/${uid}/access`, body); toast.success(msg); onChanged(); } catch (e) { toast.error(errMsg(e)); } load(); };
   const resend = async () => { try { await api.post(`/admin/users/${uid}/resend-invite`); toast.success("Invite re-sent"); } catch (e) { toast.error(errMsg(e)); } };
   const u = d?.user;
   return (
@@ -62,8 +62,8 @@ function UserDetail({ uid, onClose, onChanged }) {
           <Glass className="p-4 space-y-3" data-testid="user-access">
             <div className="flex items-center justify-between text-sm"><span>Plan</span>
               <select className="field !w-32 !py-1 text-xs" value={u.plan || "free"} onChange={(e) => patch({ plan: e.target.value }, `Plan set to ${e.target.value}`)} data-testid="user-plan-select">{["free", "pro"].map((p) => <option key={p}>{p}</option>)}</select></div>
-            {[["sop", "Full SOP library (₹499)"], ["book", "Interview ebook"]].map(([k, l]) => <label key={k} className="flex items-center justify-between text-sm"><span>{l}</span>
-              <input type="checkbox" checked={d.access[k]} onChange={(e) => patch({ [k]: e.target.checked }, e.target.checked ? `${l} granted` : `${l} removed`)} data-testid={`user-grant-${k}`} /></label>)}
+            {[["sop", "Full SOP library (₹499)"], ["book", "Interview ebook"]].map(([k, l]) => <label key={k} className="flex items-center justify-between text-sm"><span>{l}{k === "sop" && u.plan === "pro" && <span className="text-[11px] font-mono text-green-400 ml-2" data-testid="user-sop-via-pro">included with Pro</span>}</span>
+              <input type="checkbox" checked={d.access[k]} onChange={(e) => { const v = e.target.checked; setD({ ...d, access: { ...d.access, [k]: v } }); patch({ [k]: v }, v ? `${l} granted` : `${l} removed`); }} data-testid={`user-grant-${k}`} /></label>)}
             <div className="flex flex-wrap gap-2 pt-1">
               <button className="ghost-btn !text-xs" onClick={() => window.confirm("Reset XP and streak to 0?") && patch({ reset_xp: true }, "XP reset")} data-testid="user-reset-xp"><RotateCcw className="h-3.5 w-3.5" />Reset XP</button>
               {u.invite_pending && <button className="ghost-btn !text-xs" onClick={resend} data-testid="user-resend-invite"><Mail className="h-3.5 w-3.5" />Resend invite</button>}
