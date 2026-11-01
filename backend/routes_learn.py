@@ -24,6 +24,18 @@ async def public_paths():
              "modules": [m["title"] for m in p["modules"]], "lesson_count": len(lesson_ids(p))} for p in paths]
 
 
+@router.get("/public/paths/{pid}/outline")
+async def path_outline(pid: str):
+    p = await db.paths.find_one({"id": pid, "published": True}, NO_ID)
+    if not p:
+        raise HTTPException(404, "Path not found")
+    mods = [{"title": m["title"], "lessons": [{"title": l["title"], "minutes": l.get("minutes") or 10, "video": bool(l.get("video_url")),
+                                               "quiz": bool((l.get("quiz") or {}).get("required"))} for l in m["lessons"]]} for m in p["modules"]]
+    ls = [l for m in mods for l in m["lessons"]]
+    return {"id": p["id"], "title": p["title"], "description": p["description"], "level": p["level"], "category": p.get("category"),
+            "modules": mods, "lesson_count": len(ls), "minutes": sum(l["minutes"] for l in ls), "videos": sum(l["video"] for l in ls), "quizzes": sum(l["quiz"] for l in ls)}
+
+
 @router.get("/public/stats")
 async def public_stats():
     return {"learners": 12480 + await db.users.count_documents({}), "labs": await db.labs.count_documents({}) + 40,
