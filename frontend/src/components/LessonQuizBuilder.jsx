@@ -51,7 +51,7 @@ export function LessonQuizBuilder({ l, upL, level }) {
   return (
     <div className="mt-3 border border-dashed border-yellow-400/25 p-3" data-testid="lesson-quiz-builder">
       <div className="flex flex-wrap items-center gap-2"><ListChecks className="h-3.5 w-3.5 text-yellow-300" />
-        <span className="text-xs text-slate-300 flex-1" data-testid="lesson-quiz-status">{draft ? "Review the draft quiz — click a circle to set the correct answer" : n ? `${n}-question practice quiz attached` : "Lesson quiz (practice only, no XP)"}</span>
+        <span className="text-xs text-slate-300 flex-1" data-testid="lesson-quiz-status">{draft ? "Review the draft quiz — click a circle to set the correct answer" : n ? `${n}-question ${l.quiz.required ? "required" : "practice"} quiz attached` : "Lesson quiz (optional — mark it required after attaching)"}</span>
         {!draft && n > 0 && <><button className="ghost-btn !text-xs !py-1" onClick={() => setDraft(l.quiz.questions)} data-testid="lesson-quiz-edit"><Pencil className="h-3 w-3" />Edit</button>
           <button className="ghost-btn !text-xs !py-1 hover:!text-red-300" onClick={remove} data-testid="lesson-quiz-remove"><Trash2 className="h-3 w-3" />Remove</button></>}
         {!draft && <button className="glow-btn !text-xs !py-1" onClick={run} disabled={busy || !ready} data-testid="lesson-quiz-generate">

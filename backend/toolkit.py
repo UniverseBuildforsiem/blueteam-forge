@@ -37,6 +37,7 @@ BEHAVIOURS = [  # keyword, signature, MITRE technique
     ("wmi", "WMI event subscription", "T1546.003 WMI Event Subscription"), ("inbox rule", "Creates hidden mailbox rule", "T1564.008 Email Hiding Rules"), ("clear", "Clears logs or history", "T1070 Indicator Removal")]
 CMD_HINT = re.compile(r"(powershell|cmd\.exe|cmd /c|vssadmin|net user|net group|net localgroup|schtasks|rclone|curl|wget|bash -c|bash -i|chmod|7z\.exe|rundll32|mimikatz|m\.exe|nmap|useradd|xmrig|rubeus|sqlmap|whoami|find \.|dnscat|svch0st|anydesk|wmic|psexec)", re.I)
 
+SYSLOG = re.compile(r"^(?:[A-Z][a-z]{2} +\d{1,2} \d\d:\d\d|\d{4}-\d\d-\d\d[T ]\d\d:|type=\w+ msg=)")
 _cache = {"at": 0, "index": {}, "ctx": {}}
 
 
@@ -114,14 +115,14 @@ def rng(v):
     return random.Random(int(hashlib.sha256(v.encode()).hexdigest()[:12], 16))
 
 
-def vendor_table(verdict, t, r, total):
-    flagged = {"malicious": r.randint(9, 15), "suspicious": r.randint(2, 3)}.get(verdict, 0)
+def vendor_table(verdict, t, r, base_detected=None):
+    detected = base_detected if base_detected is not None else 0 if verdict not in ("malicious", "suspicious") else r.randint(30, 60) if t == "hash" else r.randint(8, 18) if verdict == "malicious" else r.randint(2, 4)
+    flagged = min({"malicious": r.randint(9, 15), "suspicious": r.randint(2, 3)}.get(verdict, 0), detected)
     labels = (["Trojan.Generic", "Malware.Heur", "Trojan.Agent", "HEUR:Trojan.Win32", "Ransom.Gen", "Backdoor.Agent"] if t == "hash"
               else ["malicious", "malware", "phishing", "suspicious"] if verdict == "malicious" else ["suspicious", "spam"])
     order = VENDORS[:]
     r.shuffle(order)
     rows = [{"vendor": n, "result": r.choice(labels) if i < flagged else ("undetected" if t == "hash" else "clean"), "flagged": i < flagged} for i, n in enumerate(order)]
-    detected = 0 if not flagged else r.randint(30, 60) if t == "hash" else r.randint(8, 18) if verdict == "malicious" else r.randint(2, 4)
     return sorted(rows, key=lambda x: not x["flagged"]), detected
 
 
@@ -138,9 +139,7 @@ async def intel_report(q, kind=None, cid=None):
     verdict = base.get("verdict") or judge(v, t, cs)
     r = rng(v)
     total = 72 if t == "hash" else 90
-    vendors, detected = vendor_table(verdict, t, r, total)
-    if base.get("detections"):
-        detected = int(base["detections"].split("/")[0])
+    vendors, detected = vendor_table(verdict, t, r, int(base["detections"].split("/")[0]) if base.get("detections") else None)
     first = base.get("first_seen") or (date(2026, 6, 1) - timedelta(days=r.randint(1, 40) if verdict != "clean" else r.randint(400, 3000))).isoformat()
     last = (date(2026, 6, 20) - timedelta(days=r.randint(0, 6))).isoformat()
     related = []
@@ -148,7 +147,7 @@ async def intel_report(q, kind=None, cid=None):
         for rt in ("ip", "domain", "hash"):
             for o in x["iocs"][rt]:
                 if o != v and not internal(o, rt) and o not in GOOD and all(o != y["value"] for y in related):
-                    related.append({"type": rt, "value": o, "relation": "seen in the same incident"})
+                    related.append({"type": rt, "value": o, "relation": "seen in the same incident" if x is cs[0] else f"also seen in: {x['title']}"})
     if t == "ip":
         details = {"country": base.get("country") or ("Internal" if internal(v, t) else r.choice(["NL", "RU", "RO", "MD", "SC", "US", "DE", "NG", "CN"])),
                    "asn": base.get("asn") or ("—" if internal(v, t) else f"AS{r.randint(10000, 65000)}"),
@@ -188,7 +187,7 @@ async def sandbox_report(file, kind, cid):
     cmds = []
     for line in text.split("\n"):
         m = CMD_HINT.search(line)
-        if m and len(cmds) < 5 and ". " not in line:
+        if m and len(cmds) < 5 and ". " not in line and not SYSLOG.match(line.strip()):
             cmd = re.sub(r"^\s*[\w\s:-]{0,30}?:\s+", "", line.strip().split("->")[-1].strip())[:110]
             if cmd not in cmds:
                 cmds.append(cmd)

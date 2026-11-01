@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 22: tested Investigation Toolkit (intel/alert-iocs/sandbox report backend + in-alert toolkit in Challenges & Labs + Tools page), Graded (required) lesson quizzes (backend + student UI + builder toggle) and 'Quiz all lessons' bulk AI generation (plan counts, generate, edit, required toggle, attach, regenerate, skip, save). New backend suite 23/23 pass; iteration-21 regression suite 22/22 pass. All requested UI flows work end-to-end with no page errors. Only minor issues found (data consistency in VT-style vendor table, cosmetic copy).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/tools/intel", "issue": "Vendor table flagged-row count can exceed the headline detection count, e.g. 185.220.101.45 shows 12/90 but 15/16 vendor rows flagged; paypa1-invoices.com 11/90 vs 13 flagged. Root cause toolkit.vendor_table: flagged=randint(9,15) is independent of `detected` (randint(8,18) or overridden by INTEL base detections). Fix: flagged = min(flagged, detected) computed after the base override."},
+      {"endpoint": "GET /api/tools/intel", "issue": "related[] entries are labelled 'seen in the same incident' even when pulled from up to 3 different alerts (cs[:3]); relation label inaccurate for cross-incident pivots."},
+      {"endpoint": "GET /api/tools/sandbox/report", "issue": "Process tree for lab files can include raw log lines as 'processes' (lab-linux-cron upload.php shows 'Jun 16 01:12:02 web-lnx-03 CRON[2201]: (root) CMD (...) (pid 2870)'). CMD_HINT extraction should skip syslog-formatted lines."},
+      {"endpoint": "toolkit.contexts()", "issue": "Context/IOC index cached 600s in-process: newly created/edited challenges or labs won't show IOCs/files in the toolkit (alert-iocs 404 for new ids) for up to 10 minutes. Invalidate cache on challenge/lab create/update."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LessonQuizBuilder status line", "issue": "When quiz is marked required, status still reads '5-question practice quiz attached' (line 54 ignores l.quiz.required).", "selector": "[data-testid='lesson-quiz-status']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Bulk quiz dialog", "issues": ["Pluralization: '1 lessons will get...', '1 lessons already have a quiz', 'Generate 1 quizzes', 'All done — 1 quizzes attached'"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_toolkit_graded_quiz.py", "/app/backend/tests/ui_setup_iter22.py", "/app/test_reports/pytest/pytest_iter22.xml"],
+  "action_items": [
+    "toolkit.vendor_table: cap flagged vendor rows to the final detection count (after INTEL base override) so 'N/90' and vendor list agree",
+    "LessonQuizBuilder: show 'required quiz attached' in lesson-quiz-status when quiz.required",
+    "Optional: fix pluralization in BulkQuiz copy; skip syslog lines in sandbox process tree; invalidate toolkit cache on challenge/lab edits; refine 'related' relation label"
+  ],
+  "critical_code_review_comments": [
+    "routes_learn.get_path strips answers for required quizzes for ALL roles (fine since builder loads via /manage/paths which keeps answers - verified).",
+    "pass_count uses ceil(n*3/5); a required quiz with 0 questions would pass with 0 answers - ensure manage validation rejects required quiz with empty questions.",
+    "Practice (non-required) quizzes still ship answers to the client by design (local grading) - acceptable since no XP.",
+    "BulkQuiz regenerate has no busy indicator on the review pane itself; the item just moves to 'generating' state (works)."
+  ],
+  "updated_files": ["/app/backend/tests/test_toolkit_graded_quiz.py", "/app/backend/tests/ui_setup_iter22.py"],
+  "success_rate": {"backend": "100% (23/23 new + 22/22 regression)", "frontend": "100% of requested flows (minor cosmetic issues only)"},
+  "seed_data_creation": "Created TEST_ paths (TEST_Graded Path via pytest, TEST_UI Graded / TEST_UI Bulk for UI) - all deleted. Student account gained +10 XP x2 from passing graded quizzes (pytest + UI).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Mission briefing dialog did not appear for ch-phish-01 for the student (probably already dismissed); toolkit is visible directly in the sheet. Use ui_setup_iter22.py create/delete to make graded/bulk test paths. Bulk AI generation took ~20-40s per lesson and worked; 3 workers in parallel.",
+  "rca of the issue": "Vendor/detection mismatch: vendor_table() draws flagged count from randint(9,15) for malicious regardless of detected value, and intel_report later overrides detected with INTEL base detections (e.g. 12) without re-capping vendor rows."
+}

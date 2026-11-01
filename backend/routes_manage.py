@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from core import db, now, now_iso, new_id, get_current_user, staff, admin_only, audit, rank_for
 
+from toolkit import _cache as toolkit_cache
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
 BG_TASKS = set()
@@ -48,6 +49,7 @@ def validate(col, doc):
                 for l in m["lessons"]:
                     assert l.get("id") and l.get("title")
                     l.setdefault("content", ""); l.setdefault("video_url", ""); l.setdefault("resources", []); l.setdefault("minutes", 10)
+                    assert not (l.get("quiz") or {}).get("required") or len(l["quiz"].get("questions") or []) >= 1
                     for q in (l.get("quiz") or {}).get("questions", []):
                         assert q["text"].strip() and len(q["options"]) == 4 and all(o.strip() for o in q["options"]) and 0 <= int(q["answer"]) < 4
         if col == "quizzes":
@@ -83,6 +85,8 @@ async def m_create(doc: dict, g=Depends(guard)):
     doc["created_by"] = user["email"]
     await db[col].insert_one(dict(doc))
     await audit(user, f"create {col}", doc["id"])
+    if col in ("challenges", "labs"):
+        toolkit_cache["at"] = 0
     return doc
 
 
@@ -96,6 +100,8 @@ async def m_update(iid: str, doc: dict, g=Depends(guard)):
     if not r.matched_count:
         raise HTTPException(404, "Not found")
     await audit(user, f"update {col}", iid)
+    if col in ("challenges", "labs"):
+        toolkit_cache["at"] = 0
     return doc
 
 
@@ -104,6 +110,8 @@ async def m_delete(iid: str, g=Depends(guard)):
     col, user = g
     await db[col].delete_one({"id": iid})
     await audit(user, f"delete {col}", iid)
+    if col in ("challenges", "labs"):
+        toolkit_cache["at"] = 0
     return {"ok": True}
 
 

@@ -118,7 +118,13 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Students: "Check your understanding" block in lessons — MCQ, instant feedback + explanations, retry, practice only (no XP).
 - New content in backend/practice_extra.py: 4 labs (Networking: port scan→SMB, C2 beaconing; Linux: cron persistence, sudo privesc), 10 challenges (5 Networking, 5 Linux), 4 quizzes (Networking, Linux, SOC Workflow, Security Foundations). Expanded suggest keyword map → every SOC L1 30-day template lesson + seeded soc-l1 lessons get a practice match (backend/tests/check_l1_matches.py).
 
+## 2026-06 Investigation Toolkit v2 + Quiz All Lessons + Graded Lesson Quizzes (DONE — iteration_22, backend 23/23 + 22/22 regression)
+- backend/toolkit.py: SIMULATED VirusTotal-style intel (vendor table, detections, community score, details, relations, seen-in) derived from INTEL + challenge/lab evidence; per-alert IOC/file extraction; generated sandbox reports per alert file. Endpoints: GET /api/tools/intel, /api/tools/alert-iocs, /api/tools/sandbox/report. Cache invalidated on challenge/lab CRUD.
+- In-alert toolkit (components/InvestigationKit.jsx) inside challenge sheets and a lab "investigate" tab; Tools page uses the same views.
+- Graded lesson quizzes: lesson.quiz.required; pass 3/5 (ceil 60%), unlimited retries, server-side grading POST /api/paths/{pid}/lessons/{lid}/quiz, auto-complete +10 XP once; answers stripped from student path view; manual complete blocked.
+- "Quiz all lessons" (components/BulkQuiz.jsx): AI drafts for lessons missing a quiz (>=150 chars content), 3 in parallel, review one by one (edit, required toggle, attach/regenerate/skip).
+
 ## Backlog (current)
-- P1: Extra investigation tools (VirusTotal-style lookup, sandbox report viewer, CyberChef decoder, threat-intel panel, case management)
-- P2: Per-user cooldown on AI quiz/lesson generation; graded lesson quizzes (would need server-side answer hiding)
+- P2: Per-user cooldown on AI quiz/lesson generation
+- P2: Lesson quiz analytics for instructors (pass rates per lesson)
 

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { QuestionEditor, RequiredToggle, generate, MIN_CONTENT } from "./LessonQuizBuilder";
 
+const pl = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 const ICON = { queued: <span className="h-3.5 w-3.5 rounded-full border border-white/20" />, running: <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400" />,
   ready: <span className="h-2 w-2 rounded-full bg-yellow-300" />, error: <AlertTriangle className="h-3.5 w-3.5 text-red-400" />, attached: <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />,
   skipped: <SkipForward className="h-3.5 w-3.5 text-slate-500" /> };
@@ -65,10 +66,10 @@ export function BulkQuiz({ mods, updateLesson, level }) {
       <DialogContent className="bg-[#0B0F1A] border-cyan-500/30 max-w-4xl" data-testid="bulk-quiz-dialog">
         <DialogHeader><DialogTitle className="font-mono">Quiz all lessons</DialogTitle></DialogHeader>
         {!items.length ? <div className="space-y-3 text-sm" data-testid="bulk-quiz-plan">
-          <div><span className="text-green-300 font-mono" data-testid="bulk-quiz-target-count">{p.targets.length}</span> lessons will get an AI-drafted 5-question quiz for you to review one by one.</div>
-          {p.has > 0 && <div className="text-slate-400 text-xs" data-testid="bulk-quiz-has-count">{p.has} lessons already have a quiz and will be skipped.</div>}
-          {p.short.length > 0 && <div className="text-slate-400 text-xs" data-testid="bulk-quiz-short-count">{p.short.length} lessons have under {MIN_CONTENT} characters of content and will be skipped: <span className="text-slate-500">{p.short.map((l) => l.title).join(" · ")}</span></div>}
-          <button className="glow-btn" disabled={!p.targets.length} onClick={start} data-testid="bulk-quiz-start">Generate {p.targets.length} quizzes</button>
+          <div><span className="text-green-300 font-mono" data-testid="bulk-quiz-target-count">{p.targets.length}</span> {p.targets.length === 1 ? "lesson" : "lessons"} will get an AI-drafted 5-question quiz for you to review one by one.</div>
+          {p.has > 0 && <div className="text-slate-400 text-xs" data-testid="bulk-quiz-has-count">{pl(p.has, "lesson")} already {p.has === 1 ? "has" : "have"} a quiz and will be skipped.</div>}
+          {p.short.length > 0 && <div className="text-slate-400 text-xs" data-testid="bulk-quiz-short-count">{pl(p.short.length, "lesson")} {p.short.length === 1 ? "has" : "have"} under {MIN_CONTENT} characters of content and will be skipped: <span className="text-slate-500">{p.short.map((l) => l.title).join(" · ")}</span></div>}
+          <button className="glow-btn" disabled={!p.targets.length} onClick={start} data-testid="bulk-quiz-start">Generate {p.targets.length === 1 ? "1 quiz" : `${p.targets.length} quizzes`}</button>
         </div> : <div className="grid md:grid-cols-[240px_1fr] gap-4">
           <div className="space-y-1 max-h-[62vh] overflow-y-auto pr-1" data-testid="bulk-quiz-list">
             <div className="text-[11px] font-mono text-slate-500 mb-2" data-testid="bulk-quiz-progress">{done} attached · {ready.length} to review · {items.filter((x) => ["queued", "running"].includes(x.status)).length} generating</div>
@@ -79,7 +80,7 @@ export function BulkQuiz({ mods, updateLesson, level }) {
           {current ? <Review key={current.id} item={current} onSkip={() => next(current.id, { status: "skipped" })} onRetry={() => { setSel(null); runOne(mods.flatMap((m) => m.lessons).find((l) => l.id === current.id)); }}
             onAttach={(qs, req) => { updateLesson(current.id, (l) => ({ ...l, quiz: { questions: qs, required: req } })); next(current.id, { status: "attached" }); }} />
             : <div className="text-sm text-slate-400 flex items-center justify-center min-h-[200px]" data-testid="bulk-quiz-waiting">
-              {items.some((x) => ["queued", "running"].includes(x.status)) ? "Drafting quizzes — the first one appears here in about 30 seconds..." : `All done — ${done} quizzes attached. Close this window and Save the path.`}</div>}
+              {items.some((x) => ["queued", "running"].includes(x.status)) ? "Drafting quizzes — the first one appears here in about 30 seconds..." : `All done — ${done === 1 ? "1 quiz" : `${done} quizzes`} attached. Close this window and Save the path.`}</div>}
         </div>}
       </DialogContent>
     </Dialog>
