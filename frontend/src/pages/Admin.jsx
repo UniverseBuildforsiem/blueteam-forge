@@ -7,6 +7,8 @@ import { Glass, PageHeader, Empty } from "../components/common";
 import ContentEditor from "../components/ContentEditor";
 import AdminAnalytics from "../components/AdminAnalytics";
 import AdminUsers from "../components/AdminUsers";
+import AdminPromos from "../components/AdminPromos";
+import AdminLive from "../components/AdminLive";
 
 function Publishing() {
   const [items, setItems] = useState([]);
@@ -66,7 +68,7 @@ function Settings() {
   );
 }
 
-const TABS = [["analytics", "Analytics", AdminAnalytics], ["users", "Users", AdminUsers], ["publishing", "Publishing", Publishing], ["builder", "Path builder", () => <ContentEditor kind="paths" />],
+const TABS = [["analytics", "Analytics", AdminAnalytics], ["users", "Users", AdminUsers], ["live", "Live classes", AdminLive], ["promos", "Promotions", AdminPromos], ["publishing", "Publishing", Publishing], ["builder", "Path builder", () => <ContentEditor kind="paths" />],
   ["categories", "Categories", () => <SimpleList kind="categories" fields={["name"]} />], ["certificates", "Certificates", Certs],
   ["announcements", "Announcements", () => <SimpleList kind="announcements" fields={["title", "body"]} />], ["audit", "Audit logs", Audit], ["settings", "Settings", Settings]];
 
