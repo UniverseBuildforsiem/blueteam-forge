@@ -183,3 +183,4 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 ## Landing tweaks (2026-06)
 - Removed "// threat briefing · updated daily" magazine section (LandingIntel now renders only SOP showcase)
 - Learning paths: LandingPaths.jsx image cards (5 AI images in user's reference style, mapped by path id), framer-motion slide-in stagger, slow Ken Burns zoom, hover glow + scanline sweep (index.css .path-card/.path-img)
+- Path preview popup (2026-06): landing path cards open a dialog (LandingPaths.jsx PathPreview) with outline from GET /api/public/paths/{id}/outline (module/lesson titles, minutes, video/quiz flags, totals; no content). Logged out: "Sign up to start this path" stores localStorage pending_path -> after onboarding/login lands on /app/paths/{id} (takePendingCase); "View pricing" scrolls to #pricing. Logged in: "Open this path".

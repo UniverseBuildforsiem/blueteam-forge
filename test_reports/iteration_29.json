@@ -1,0 +1,22 @@
+{
+  "summary": "Path Preview Popup tested end-to-end. Backend: GET /api/public/paths/{id}/outline is correct for all 5 paths. Each lesson exposes only title, minutes, video and quiz booleans; counts and totals match; unknown id returns 404; no auth needed; no _id. Frontend: all 5 landing cards open the path-preview dialog with title, stats, modules, lesson titles, minutes and lock icons, and no lesson content. Dialog closes with Escape and with X. View pricing closes the dialog and scrolls #pricing into view. Logged-out Sign up -> /register sets pending_path. A new user registers, picks a different onboarding goal (soc-l1) and still lands on /app/paths/soc-l2; pending_path is cleared. Existing student: logged-out start -> register -> login link -> login lands on /app/paths/incident-response. Logged in: the button reads 'Open this path', pricing is hidden, footer says 'Pick up right where you left off.', and the button goes to /app/paths/soc-l1. No page errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_path_preview_outline.py", "/app/test_reports/pytest/iter29_outline.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Product note, outside this feature: the new FREE user who landed on /app/paths/soc-l2 (paid tier per pricing: 'Free = SOC Fundamentals path') saw full lesson content and 'Mark as complete'. Paths are not plan-gated, so the popup's 'Sign up to start' with a paid path gives free access. Confirm this is intended.",
+    "takePendingCase prefers pending_path over pending_case and clears both. Fine, but a stale pending_path (under 1h) from an earlier click overrides a newer pending_case click.",
+    "PathPreview shows 'outline unavailable' when the fetch fails, but there is no retry button (minor)."
+  ],
+  "updated_files": ["/app/backend/tests/test_path_preview_outline.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100%"},
+  "seed_data_creation": "Registered TEST users test_pp_<ts>@example.com and test_pp2_<ts>@example.com (password TestPass@123)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Path preview popup is in LandingPaths.jsx. Outline endpoint is in routes_learn.py path_outline. Scroll each card into view and wait about 900ms before clicking (framer-motion whileInView). Onboarding goal testids: onboarding-goal-{soc-l1|soc-l2|ir|interview-prep}, then onboarding-continue-button."
+}
