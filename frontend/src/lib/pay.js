@@ -5,12 +5,13 @@ const loadScript = (src) => new Promise((res, rej) => {
   const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.body.appendChild(s);
 });
 
-export async function payRazorpay(item, description, onPaid, onError, ref) {
+export async function payRazorpay(item, description, onPaid, onError, ref, onDismiss) {
   await loadScript("https://checkout.razorpay.com/v1/checkout.js");
   const { data } = await api.post("/payments/razorpay/order", { plan: item, ...(ref ? { ref } : {}) });
   new window.Razorpay({
     key: data.key_id, amount: data.amount, currency: "INR", order_id: data.order_id, name: "SOCProfessionals Academy", description,
     prefill: { name: data.name, email: data.email }, theme: { color: "#00F0FF" },
+    ...(onDismiss ? { modal: { ondismiss: onDismiss } } : {}),
     handler: async (r) => { try { await api.post("/payments/razorpay/verify", r); onPaid(); } catch (e) { onError(e); } },
   }).open();
 }

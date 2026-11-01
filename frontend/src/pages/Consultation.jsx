@@ -25,6 +25,20 @@ function SlotPicker({ days, slot, setSlot }) {
   </div>);
 }
 
+function MyBookings() {
+  const { user } = useAuth();
+  const [bs, setBs] = useState([]);
+  useEffect(() => { if (user) api.get("/consultations/mine").then((r) => setBs(r.data)).catch(() => {}); }, [user]);
+  if (!bs.length) return null;
+  return (
+    <Glass className="p-5" data-testid="consult-my-bookings">
+      <div className="font-bold text-sm mb-2">Your bookings</div>
+      {bs.map((b, i) => <div key={b.id} className="flex justify-between gap-3 text-xs font-mono py-1.5 border-b border-white/5" data-testid={`consult-my-booking-${i}`}>
+        <span>{dayLbl(b.slot_at.slice(0, 10))} · {tLbl(b.slot_at)} IST · {b.topic}</span>
+        <span className={b.status === "paid" ? "text-green-400" : b.status === "needs_reschedule" ? "text-orange-300" : "text-slate-400"}>{b.status === "needs_reschedule" ? "we'll call to reschedule" : b.status === "paid" ? "confirmed" : b.status}</span></div>)}
+    </Glass>);
+}
+
 function Booking({ info, cfg, onDone }) {
   const { user } = useAuth();
   const [slot, setSlot] = useState(null);
@@ -35,8 +49,11 @@ function Booking({ info, cfg, onDone }) {
     setBusy(via);
     try {
       const { data } = await api.post("/consultations/hold", { slot_at: slot, ...f });
-      if (via === "razorpay") await payRazorpay("soc-consultation", `Consultation · ${data.when}`, () => onDone(data.when), (e) => toast.error(errMsg(e)), data.id);
-      else await payCashfree("soc-consultation", f.phone.replace(/\D/g, "").slice(-10), cfg.cashfree_mode, data.id);
+      const release = () => api.post(`/consultations/${data.id}/release`).catch(() => {});
+      try {
+        if (via === "razorpay") await payRazorpay("soc-consultation", `Consultation · ${data.when}`, () => onDone(data.when), (e) => toast.error(errMsg(e)), data.id, release);
+        else await payCashfree("soc-consultation", f.phone.replace(/\D/g, "").slice(-10), cfg.cashfree_mode, data.id);
+      } catch (e) { release(); throw e; }
     } catch (e) { toast.error(errMsg(e)); }
     setBusy("");
   };
@@ -75,7 +92,7 @@ export default function Consultation() {
   return (
     <div className="grid-bg min-h-screen">
       <PublicNav />
-      <section className="max-w-7xl mx-auto px-6 pt-10 pb-20 grid lg:grid-cols-[1fr_1.15fr] gap-10">
+      <section className="max-w-7xl mx-auto px-6 pt-10 pb-20 grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-10">
         <div className="rise">
           <div className="eyebrow mb-4">// 1:1 expert consultation · 30 min</div>
           <h1 className="text-4xl sm:text-5xl font-extrabold" data-testid="consult-title">Book a Cyber & SOC Consultation with Our Experts</h1>
@@ -86,7 +103,7 @@ export default function Consultation() {
         {done ? <Glass className="p-8 text-center space-y-3" data-testid="consult-success"><CheckCircle2 className="h-10 w-10 text-green-400 mx-auto" /><div className="text-xl font-bold">You're booked!</div>
           <p className="text-sm text-slate-300">Your consultation for {done} is confirmed. A confirmation email is on its way, and our expert will share the meeting link before the session.</p>
           <a href={waLink(info?.whatsapp || "919381203090", `Hi SOCProfessionals, I've booked a consultation for ${done}.`)} target="_blank" rel="noopener noreferrer" className="ghost-btn" data-testid="consult-success-whatsapp"><MessageCircle className="h-4 w-4" />Message us on WhatsApp</a></Glass>
-          : info && <Booking info={info} cfg={cfg} onDone={(w) => { setDone(w); load(); }} />}
+          : info && <div className="min-w-0 space-y-4"><MyBookings key={done || "x"} /><Booking info={info} cfg={cfg} onDone={(w) => { setDone(w); load(); }} /></div>}
       </section>
       <Footer />
     </div>);

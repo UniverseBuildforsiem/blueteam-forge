@@ -55,11 +55,13 @@ async def hold_slot(body: HoldIn, user=Depends(get_current_user)):
     if body.topic not in TOPICS:
         raise HTTPException(422, "Pick a topic from the list")
     info = await consultation_info()
-    free = {x["at"] for d in info["days"] for x in d["slots"] if x["free"]}
+    every = {x["at"]: x["free"] for d in info["days"] for x in d["slots"]}
+    if body.slot_at not in every:
+        raise HTTPException(400, "Invalid slot — please pick a time from the list")
     mine = await db.consultations.find_one({"user_id": user["id"], "slot_at": body.slot_at, "status": "pending"}, NO_ID)
-    if body.slot_at not in free and not mine:
+    if not every[body.slot_at] and not mine:
         raise HTTPException(409, "That slot was just taken — please pick another time")
-    await db.consultations.delete_many({"user_id": user["id"], "status": "pending"})
+    await db.consultations.update_many({"user_id": user["id"], "status": "pending"}, {"$set": {"status": "abandoned"}})
     c = {"id": new_id(), "user_id": user["id"], "name": user["name"], "email": user["email"], **body.model_dump(), "status": "pending",
          "hold_until": (now() + timedelta(minutes=HOLD_MIN)).isoformat(), "amount": PRICE, "created_at": now_iso()}
     await db.consultations.insert_one(dict(c))
@@ -70,17 +72,34 @@ async def check_hold(ref, user):
     c = await db.consultations.find_one({"id": ref, "user_id": user["id"]}, NO_ID)
     if not c or c["status"] != "pending":
         raise HTTPException(400, "Your slot hold expired — please pick a time again")
-    clash = await db.consultations.find_one({"slot_at": c["slot_at"], "id": {"$ne": ref}, "$or": [{"status": "paid"}, {"status": "pending", "hold_until": {"$gt": now().isoformat()}}]})
+    clash = await db.consultations.find_one({"slot_at": c["slot_at"], "id": {"$ne": ref}, "$or": [{"status": {"$in": ["paid", "completed"]}}, {"status": "pending", "hold_until": {"$gt": now().isoformat()}}]})
     if clash:
         raise HTTPException(409, "That slot was just taken — please pick another time")
     await db.consultations.update_one({"id": ref}, {"$set": {"hold_until": (now() + timedelta(minutes=HOLD_MIN)).isoformat()}})
 
 
+@router.post("/consultations/{cid}/release")
+async def release_hold(cid: str, user=Depends(get_current_user)):
+    await db.consultations.update_one({"id": cid, "user_id": user["id"], "status": "pending"}, {"$set": {"status": "abandoned"}})
+    return {"ok": True}
+
+
 async def confirm_consultation(ref, payment_id):
-    c = await db.consultations.find_one_and_update({"id": ref, "status": "pending"}, {"$set": {"status": "paid", "payment_id": payment_id, "paid_at": now_iso()}}, projection=NO_ID)
+    c = await db.consultations.find_one({"id": ref}, NO_ID)
+    if not c or c["status"] not in ("pending", "abandoned"):
+        return
+    clash = await db.consultations.find_one({"slot_at": c["slot_at"], "id": {"$ne": ref}, "status": {"$in": ["paid", "completed"]}})
+    status = "needs_reschedule" if clash else "paid"
+    c = await db.consultations.find_one_and_update({"id": ref, "status": {"$in": ["pending", "abandoned"]}}, {"$set": {"status": status, "payment_id": payment_id, "paid_at": now_iso()}}, projection=NO_ID)
     if not c:
         return
     s, when = await live_settings(), fmt_ist(c["slot_at"])
+    if status == "needs_reschedule":
+        await safe_send(c["email"], "Consultation payment received — we'll confirm your time", email_template(c["name"], [
+            f"We received your ₹{c['amount']} payment, but the {when} slot was booked by someone else moments earlier.", "Our team will contact you shortly to fix a new time that suits you."]))
+        await safe_send(s["notify_email"], f"ACTION: reschedule paid consultation — {c['name']}", email_template("team", [
+            f"Paid slot clash at {when}. Please call {c['name']} ({c['phone']}, {c['email']}) to reschedule.", f"Payment: {payment_id}"]))
+        return
     await safe_send(c["email"], f"Consultation booked — {when}", email_template(c["name"], [
         f"Your 30-minute Cyber & SOC consultation is confirmed for {when}.", f"Topic: {c['topic']}. Amount paid: ₹{c['amount']}.",
         "Our expert will share the meeting link on your email and WhatsApp before the session. Keep your questions ready!"]))
@@ -91,21 +110,21 @@ async def confirm_consultation(ref, payment_id):
 
 @router.get("/consultations/mine")
 async def my_consultations(user=Depends(get_current_user)):
-    return await db.consultations.find({"user_id": user["id"], "status": {"$in": ["paid", "completed"]}}, NO_ID).sort("slot_at", -1).to_list(50)
+    return await db.consultations.find({"user_id": user["id"], "status": {"$in": ["paid", "completed", "needs_reschedule"]}}, NO_ID).sort("slot_at", -1).to_list(50)
 
 
 @router.get("/admin/consultations")
 async def admin_consultations(user=Depends(admin_only)):
-    return await db.consultations.find({"status": {"$in": ["paid", "completed", "cancelled"]}}, NO_ID).sort("slot_at", -1).to_list(2000)
+    return await db.consultations.find({"status": {"$in": ["paid", "completed", "cancelled", "needs_reschedule"]}}, NO_ID).sort("slot_at", -1).to_list(2000)
 
 
 class CStatusIn(BaseModel):
-    status: str = Field(pattern="^(paid|completed|cancelled)$")
+    status: str = Field(pattern="^(paid|completed|cancelled|needs_reschedule)$")
 
 
 @router.patch("/admin/consultations/{cid}")
 async def consultation_status(cid: str, body: CStatusIn, user=Depends(admin_only)):
-    if not (await db.consultations.update_one({"id": cid, "status": {"$ne": "pending"}}, {"$set": {"status": body.status}})).matched_count:
+    if not (await db.consultations.update_one({"id": cid, "status": {"$nin": ["pending", "abandoned"]}}, {"$set": {"status": body.status}})).matched_count:
         raise HTTPException(404, "Consultation not found")
     await audit(user, f"consultation {body.status}", cid)
     return {"ok": True}

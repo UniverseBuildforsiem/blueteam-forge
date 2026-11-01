@@ -1,0 +1,45 @@
+{
+  "summary": "Tested the ₹99 Cyber & SOC Consultation (public slots, holds, payment gating, simulated paid flow, admin list/status), per-batch seat counters, live settings (seats/WhatsApp/consult hours/days) and wa.me click-to-chat links, end-to-end on backend and frontend. Backend: 15/15 pytest pass. Frontend: landing promo, seats/batch full, enquiry WhatsApp link, /consultation logged-out and logged-in, and admin Live tab (seats save, consultations table and status change, enquiry WhatsApp, settings save/validation) all work. I found no blocking bugs. The main risks are in payment-to-booking edge cases (double booking or a lost booking), and there is a layout issue on /consultation.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "routes_consult.confirm_consultation", "issue": "Double booking is possible. When payment succeeds, the code does not re-check whether the slot is still free. If the 15-min hold expires while the user is in checkout, another user can hold and pay for the same slot, and both bookings become 'paid'."},
+      {"endpoint": "POST /api/consultations/hold + confirm_consultation", "issue": "A paid booking can be lost. hold_slot runs delete_many on all of the user's pending holds. If the user starts a new hold (for example in another tab) while a Razorpay/Cashfree payment is in flight, the original pending doc is deleted. confirm_consultation then finds nothing and returns silently: money is captured, there is no booking, no email is sent and admin is not alerted. Suggested fix: if the consultation is missing or the slot clashes on confirm, still record it with status 'needs_reschedule' and alert hr@; do not delete holds that have a created payment."},
+      {"endpoint": "routes_consult.check_hold", "issue": "The clash query checks only status 'paid', while taken_slots also treats 'completed' as taken. This is inconsistent, though low impact."},
+      {"endpoint": "POST /api/consultations/hold", "issue": "An invalid or past slot_at returns 409 'That slot was just taken', which is misleading. Use 400 'Invalid slot'."},
+      {"endpoint": "Email on consultation confirm", "issue": "In one simulated confirmation, one of the two emails got a 422 from the email provider (non-fatal, logged). In the other run both returned 202. Likely intermittent at the provider."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Student viewing own booking", "issue": "GET /api/consultations/mine is not used anywhere in the frontend. After leaving the success screen, a student cannot see their booked consultation (for example on the dashboard, Billing or /consultation).", "affected_selectors": []},
+      {"flow": "Razorpay modal dismissed", "issue": "The slot stays held (pending) for 15 minutes. There is no release endpoint and no ondismiss handler, so the student and others see the slot as taken until it expires.", "affected_selectors": ["consult-pay-razorpay"]}
+    ],
+    "design_issues": [
+      {"screen": "/consultation (desktop 1920)", "issues": ["The left column is squeezed to about 290px. The H1 wraps onto 5 lines, and the eyebrow '// 1:1 expert consultation · 30 min' and the extras wrap awkwardly. Cause: the horizontal day scroller (shrink-0 buttons) in the right grid column inflates its min-content width. Fix: add min-w-0 to the right column/Glass (and to the Booking wrapper)."]},
+      {"screen": "Admin Live settings", "issues": ["Consult start/end and the demo/batch times use the browser's native time input instead of a styled picker. Minor.", "The consultation-row WhatsApp/email links have no data-testid."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_consultation_seats.py", "/app/backend/tests/consult_pay_sim.py", "/app/test_reports/pytest/pytest_iter25.xml"],
+  "action_items": [
+    "Make confirm_consultation robust: if the consultation is missing (deleted by a re-hold) or the slot has already been paid by someone else, keep a record (for example status 'needs_reschedule') and email hr@ instead of returning silently",
+    "In hold_slot, avoid deleting pending holds that already have a created payment order (or re-check the slot when payment completes)",
+    "Add min-w-0 to the right column on /consultation so the left hero is not squeezed",
+    "Show the student's booked consultations (GET /api/consultations/mine) somewhere in the UI",
+    "Optional: release the hold on Razorpay modal dismiss; return 400 for invalid slot_at; include 'completed' in the check_hold clash query"
+  ],
+  "critical_code_review_comments": [
+    "Paid-but-not-booked and double-booking edge cases in the hold → pay → confirm flow (see minor backend issues)",
+    "confirm_consultation sends two emails inline inside the Razorpay verify request (up to 30s each), which slows the payment success response. Consider BackgroundTasks, as already done for enquiries",
+    "PUT /admin/live-classes/batches upserts an override for any start string without checking it is a real upcoming batch",
+    "Changing default_seats does not affect batches whose seats were saved explicitly in admin (a stored override), which may confuse admins"
+  ],
+  "updated_files": ["/app/backend/tests/test_consultation_seats.py (new)", "/app/backend/tests/consult_pay_sim.py (new helper: simulate payment / cleanup)"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% of requested flows"},
+  "seed_data_creation": "All test data is cleaned up: test consultations (notes TEST_*), payments (id TEST_order_*) and live enquiries (test_* emails) are deleted. The batch_seats override for 2026-12-25 (8) is removed. Live settings are verified restored (default_seats 8, whatsapp 919381203090, 16:00-23:00, all 7 days, original Teams link/title/notify email).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: pytest tests/test_consultation_seats.py -n0 (sequential; settings test changes consult hours). Payment success is simulated with `python3 tests/consult_pay_sim.py pay <hold_id> <user_id>`, and `... cleanup` removes TEST data. Razorpay/Cashfree keys are intentionally missing (orders return 503; the UI shows consult-pay-not-configured and both pay buttons stay disabled). Server time is Nov 2026, and the batches are 13 Nov, 27 Nov, 11 Dec and 25 Dec. Auth playbook items were not re-verified this iteration.",
+  "rca of the issue": "Lost booking: hold_slot → db.consultations.delete_many({user_id, status:'pending'}) removes a hold whose payment is still in progress; activate() → confirm_consultation() does find_one_and_update({id: ref, status:'pending'}), gets None and returns. Double booking: confirm_consultation does not check for other paid consultations with the same slot_at, and an expired hold lets another user take the slot."
+}

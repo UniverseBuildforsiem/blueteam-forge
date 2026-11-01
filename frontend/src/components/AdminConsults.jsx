@@ -39,7 +39,7 @@ export function Consultations() {
           <td className="px-2 py-2 text-xs"><a href={`mailto:${c.email}`} className="text-cyan-300 hover:underline">{c.email}</a>
             <a href={waLink(waNum(c.phone), `Hi ${c.name}, this is SOCProfessionals about your consultation on ${ist(c.slot_at)}.`)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-300 hover:underline"><MessageCircle className="h-3 w-3" />{c.phone}</a></td>
           <td className="px-2 py-2 text-xs">{c.topic}</td><td className="px-2 py-2 text-xs text-slate-400 max-w-[220px]">{c.notes || "—"}</td><td className="px-2 py-2 text-xs font-mono">₹{c.amount}</td>
-          <td className="px-2 py-2"><select className="field !py-1 text-xs" value={c.status} onChange={(e) => set(c, e.target.value)} data-testid={`consult-status-${i}`}>{["paid", "completed", "cancelled"].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}</tbody>
+          <td className="px-2 py-2"><select className="field !py-1 text-xs" value={c.status} onChange={(e) => set(c, e.target.value)} data-testid={`consult-status-${i}`}>{["paid", "completed", "cancelled", "needs_reschedule"].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}</tbody>
       </table></div>}
     </Glass>);
 }

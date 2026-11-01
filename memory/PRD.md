@@ -141,6 +141,12 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - SOC Live Classes (landing, after the spotlight): free demo every Friday 16:00 IST (next 4), new batches on 2nd & 4th Fridays (next 4). Enquiry form (name/email/phone/experience/message) -> db.live_enquiries; background emails: confirmation to visitor (Teams join link for demos) + copy to notify_email (default hr@socprofessionals.com). 5/day per email limit.
 - Admin tabs: "Live classes" (enquiries table, status, filters, CSV, settings: demo link/times/notify email/title) and "Promotions".
 
+## 2026-06 ₹99 Expert Consultation + Batch Seat Counter + WhatsApp click-to-chat (DONE — iteration_25 15/15 backend + frontend; fixes self-tested)
+- routes_consult.py: 30-min slots (default 16:00–23:00 IST, every day; editable start/end/days in Live settings), 15-min holds, plan "soc-consultation" (₹99, MRP ₹999) via existing Razorpay/Cashfree with PlanIn.ref; activate() -> confirm_consultation (paid, or needs_reschedule on clash) + emails to user + notify_email. Release on checkout dismiss. /consultation page (slot picker, topic, phone, notes, My bookings) + landing ConsultationPromo.
+- Batch seats: default_seats 8 + per-batch override db.batch_seats; non-closed enquiries take seats; full -> 409 + 'batch full' UI.
+- WhatsApp: no API (user declined) — wa.me click-to-chat to 919381203090 (editable) after enquiries/on consultation page; admin WhatsApp links to each lead.
+- NOTE: RAZORPAY_KEY_ID/SECRET and CASHFREE_CLIENT_ID/SECRET/BASE_URL are NOT set — checkout shows 'payments open soon' until added.
+
 ## Backlog (current)
 - P2: Per-user cooldown on AI quiz/lesson generation
 - P2: Lesson quiz analytics for instructors (pass rates per lesson)
