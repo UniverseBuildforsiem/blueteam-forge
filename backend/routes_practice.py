@@ -78,7 +78,8 @@ async def submit_challenge(cid: str, body: TriageIn, user=Depends(get_current_us
     sub = {"id": prev["id"] if prev else new_id(), "user_id": user["id"], "user_name": user["name"], "challenge_id": cid, "challenge_title": c["title"],
            "category": c["category"], "verdict": body.verdict, "verdict_correct": vc, "report": body.report, "auto_score": score,
            "keywords_hit": hits, "status": "resubmitted" if prev else "auto-graded", "instructor_grade": (prev or {}).get("instructor_grade"),
-           "feedback": (prev or {}).get("feedback", ""), "created_at": now_iso()}
+           "feedback": (prev or {}).get("feedback", ""), "created_at": now_iso(),
+           "investigated": bool((prev or {}).get("investigated") or await db.toolkit_usage.find_one({"user_id": user["id"], "challenge_id": cid}, {"_id": 1}))}
     await db.challenge_submissions.replace_one({"user_id": user["id"], "challenge_id": cid}, dict(sub), upsert=True)
     if not prev:
         await award(user["id"], round(c["points"] * score / 100), f"Triaged alert '{c['title']}' ({score}/100)")
@@ -459,7 +460,14 @@ async def saved_delete(sid: str, user=Depends(get_current_user)):
 # ---------- Investigation tools ----------
 @router.get("/tools/intel")
 async def intel(q: str = Query(min_length=3, max_length=300), kind: Optional[str] = None, id: Optional[str] = None, user=Depends(get_current_user)):
-    return await intel_report(q, kind, id)
+    r = await intel_report(q, kind, id)
+    await log_toolkit(user, kind, id)
+    return r
+
+
+async def log_toolkit(user, kind, cid):
+    if kind == "challenge" and cid and await db.challenges.find_one({"id": cid}, {"_id": 1}):
+        await db.toolkit_usage.update_one({"user_id": user["id"], "challenge_id": cid}, {"$setOnInsert": {"first_at": now_iso()}, "$inc": {"uses": 1}}, upsert=True)
 
 
 @router.get("/tools/alert-iocs")
@@ -475,6 +483,7 @@ async def sandbox_for_file(file: str = Query(max_length=300), kind: str = Query(
     r = await sandbox_report(file, kind, id)
     if not r:
         raise HTTPException(404, "File not found in this alert")
+    await log_toolkit(user, kind, id)
     return r
 
 

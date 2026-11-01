@@ -50,15 +50,17 @@ export function AlertToolkit({ kind, id }) {
   const [view, setView] = useState(null);
   const [busy, setBusy] = useState("");
   useEffect(() => { api.get("/tools/alert-iocs", { params: { kind, id } }).then((r) => setData(r.data)).catch(() => setData({ iocs: [], files: [] })); }, [kind, id]);
-  const lookup = async (q) => { setBusy(q); try { setView({ type: "intel", r: (await api.get("/tools/intel", { params: { q, kind, id } })).data }); } catch (e) { toast.error(errMsg(e)); } setBusy(""); };
-  const detonate = async (file) => { setBusy(file); try { setView({ type: "sandbox", r: (await api.get("/tools/sandbox/report", { params: { file, kind, id } })).data }); } catch (e) { toast.error(errMsg(e)); } setBusy(""); };
+  const [used, setUsed] = useState(false);
+  const lookup = async (q) => { setBusy(q); try { setView({ type: "intel", r: (await api.get("/tools/intel", { params: { q, kind, id } })).data }); setUsed(true); } catch (e) { toast.error(errMsg(e)); } setBusy(""); };
+  const detonate = async (file) => { setBusy(file); try { setView({ type: "sandbox", r: (await api.get("/tools/sandbox/report", { params: { file, kind, id } })).data }); setUsed(true); } catch (e) { toast.error(errMsg(e)); } setBusy(""); };
   if (!data) return null;
   const chip = (key, label, sub, onClick, tid) => <button key={key} onClick={onClick} disabled={!!busy} data-testid={tid}
     className={`inline-flex items-center gap-1.5 text-xs font-mono border px-2 py-1 transition-colors ${busy === key ? "border-cyan-400 animate-pulse" : "border-white/10 hover:border-cyan-400/50"}`}>
     <span className="text-[10px] uppercase text-cyan-400">{sub}</span><span className="truncate max-w-[230px]">{label}</span></button>;
   return (
     <div className="border border-cyan-500/20 bg-cyan-500/[0.03] p-3 space-y-3" data-testid="alert-toolkit">
-      <div className="eyebrow flex items-center gap-2"><Search className="h-3.5 w-3.5" />investigation toolkit</div>
+      <div className="eyebrow flex items-center gap-2"><Search className="h-3.5 w-3.5" />investigation toolkit
+        {kind === "challenge" && <span className={`ml-auto normal-case text-[10px] ${used ? "text-green-400" : "text-slate-500"}`} data-testid="alert-toolkit-badge-hint">{used ? "✓ investigated — counts toward Evidence badges" : "look something up before your verdict to earn Evidence badges"}</span>}</div>
       {data.iocs.length + data.files.length === 0 && <div className="text-[11px] font-mono text-slate-500" data-testid="alert-toolkit-empty">no indicators or files in this alert — use the evidence and your judgement</div>}
       {data.iocs.length > 0 && <div><div className="text-[10px] font-mono uppercase text-slate-500 mb-1.5">reputation lookup</div><div className="flex flex-wrap gap-2">
         {data.iocs.map((x, i) => chip(x.value, x.value, x.internal ? `${x.type} · internal` : x.type, () => lookup(x.value), `alert-ioc-${i}`))}</div></div>}

@@ -124,6 +124,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Graded lesson quizzes: lesson.quiz.required; pass 3/5 (ceil 60%), unlimited retries, server-side grading POST /api/paths/{pid}/lessons/{lid}/quiz, auto-complete +10 XP once; answers stripped from student path view; manual complete blocked.
 - "Quiz all lessons" (components/BulkQuiz.jsx): AI drafts for lessons missing a quiz (>=150 chars content), 3 in parallel, review one by one (edit, required toggle, attach/regenerate/skip).
 
+## 2026-06 Investigation (Evidence) Badges (DONE — self-tested curl + screenshot)
+- Any toolkit lookup/sandbox on a SOC challenge (kind=challenge) logs db.toolkit_usage; challenge submissions store investigated=True if toolkit was used before the verdict (counts from now on).
+- Tiers: Evidence Seeker (3, Recruit), Evidence First (10, Analyst), Master Investigator (25, Hunter); progress bar on Badges page; share cards work; art in frontend/public/badges + backend/assets/badges.
+
 ## Backlog (current)
 - P2: Per-user cooldown on AI quiz/lesson generation
 - P2: Lesson quiz analytics for instructors (pass rates per lesson)

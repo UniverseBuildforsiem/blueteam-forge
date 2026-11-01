@@ -304,11 +304,16 @@ BADGES = [("first-blood", "First Blood", "Solve your first CTF"), ("triage-pro",
           ("quiz-master", "Quiz Master", "Score 100% on a quiz"), ("pathfinder", "Pathfinder", "Earn a certificate"),
           ("on-fire", "On Fire", "3-day streak"), ("lab-rat", "Lab Rat", "Finish a scenario lab"),
           ("drill-7", "Week Watch", "7-day daily drill streak"), ("drill-30", "Night Shift", "30-day daily drill streak"),
-          ("interview-ready", "Interview Ready", "Buy the SOC Interview Preparation ebook")]
+          ("interview-ready", "Interview Ready", "Buy the SOC Interview Preparation ebook"),
+          ("evidence-bronze", "Evidence Seeker", "Use the investigation toolkit on 3 alerts before your verdict"),
+          ("evidence-silver", "Evidence First", "Use the investigation toolkit on 10 alerts before your verdict"),
+          ("evidence-gold", "Master Investigator", "Use the investigation toolkit on 25 alerts before your verdict")]
+EVIDENCE_TIERS = {"evidence-bronze": 3, "evidence-silver": 10, "evidence-gold": 25}
 BADGE_LEVEL = {"first-blood": ("Recruit", "first-blood.jpg"), "on-fire": ("Recruit", "on-fire.jpg"),
                "triage-pro": ("Analyst", "triage-pro.jpg"), "quiz-master": ("Analyst", "quiz-master.jpg"), "interview-ready": ("Analyst", "interview-ready.jpg"),
                "lab-rat": ("Hunter", "lab-rat.jpg"), "drill-7": ("Hunter", "drill-7.jpg"),
-               "pathfinder": ("Elite", "pathfinder.jpg"), "drill-30": ("Elite", "drill-30.jpg")}
+               "pathfinder": ("Elite", "pathfinder.jpg"), "drill-30": ("Elite", "drill-30.jpg"),
+               "evidence-bronze": ("Recruit", "evidence-bronze.jpg"), "evidence-silver": ("Analyst", "evidence-silver.jpg"), "evidence-gold": ("Hunter", "evidence-gold.jpg")}
 REVEAL_LEVELS = ("Elite", "Hunter")
 
 
@@ -344,7 +349,10 @@ async def compute_badges(u):
         "lab-rat": await db.lab_progress.count_documents({"user_id": uid, "report_submitted": True}) > 0,
         "interview-ready": bool(await db.purchases.find_one({"user_id": uid, "product_id": "soc-interview-ebook"})),
     }
-    return [{"id": i, "name": n, "description": d, "earned": earned[i]} for i, n, d in BADGES] + await course_badges(uid)
+    investigated = await db.challenge_submissions.count_documents({"user_id": uid, "investigated": True})
+    earned.update({k: investigated >= n for k, n in EVIDENCE_TIERS.items()})
+    return [{"id": i, "name": n, "description": d, "earned": earned[i], **({"progress": [min(investigated, EVIDENCE_TIERS[i]), EVIDENCE_TIERS[i]]} if i in EVIDENCE_TIERS else {})}
+            for i, n, d in BADGES] + await course_badges(uid)
 
 
 def short_title(t):

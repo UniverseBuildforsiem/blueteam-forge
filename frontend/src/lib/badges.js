@@ -15,6 +15,9 @@ export const BADGE_ART = {
   "drill-7": ["Hunter", "/badges/drill-7.jpg"],
   pathfinder: ["Elite", "/badges/pathfinder.jpg"],
   "drill-30": ["Elite", "/badges/drill-30.jpg"],
+  "evidence-bronze": ["Recruit", "/badges/evidence-bronze.jpg"],
+  "evidence-silver": ["Analyst", "/badges/evidence-silver.jpg"],
+  "evidence-gold": ["Hunter", "/badges/evidence-gold.jpg"],
 };
 
 export const badgeArt = (b) => {
