@@ -29,6 +29,7 @@ import { Labs, LabRunner, KaliPage } from "./pages/app/Labs";
 import Siem from "./pages/app/Siem";
 import Tools from "./pages/app/Tools";
 import { Certificates, Billing, AccountSettings } from "./pages/app/Account";
+import Consultation from "./pages/Consultation";
 import Instructor from "./pages/Instructor";
 import Admin from "./pages/Admin";
 
@@ -42,6 +43,7 @@ function App() {
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/book" element={<Book />} />
+            <Route path="/consultation" element={<Consultation />} />
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/sops" element={<SopList />} />

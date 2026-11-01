@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { Radio, CalendarDays, Users, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Radio, CalendarDays, Users, ArrowRight, CheckCircle2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { api, errMsg } from "../lib/api";
+import { waLink } from "../lib/pay";
 
 const EXP = ["Student / fresher", "0-1 years IT", "1-3 years IT", "3+ years IT", "Already in a SOC"];
 const ist = (iso, o = {}) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", ...o });
 const istTime = (iso) => new Date(iso).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
 const local = (iso) => (Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Kolkata" ? null : new Date(iso).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit", timeZoneName: "short" }));
 
-function EnquiryForm({ pick, onClose }) {
+function EnquiryForm({ pick, onClose, wa }) {
   const [f, setF] = useState({ name: "", email: "", phone: "", experience: EXP[0], message: "" });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
@@ -27,7 +28,9 @@ function EnquiryForm({ pick, onClose }) {
           <DialogTitle className="font-mono text-lg">{ist(pick.at)} · {istTime(pick.at)} IST</DialogTitle></DialogHeader>
         {done ? <div className="text-sm text-slate-300 space-y-3" data-testid="live-enquiry-success"><CheckCircle2 className="h-8 w-8 text-green-400" />
           <p>{demo ? `You're registered for the free demo on ${done}. Check your email for the joining link.` : `Thanks! Our team will contact you about the batch starting ${done}.`}</p>
-          <button className="ghost-btn" onClick={onClose} data-testid="live-enquiry-close">Close</button></div>
+          <a href={waLink(wa, `Hi SOCProfessionals, I'm ${f.name}. I just ${demo ? "registered for the free demo" : "enquired about the batch"} on ${done}. Phone: ${f.phone}. Experience: ${f.experience}.${f.message ? ` Message: ${f.message}` : ""}`)}
+            target="_blank" rel="noopener noreferrer" className="glow-btn" data-testid="live-enquiry-whatsapp"><MessageCircle className="h-4 w-4" />Also send on WhatsApp</a>
+          <button className="ghost-btn ml-2" onClick={onClose} data-testid="live-enquiry-close">Close</button></div>
           : <form onSubmit={submit} className="space-y-3">
             <input className="field" placeholder="Full name" required minLength={2} value={f.name} onChange={up("name")} data-testid="live-enquiry-name" />
             <div className="grid sm:grid-cols-2 gap-3">
@@ -42,12 +45,17 @@ function EnquiryForm({ pick, onClose }) {
 }
 
 function Dates({ items, kind, onPick, accent }) {
-  return <div className="grid sm:grid-cols-2 gap-2">{items.map((d, i) => (
-    <button key={d.at} onClick={() => onPick({ kind, at: d.at })} data-testid={`live-${kind}-date-${i}`}
-      className="text-left border border-white/10 hover:border-cyan-400/50 px-3 py-2.5 rounded-sm transition-colors group">
-      <div className="font-mono text-sm" style={{ color: i === 0 ? accent : undefined }}>{ist(d.at)} · {istTime(d.at)} IST</div>
-      <div className="text-[11px] text-slate-500 flex items-center justify-between">{d.label || (local(d.at) ? `your time: ${local(d.at)}` : "free · online")}<ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-    </button>))}</div>;
+  return <div className="grid sm:grid-cols-2 gap-2">{items.map((d, i) => {
+    const full = d.left === 0;
+    return (
+    <button key={d.at} disabled={full} onClick={() => onPick({ kind, at: d.at })} data-testid={`live-${kind}-date-${i}`}
+      className={`text-left border px-3 py-2.5 rounded-sm transition-colors group ${full ? "border-white/5 opacity-50 cursor-not-allowed" : "border-white/10 hover:border-cyan-400/50"}`}>
+      <div className="font-mono text-sm" style={{ color: i === 0 && !full ? accent : undefined }}>{ist(d.at)} · {istTime(d.at)} IST</div>
+      <div className="text-[11px] text-slate-500 flex items-center justify-between gap-2">{d.label || (local(d.at) ? `your time: ${local(d.at)}` : "free · online")}
+        {d.left !== undefined ? <span className={`font-mono ${full ? "text-red-400" : d.left <= 3 ? "text-orange-300" : "text-green-400"}`} data-testid={`live-batch-seats-${i}`}>{full ? "batch full" : `${d.left} ${d.left === 1 ? "seat" : "seats"} left`}</span>
+          : <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />}</div>
+    </button>);
+  })}</div>;
 }
 
 export default function LiveClasses() {
@@ -69,9 +77,9 @@ export default function LiveClasses() {
         <div className="glass rounded-sm p-6" data-testid="live-batch-card">
           <div className="flex items-center gap-2 font-bold"><Users className="h-4 w-4 text-green-400" />New batches · 2nd & 4th Friday</div>
           <p className="text-xs text-slate-400 mt-1 mb-4 flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />Seats are limited — enquire to enrol in an upcoming batch.</p>
-          <Dates items={d.batches.map((b) => ({ at: b.start, label: b.label }))} kind="batch" onPick={setPick} accent="#00FF66" />
+          <Dates items={d.batches.map((b) => ({ at: b.start, label: b.label, left: b.seats_left }))} kind="batch" onPick={setPick} accent="#00FF66" />
         </div>
       </div>
-      {pick && <EnquiryForm pick={pick} onClose={() => setPick(null)} />}
+      {pick && <EnquiryForm pick={pick} wa={d.whatsapp} onClose={() => { setPick(null); api.get("/public/live-classes").then((r) => setD(r.data)).catch(() => {}); }} />}
     </section>);
 }

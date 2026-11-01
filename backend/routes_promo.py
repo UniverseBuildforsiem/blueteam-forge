@@ -20,7 +20,8 @@ DEFAULT_PROMOS = [
     {"id": "book", "tag": "Ebook", "title": "SOC Interview Preparation", "text": "Real interview questions, scenario walkthroughs and answers that get SOC analysts hired.", "price": "Interview ready", "cta": "See the book", "url": "/book", "accent": "#FB923C", "icon": "book", "img": "/book/cover.jpg"},
 ]
 LIVE_DEFAULTS = {"id": "live_classes", "demo_link": "https://teams.microsoft.com/meet/2291320368285614?p=clnHXl5ykhFkFphtCb", "demo_time": "16:00", "batch_time": "16:00",
-                 "notify_email": "hr@socprofessionals.com", "title": "SOC Live Classes", "description": "Instructor-led SOC analyst training: live SIEM, triage, incident response and interview prep with real alerts."}
+                 "notify_email": "hr@socprofessionals.com", "title": "SOC Live Classes", "description": "Instructor-led SOC analyst training: live SIEM, triage, incident response and interview prep with real alerts.",
+                 "default_seats": 8, "whatsapp_number": "919381203090", "consult_start": "16:00", "consult_end": "23:00", "consult_days": [0, 1, 2, 3, 4, 5, 6]}
 
 
 async def ensure_promos():
@@ -132,11 +133,42 @@ async def schedule():
     return s, demos, batches
 
 
+async def seat_map(starts, s):
+    over = {r["start"]: r["seats"] for r in await db.batch_seats.find({"start": {"$in": starts}}, NO_ID).to_list(100)}
+    taken = {r["_id"]: r["n"] for r in await db.live_enquiries.aggregate([{"$match": {"kind": "batch", "session_at": {"$in": starts}, "status": {"$ne": "closed"}}},
+                                                                        {"$group": {"_id": "$session_at", "n": {"$sum": 1}}}]).to_list(100)}
+    return {k: {"seats": over.get(k, s["default_seats"]), "taken": taken.get(k, 0), "left": max(0, over.get(k, s["default_seats"]) - taken.get(k, 0))} for k in starts}
+
+
+def batch_label(b):
+    return f"{'2nd' if (b.day - 1) // 7 == 1 else '4th'} Friday batch"
+
+
 @router.get("/public/live-classes")
 async def live_public():
     s, demos, batches = await schedule()
-    return {"title": s["title"], "description": s["description"], "timezone": "IST (UTC+05:30)",
-            "demos": [d.isoformat() for d in demos], "batches": [{"start": b.isoformat(), "label": f"{'2nd' if (b.day - 1) // 7 == 1 else '4th'} Friday batch"} for b in batches]}
+    seats = await seat_map([b.isoformat() for b in batches], s)
+    return {"title": s["title"], "description": s["description"], "timezone": "IST (UTC+05:30)", "whatsapp": s["whatsapp_number"],
+            "demos": [d.isoformat() for d in demos], "batches": [{"start": b.isoformat(), "label": batch_label(b), "seats_left": seats[b.isoformat()]["left"], "seats": seats[b.isoformat()]["seats"]} for b in batches]}
+
+
+@router.get("/admin/live-classes/batches")
+async def admin_batches(user=Depends(admin_only)):
+    s, _, batches = await schedule()
+    seats = await seat_map([b.isoformat() for b in batches], s)
+    return [{"start": b.isoformat(), "label": batch_label(b), **seats[b.isoformat()]} for b in batches]
+
+
+class SeatsIn(BaseModel):
+    start: str = Field(max_length=40)
+    seats: int = Field(ge=0, le=500)
+
+
+@router.put("/admin/live-classes/batches")
+async def set_batch_seats(body: SeatsIn, user=Depends(admin_only)):
+    await db.batch_seats.update_one({"start": body.start}, {"$set": {"seats": body.seats}}, upsert=True)
+    await audit(user, "set batch seats", f"{body.start}={body.seats}")
+    return await admin_batches(user)
 
 
 class EnquiryIn(BaseModel):
@@ -187,6 +219,8 @@ async def live_enquiry(body: EnquiryIn, bg: BackgroundTasks):
     valid = [d.isoformat() for d in (demos if body.kind == "demo" else batches)]
     if body.session_at not in valid:
         raise HTTPException(400, "That session is no longer available — please pick another date")
+    if body.kind == "batch" and (await seat_map([body.session_at], s))[body.session_at]["left"] <= 0:
+        raise HTTPException(409, "This batch is full — please pick the next batch")
     if await db.live_enquiries.count_documents({"email": email, "created_at": {"$gte": (now() - timedelta(days=1)).isoformat()}}) >= 5:
         raise HTTPException(429, "You've already sent several requests today — we'll be in touch soon")
     e = {"id": new_id(), **body.model_dump(), "email": email, "name": body.name.strip(), "status": "new", "created_at": now_iso()}
@@ -219,6 +253,11 @@ class LiveSettingsIn(BaseModel):
     notify_email: str = Field(max_length=120)
     title: str = Field(min_length=2, max_length=80)
     description: str = Field(default="", max_length=400)
+    default_seats: int = Field(default=8, ge=0, le=500)
+    whatsapp_number: str = Field(default="919381203090", pattern=r"^\d{10,15}$")
+    consult_start: str = Field(default="16:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    consult_end: str = Field(default="23:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    consult_days: list[int] = Field(default=[0, 1, 2, 3, 4, 5, 6])
 
 
 @router.get("/admin/live-classes/settings")
@@ -232,6 +271,9 @@ async def put_live_settings(body: LiveSettingsIn, user=Depends(admin_only)):
         raise HTTPException(400, "Invalid notification email")
     if body.demo_link and not _host_ok(urlparse(body.demo_link).hostname or ""):
         raise HTTPException(400, "That meeting link can't be used in emails — paste the full Teams/Meet/Zoom link")
+    if body.consult_start >= body.consult_end or not body.consult_days or any(d not in range(7) for d in body.consult_days):
+        raise HTTPException(400, "Consultation hours must end after they start, on at least one valid day")
+    body.consult_days = sorted(set(body.consult_days))
     await db.settings.update_one({"id": "live_classes"}, {"$set": body.model_dump()}, upsert=True)
     await audit(user, "update live class settings", "live_classes")
     return await live_settings()

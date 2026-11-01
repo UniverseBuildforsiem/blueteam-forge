@@ -16,6 +16,7 @@ import PublicNav, { Footer } from "../components/PublicNav";
 import LandingIntel, { ThreatTicker, useLandingIntel } from "../components/LandingIntel";
 import PromoSpotlight from "../components/PromoSpotlight";
 import LiveClasses from "../components/LiveClasses";
+import ConsultationPromo from "../components/ConsultationPromo";
 
 const FEED = [
   ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
@@ -203,6 +204,7 @@ export default function Landing() {
 
       <PromoSpotlight />
       <LiveClasses />
+      <ConsultationPromo />
 
       <LandingIntel posts={intel.posts} sops={intel.sops} />
 

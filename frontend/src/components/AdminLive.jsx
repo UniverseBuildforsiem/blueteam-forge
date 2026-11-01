@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Download } from "lucide-react";
+import { Download, MessageCircle } from "lucide-react";
 import { api, errMsg, fmtDate } from "../lib/api";
+import { waLink } from "../lib/pay";
 import { Glass, Empty } from "./common";
+import { BatchSeats, Consultations, waNum } from "./AdminConsults";
 
 const STATUS = ["new", "contacted", "enrolled", "closed"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const SCOL = { new: "text-yellow-300", contacted: "text-cyan-300", enrolled: "text-green-400", closed: "text-slate-500" };
 const ist = (iso) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
 
@@ -21,6 +24,11 @@ function Settings() {
       <div className="grid sm:grid-cols-2 gap-3">{inp("title", "Section title", "live-settings-title")}{inp("notify_email", "Send enquiries to", "live-settings-email", "email")}</div>
       {inp("description", "Description", "live-settings-description")}
       <div className="grid sm:grid-cols-3 gap-3">{inp("demo_link", "Demo meeting link (Teams/Meet)", "live-settings-link")}{inp("demo_time", "Friday demo time (IST)", "live-settings-demo-time", "time")}{inp("batch_time", "Batch start time (IST)", "live-settings-batch-time", "time")}</div>
+      <div className="grid sm:grid-cols-4 gap-3">{inp("default_seats", "Default seats per batch", "live-settings-seats", "number")}{inp("whatsapp_number", "WhatsApp number (with 91)", "live-settings-whatsapp")}
+        {inp("consult_start", "Consultations from (IST)", "live-settings-consult-start", "time")}{inp("consult_end", "Consultations until (IST)", "live-settings-consult-end", "time")}</div>
+      <div><span className="text-[11px] font-mono uppercase text-slate-500">Consultation days</span><div className="flex flex-wrap gap-2 mt-1">{DAYS.map((d, i) => (
+        <button key={d} type="button" onClick={() => setS({ ...s, consult_days: s.consult_days.includes(i) ? s.consult_days.filter((x) => x !== i) : [...s.consult_days, i] })} data-testid={`live-settings-day-${i}`}
+          className={`px-2.5 py-1 text-xs font-mono border rounded-sm ${s.consult_days.includes(i) ? "border-green-400 text-green-300" : "border-white/10 text-slate-500"}`}>{d}</button>))}</div></div>
       <button className="glow-btn !text-xs" onClick={save} data-testid="live-settings-save">Save settings</button>
     </Glass>);
 }
@@ -47,11 +55,14 @@ export default function AdminLive() {
           <thead><tr className="text-left text-[11px] font-mono uppercase text-slate-500 border-b border-white/5">{["Type", "Session (IST)", "Name", "Contact", "Experience", "Message", "Received", "Status"].map((h) => <th key={h} className="px-2 py-2">{h}</th>)}</tr></thead>
           <tbody>{shown.map((e, i) => <tr key={e.id} className="border-b border-white/5 align-top" data-testid={`live-enquiry-row-${i}`}>
             <td className="px-2 py-2 font-mono text-xs uppercase">{e.kind}</td><td className="px-2 py-2 text-xs">{ist(e.session_at)}</td><td className="px-2 py-2">{e.name}</td>
-            <td className="px-2 py-2 text-xs"><a href={`mailto:${e.email}`} className="text-cyan-300 hover:underline">{e.email}</a><div className="text-slate-400">{e.phone}</div></td>
+            <td className="px-2 py-2 text-xs"><a href={`mailto:${e.email}`} className="text-cyan-300 hover:underline">{e.email}</a>
+              <a href={waLink(waNum(e.phone), `Hi ${e.name}, this is SOCProfessionals about your SOC Live Classes ${e.kind} enquiry for ${ist(e.session_at)}.`)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-300 hover:underline" data-testid={`live-enquiry-whatsapp-${i}`}><MessageCircle className="h-3 w-3" />{e.phone}</a></td>
             <td className="px-2 py-2 text-xs">{e.experience}</td><td className="px-2 py-2 text-xs text-slate-400 max-w-[240px]">{e.message || "—"}</td><td className="px-2 py-2 text-xs text-slate-500">{fmtDate(e.created_at)}</td>
             <td className="px-2 py-2"><select className={`field !py-1 text-xs ${SCOL[e.status]}`} value={e.status} onChange={(x) => set(e, x.target.value)} data-testid={`live-enquiry-status-${i}`}>{STATUS.map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}</tbody>
         </table></div>}
       </Glass>
+      <BatchSeats />
+      <Consultations />
       <Settings />
     </div>);
 }

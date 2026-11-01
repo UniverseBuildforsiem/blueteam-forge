@@ -3,6 +3,7 @@ import os
 import uuid
 from collections import Counter, defaultdict
 from datetime import timedelta
+from typing import Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
@@ -250,7 +251,8 @@ async def put_settings(body: dict, user=Depends(admin_only)):
 # ---------- Payments (Razorpay / Cashfree) ----------
 PLANS = {"pro_monthly": {"name": "Pro Monthly", "amount": 999}, "pro_yearly": {"name": "Pro Yearly", "amount": 7999}}
 PRODUCTS = {"soc-interview-ebook": {"name": "SOC Interview Preparation - Ebook", "amount": 973, "return": "/book"},
-            "sop-bundle": {"name": "SOC SOP Library - Full Access", "amount": 499, "return": "/sops"}}
+            "sop-bundle": {"name": "SOC SOP Library - Full Access", "amount": 499, "return": "/sops"},
+            "soc-consultation": {"name": "Cyber & SOC Expert Consultation (30 min)", "amount": 99, "return": "/consultation"}}
 
 
 def item_for(key):
@@ -263,6 +265,15 @@ def item_for(key):
 class PlanIn(BaseModel):
     plan: str
     phone: str = Field(default="9999999999", pattern=r"^\d{10}$")
+    ref: Optional[str] = Field(default=None, max_length=40)
+
+
+async def prepare(body, user):
+    if body.plan == "soc-consultation":
+        from routes_consult import check_hold
+        if not body.ref:
+            raise HTTPException(400, "Pick a consultation slot first")
+        await check_hold(body.ref, user)
 
 
 def rzp():
@@ -281,7 +292,10 @@ async def pay_config():
 
 async def activate(user_id, pid):
     p = await db.payments.find_one_and_update({"id": pid, "status": {"$ne": "paid"}}, {"$set": {"status": "paid", "paid_at": now_iso()}}, projection=NO_ID)
-    if p:
+    if p and p["plan"] == "soc-consultation":
+        from routes_consult import confirm_consultation
+        await confirm_consultation(p.get("ref"), pid)
+    elif p:
         if p["plan"] in PRODUCTS:
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
@@ -297,8 +311,9 @@ async def activate(user_id, pid):
 @router.post("/payments/razorpay/order")
 async def rzp_order(body: PlanIn, user=Depends(get_current_user)):
     plan = item_for(body.plan)
+    await prepare(body, user)
     o = rzp().order.create({"amount": plan["amount"] * 100, "currency": "INR", "receipt": f"rcpt_{new_id()}", "payment_capture": 1})
-    await db.payments.insert_one({"id": o["id"], "provider": "razorpay", "user_id": user["id"], "plan": body.plan, "plan_name": plan["name"],
+    await db.payments.insert_one({"id": o["id"], "provider": "razorpay", "user_id": user["id"], "plan": body.plan, "plan_name": plan["name"], "ref": body.ref,
                                   "amount": plan["amount"], "status": "created", "created_at": now_iso()})
     return {"order_id": o["id"], "amount": o["amount"], "key_id": os.environ["RAZORPAY_KEY_ID"], "name": user["name"], "email": user["email"]}
 
@@ -339,6 +354,7 @@ def cf_base():
 @router.post("/payments/cashfree/order")
 async def cf_order(body: PlanIn, user=Depends(get_current_user)):
     plan = item_for(body.plan)
+    await prepare(body, user)
     base = cf_base()
     oid = f"order_{uuid.uuid4().hex[:20]}"
     payload = {"order_id": oid, "order_amount": float(plan["amount"]), "order_currency": "INR",
@@ -348,7 +364,7 @@ async def cf_order(body: PlanIn, user=Depends(get_current_user)):
         r = await c.post(f"{base}/orders", headers=cf_headers(oid), json=payload)
     if r.status_code >= 400:
         raise HTTPException(502, "Cashfree order creation failed")
-    await db.payments.insert_one({"id": oid, "provider": "cashfree", "user_id": user["id"], "plan": body.plan, "plan_name": plan["name"],
+    await db.payments.insert_one({"id": oid, "provider": "cashfree", "user_id": user["id"], "plan": body.plan, "plan_name": plan["name"], "ref": body.ref,
                                   "amount": plan["amount"], "status": "created", "created_at": now_iso()})
     return {"order_id": oid, "payment_session_id": r.json()["payment_session_id"]}
 
