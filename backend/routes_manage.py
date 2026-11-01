@@ -48,6 +48,8 @@ def validate(col, doc):
                 for l in m["lessons"]:
                     assert l.get("id") and l.get("title")
                     l.setdefault("content", ""); l.setdefault("video_url", ""); l.setdefault("resources", []); l.setdefault("minutes", 10)
+                    for q in (l.get("quiz") or {}).get("questions", []):
+                        assert q["text"].strip() and len(q["options"]) == 4 and all(o.strip() for o in q["options"]) and 0 <= int(q["answer"]) < 4
         if col == "quizzes":
             doc.setdefault("pass_mark", 70); doc.setdefault("time_limit_sec", 0); doc.setdefault("topic", "General")
             for q in doc["questions"]:

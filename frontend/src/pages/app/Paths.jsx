@@ -4,6 +4,7 @@ import { CheckCircle2, Circle, PlayCircle, Download, Award, ChevronRight, FileTe
 import { toast } from "sonner";
 import { api, API, errMsg } from "../../lib/api";
 import { Glass, PageHeader } from "../../components/common";
+import { LessonQuiz } from "../../components/LessonQuiz";
 
 export function Paths() {
   const [paths, setPaths] = useState([]);
@@ -35,6 +36,7 @@ export function LessonBody({ lesson }) {
     <h2 className="text-2xl font-bold mb-6">{lesson.title || "Untitled lesson"}</h2>
     {lesson.video_url && <div className="aspect-video mb-6 border border-cyan-500/20"><iframe title={lesson.title} src={lesson.video_url} className="w-full h-full" allowFullScreen data-testid="lesson-video" /></div>}
     <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[15px]">{lesson.content}</div>
+    <LessonQuiz key={lesson.id} quiz={lesson.quiz} />
     {lesson.attachments?.length > 0 && <div className="mt-8" data-testid="lesson-practice"><div className="eyebrow mb-3">practice this lesson</div>
       <div className="grid sm:grid-cols-2 gap-2">{lesson.attachments.map((a) => { const [label, to] = ATTACH[a.type] || ["Item", () => "#"]; const href = to(a); const ext = /^https?:/.test(href || "");
         return <a key={`${a.type}-${a.id}`} href={href} {...(ext ? { target: "_blank", rel: "noreferrer" } : {})} className="glass rounded-sm p-3 hover:border-cyan-400/50 transition-colors flex items-center gap-3" data-testid={`lesson-attachment-${a.type}-${a.id}`}>

@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 from core import now
 from labs_data import NEW_LABS
+from practice_extra import NET_LINUX_LABS, NET_LINUX_CHALLENGES, EXTRA_QUIZZES
 
 
 def L(id, title, content, video="", minutes=10, resources=None):
@@ -96,7 +97,7 @@ QUIZZES = [
     quiz("final-soc-l2", "SOC L2 — Final Exam", "Final", ["q6", "q8", "q2", "q12"], 600, "soc-l2"),
     quiz("final-incident-response", "Incident Response — Final Exam", "Final", ["q5", "q9", "q8"], 600, "incident-response"),
     quiz("final-interview-prep", "Interview Prep — Final Exam", "Final", ["q4", "q7", "q10", "q9"], 600, "interview-prep"),
-]
+] + EXTRA_QUIZZES
 
 CHALLENGES = [
     {"id": "ch-phish-01", "title": "Invoice Overdue — Urgent", "category": "Phishing", "severity": "High", "points": 100, "verdict": "TP",
@@ -138,7 +139,7 @@ CHALLENGES = [
 ]
 for _c in CHALLENGES:
     _c.setdefault("difficulty", {80: "Easy", 100: "Easy", 120: "Medium"}.get(_c["points"], "Hard"))
-CHALLENGES += json.loads((Path(__file__).parent / "assets" / "challenges.json").read_text())
+CHALLENGES += json.loads((Path(__file__).parent / "assets" / "challenges.json").read_text()) + NET_LINUX_CHALLENGES
 
 CTFS = [
     {"id": "ctf-log-1", "category": "Log Analysis", "title": "Who Knocked?", "points": 100, "flag": "SOCF{45.155.205.12}",
@@ -233,7 +234,7 @@ BRUTE_LAB = {
         "pcap": "No capture loaded.", "cracked": {}},
 }
 
-LABS = [PHISH_LAB, BRUTE_LAB] + NEW_LABS
+LABS = [PHISH_LAB, BRUTE_LAB] + NEW_LABS + NET_LINUX_LABS
 
 INTEL = {
     "185.220.101.45": {"type": "ip", "verdict": "malicious", "detections": "12/90", "tags": ["c2", "tor-exit", "malware-hosting"], "country": "DE", "asn": "AS60729", "first_seen": "2025-11-02"},

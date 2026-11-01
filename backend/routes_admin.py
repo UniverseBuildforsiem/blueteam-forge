@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import re
 import secrets
@@ -285,7 +286,13 @@ SYN = {"phishing": ["email", "phish", "bec"], "email": ["phishing"], "brute": ["
        "endpoint": ["malware", "edr", "sysmon"], "powershell": ["script"], "dns": ["tunneling", "tunnel"], "tunneling": ["dns", "exfiltration"], "exfiltration": ["exfil", "data"],
        "web": ["shell", "sql", "iis"], "siem": ["splunk", "sentinel", "log", "spl", "kql"], "splunk": ["siem", "spl"], "sentinel": ["siem", "kql"], "logs": ["log", "event"],
        "cloud": ["azure", "m365", "microsoft", "entra"], "m365": ["microsoft", "cloud", "bec"], "lateral": ["movement", "psexec"], "privilege": ["admin", "escalation"],
-       "incident": ["response", "ir"], "triage": ["alert", "verdict"], "intel": ["ioc", "threat"], "linux": ["ssh"], "windows": ["event"], "hunting": ["hunt"], "c2": ["beacon", "beaconing"]}
+       "incident": ["response", "ir"], "triage": ["alert", "verdict"], "intel": ["ioc", "threat"], "linux": ["ssh", "cron", "sudo"], "windows": ["event"], "hunting": ["hunt"], "c2": ["beacon", "beaconing"],
+       "networking": ["network", "port", "firewall"], "network": ["networking", "port", "firewall"], "firewall": ["networking", "port"], "proxy": ["firewall", "beaconing"],
+       "tiers": ["escalation", "triage"], "escalating": ["escalation"], "escalation": ["triage"], "ticketing": ["ticket", "triage"], "lifecycle": ["triage", "ticketing"],
+       "positive": ["triage", "detections"], "reporting": ["ticketing", "report"], "handover": ["escalation", "ticketing"], "shift": ["handover", "escalation"],
+       "detections": ["detection", "detections"], "detection": ["detections"], "mitre": ["att", "foundations"], "cia": ["triad", "foundations"], "quiz": ["exam", "essentials"],
+       "sysmon": ["process", "edr"], "edr": ["process"], "scenario": ["lab"],
+       "url": ["phishing", "link"], "attachment": ["phishing", "macro", "invoice"], "hypothesis": ["hunting", "beaconing"], "picerl": ["incident", "response", "ransomware"]}
 
 
 def words(s):
@@ -359,9 +366,57 @@ async def write_lesson(body: WriteIn, user=Depends(staff)):
     return {"job_id": job_id, "status": "running"}
 
 
+class QuizGenIn(BaseModel):
+    title: str = Field(min_length=2, max_length=200)
+    content: str = Field(min_length=150, max_length=20000)
+    level: str = Field(default="Beginner", max_length=30)
+
+
+QUIZ_PROMPT = """Create a 5-question multiple-choice quiz that checks understanding of this {level} SOC analyst lesson.
+Rules: exactly 5 questions, each with exactly 4 short options and one correct answer; base every question only on the lesson text; mix recall and applied "what would you do" questions;
+plausible distractors; a one-sentence explanation of why the answer is correct. Vary the position of the correct answer.
+Return ONLY JSON, no prose, in this shape: {{"questions": [{{"text": "...", "options": ["...", "...", "...", "..."], "answer": 0, "explanation": "..."}}]}}
+
+LESSON TITLE: {title}
+LESSON CONTENT:
+{content}"""
+
+
+def parse_quiz(text):
+    m = re.search(r"\{.*\}", text, re.S)
+    qs = json.loads(m.group(0))["questions"] if m else []
+    out = [{"id": f"lq-{new_id()[:7]}", "text": str(q["text"]).strip(), "options": [str(o).strip() for o in q["options"]][:4],
+            "answer": int(q["answer"]), "explanation": str(q.get("explanation", "")).strip()} for q in qs[:5]]
+    if len(out) != 5 or any(len(q["options"]) != 4 or not 0 <= q["answer"] < 4 for q in out):
+        raise ValueError("the AI returned an incomplete quiz — please try again")
+    return out
+
+
+async def run_quiz_job(job_id, body: QuizGenIn):
+    chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"lquiz-{job_id}",
+                   system_message="You are a senior SOC analyst who writes fair, accurate assessment questions. You always reply with valid JSON only.").with_model("anthropic", "claude-sonnet-5-5")
+    try:
+        text = await chat.send_message(UserMessage(text=QUIZ_PROMPT.format(title=body.title, level=body.level, content=body.content[:12000])))
+        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "done", "questions": parse_quiz(text), "done_at": now_iso()}})
+    except Exception as e:
+        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "error", "error": f"The quiz generator is unavailable right now: {str(e)[:120]}"}})
+
+
+@router.post("/builder/lesson-quiz")
+async def lesson_quiz(body: QuizGenIn, user=Depends(staff)):
+    job_id = new_id()
+    await db.lesson_jobs.insert_one({"id": job_id, "user_id": user["id"], "kind": "quiz", "title": body.title, "status": "running", "created_at": now_iso()})
+    t = asyncio.create_task(run_quiz_job(job_id, body))
+    JOBS.add(t)
+    t.add_done_callback(JOBS.discard)
+    await audit(user, "ai lesson quiz", body.title[:80])
+    return {"job_id": job_id, "status": "running"}
+
+
 @router.get("/builder/write-lesson/{job_id}")
+@router.get("/builder/jobs/{job_id}")
 async def write_lesson_status(job_id: str, user=Depends(staff)):
-    j = await db.lesson_jobs.find_one({"id": job_id, "user_id": user["id"]}, {"_id": 0, "status": 1, "content": 1, "error": 1})
+    j = await db.lesson_jobs.find_one({"id": job_id, "user_id": user["id"]}, {"_id": 0, "status": 1, "content": 1, "questions": 1, "error": 1})
     if not j:
         raise HTTPException(404, "Job not found")
     return j

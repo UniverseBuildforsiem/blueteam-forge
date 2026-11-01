@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { api, errMsg } from "../lib/api";
 import { Glass, Empty } from "./common";
 import { LessonBody } from "../pages/app/Paths";
+import { LessonQuizBuilder } from "./LessonQuizBuilder";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const Lbl = ({ l, children }) => <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
@@ -88,7 +89,8 @@ function LessonEditor({ l, upL, assets, ctx }) {
         </div>
         <Lbl l="Video embed URL"><input className="field text-xs" placeholder="https://www.youtube.com/embed/..." value={l.video_url} onChange={(e) => upL({ ...l, video_url: e.target.value })} data-testid="builder-lesson-video" /></Lbl>
         <div><div className="flex items-center justify-between"><span className="text-[11px] font-mono uppercase text-slate-500">Content</span><WriteButton l={l} upL={upL} ctx={ctx} /></div>
-          <textarea className="field h-44 text-sm mt-1" placeholder="Lesson content (line breaks and '- ' bullets)" value={l.content} onChange={(e) => upL({ ...l, content: e.target.value })} data-testid="builder-lesson-content" /></div>
+          <textarea className="field h-44 text-sm mt-1" placeholder="Lesson content (line breaks and '- ' bullets)" value={l.content} onChange={(e) => upL({ ...l, content: e.target.value })} data-testid="builder-lesson-content" />
+          <LessonQuizBuilder l={l} upL={upL} level={ctx.level} /></div>
         <Lbl l="Practice: attach quizzes, labs, challenges, CTFs, courses or SOPs"><Attachments l={l} upL={upL} assets={assets} /><Suggestions l={l} upL={upL} /></Lbl>
         <Lbl l="Downloadable resources">
           <div className="space-y-2">{res.map((r, i) => <div key={i} className="flex gap-2">
