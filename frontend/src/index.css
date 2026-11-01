@@ -105,3 +105,8 @@
   75% { box-shadow: 2px 0 0 #ff004c, -2px 0 0 #00e5ff; opacity: .6; }
 }
 @media (prefers-reduced-motion: reduce) { .avatar-frame::before { animation: none; } }
+
+@keyframes promo-timer { from { width: 0%; } to { width: 100%; } }
+.promo-timer { width: 0%; animation-name: promo-timer; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes promo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.promo-in { animation: promo-in .45s ease-out both; }

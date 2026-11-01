@@ -133,6 +133,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Dashboard card "Top investigators this week": GET /api/leaderboard/investigators (Mon-Sun UTC, counts first submissions with investigated=true via first_at; last week's champion).
 - api.js interceptor now refreshes for all calls except auth login/register/refresh/logout.
 
+## 2026-06 Landing Promo Spotlight (DONE — self-tested screenshot)
+- components/PromoSpotlight.jsx above the Blog section: rotating spotlight (6s timer bar, pauses on hover, prev/next + named tabs) for Udemy Qualys Guard VMDR ₹499, Udemy Certified SOC Analyst ₹499 (same referral link), SOCProfessionals Android app (Google Play), SOC Learning Paths (/catalog), SOC Interview Preparation book (/book).
+
 ## Backlog (current)
 - P2: Per-user cooldown on AI quiz/lesson generation
 - P2: Lesson quiz analytics for instructors (pass rates per lesson)

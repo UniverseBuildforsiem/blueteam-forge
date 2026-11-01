@@ -14,6 +14,7 @@ import { api } from "../lib/api";
 import { Glass, SeverityBadge } from "../components/common";
 import PublicNav, { Footer } from "../components/PublicNav";
 import LandingIntel, { ThreatTicker, useLandingIntel } from "../components/LandingIntel";
+import PromoSpotlight from "../components/PromoSpotlight";
 
 const FEED = [
   ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
@@ -198,6 +199,8 @@ export default function Landing() {
         <h2 className="text-3xl font-bold mb-12 max-w-xl">A full SOC, rendered in your browser.</h2>
         <FeatureShowcase />
       </section>
+
+      <PromoSpotlight />
 
       <LandingIntel posts={intel.posts} sops={intel.sops} />
 
