@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 23: Tested change-password (with session revocation via token_version) and the Weekly Investigator Leaderboard, backend and frontend. Backend: 11 of 11 pytest tests pass. They cover seeded admin/instructor/student login, me, refresh and logout; change-password returning 401 unauthenticated, 400 for a wrong current password, 400 when the new password matches the current one, and 400/422 for weak passwords; a successful change returns {ok:true}, keeps the caller's session valid (me and refresh both 200) and gives a session opened earlier 401 on me and refresh; the old password then fails (401) and the new one works (200); reset-password also signs out existing sessions and a used token returns 400. For the leaderboard, I checked the response shape (week_start is a Monday, resets_on is 7 days later), that only students are ranked, and the counting rules: a submit with no lookup is not counted, an intel lookup or sandbox report before submit is counted, and lookups with the wrong kind or a bogus challenge id are not counted. Frontend: the Account Settings nav link opens /app/account for a freshly registered student and for admin (desktop and mobile). The mismatch hint, the orange weak-password hint and the disabled submit button work; a wrong current password shows the error toast 'Current password is incorrect'; a correct change shows the success toast, clears the fields, keeps the user logged in after reload, and the new password logs in. The Dashboard investigator-board shows the reset text 'resets Mon, Nov 2', the rows, the me line and the last-week champion (tested with a seeded last-week record). End to end in the UI, I clicked IOC alert-ioc-0 in the ch-phish-01 alert-toolkit (intel result MALICIOUS), submitted a TP verdict, and the board went from 'you: 0 this week' to 'you: 1 this week · #2', with a highlighted row-1 count of 1. All TEST users are deleted (admin delete also removes their submissions). The Resend email to the @example.com test addresses failed with 422; this is logged and handled, and the endpoint still returned ok.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/change-password", "issue": "No rate limit or lockout on wrong current_password attempts. Someone holding a stolen session can brute-force the current password without limit (login has a 5-attempt lockout, this endpoint does not)."},
+      {"endpoint": "POST /api/challenges/{cid}/submit -> /api/leaderboard/investigators", "issue": "A resubmission sets created_at to the current time and keeps investigated=true from the previous submission (or picks up a lookup made after the first submit, once the expected verdict is already known). Resubmitting old challenges therefore counts again in a new week, so the board can be farmed once per challenge per week."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "lib/api.js interceptor + ChangePasswordCard", "issue": "The 401 auto-refresh interceptor skips every URL that contains '/auth/', and that includes /auth/change-password. If the user stays on the Account page for more than 15 minutes, the access token expires and submitting shows a 'Token expired' error toast instead of refreshing silently and retrying.", "selector": "[data-testid='change-password-submit']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard InvestigatorBoard", "issues": ["If the API call fails, the component catches the error silently and renders nothing; there is no error or empty state."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_change_password_investigators.py", "/app/test_reports/pytest/pytest_iter23.xml"],
+  "action_items": [
+    "Make the api.js refresh interceptor exclude only login, register, refresh and logout, not every '/auth/' URL, so /auth/change-password and /auth/onboarding refresh after the access token expires.",
+    "Add attempt limiting to change-password wrong-current-password tries (reuse the login_attempts lockout).",
+    "Optional: on resubmission, keep the original created_at for leaderboard counting (or store investigated_at / first_submitted_at) so resubmits cannot farm the weekly board."
+  ],
+  "critical_code_review_comments": [
+    "token_version check is correctly applied in get_current_user and refresh; reset-password also increments it. clean() strips token_version from responses.",
+    "Week bounds compare ISO strings against date strings ('2026-10-26' <= created_at < '2026-11-02'). This is correct for the UTC ISO timestamps produced by now_iso().",
+    "Change-password emails go through send_email; failures are logged as a warning and do not break the endpoint.",
+    "Passwords are stored as bcrypt hashes ($2b$)."
+  ],
+  "updated_files": ["/app/backend/tests/test_change_password_investigators.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created temporary TEST users (test_cp_*, test_inv_*, test_ui_*@example.com) and one last-week challenge_submission for champion display; all deleted afterwards. I also deleted 2 leftover test_ui_* users from earlier iterations. Seeded account passwords were not changed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Server clock is about 2026-11-01 (Sunday), so the week is 2026-10-26 to 2026-11-02. bot4 (Omar Haddad, omar4) has 3 investigated submissions this week. Run the suite with: pytest /app/backend/tests/test_change_password_investigators.py. To view a challenge in the UI, go to /app/challenges, click challenge-row-<id>, then mission-begin-button; alert-toolkit then shows alert-ioc-N chips."
+}

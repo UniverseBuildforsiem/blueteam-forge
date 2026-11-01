@@ -8,7 +8,7 @@ api.interceptors.response.use(
   (r) => r,
   async (err) => {
     const cfg = err.config || {};
-    if (err.response?.status === 401 && !cfg._retry && !cfg.url?.includes("/auth/")) {
+    if (err.response?.status === 401 && !cfg._retry && !/\/auth\/(login|register|refresh|logout)/.test(cfg.url || "")) {
       cfg._retry = true;
       try {
         refreshing = refreshing || api.post("/auth/refresh");

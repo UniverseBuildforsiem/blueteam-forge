@@ -9,7 +9,9 @@ const fmt = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { we
 
 export default function InvestigatorBoard({ meId }) {
   const [d, setD] = useState(null);
-  useEffect(() => { api.get("/leaderboard/investigators").then((r) => setD(r.data)).catch(() => {}); }, []);
+  const [err, setErr] = useState(false);
+  useEffect(() => { api.get("/leaderboard/investigators").then((r) => setD(r.data)).catch(() => setErr(true)); }, []);
+  if (err) return <Glass className="p-6 text-xs text-slate-500" data-testid="investigator-board-error">Investigator leaderboard is unavailable right now.</Glass>;
   if (!d) return null;
   return (
     <Glass className="p-6" data-testid="investigator-board">

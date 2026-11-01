@@ -156,8 +156,15 @@ class ChangePasswordIn(BaseModel):
 @router.post("/change-password")
 async def change_password(body: ChangePasswordIn, response: Response, user=Depends(get_current_user)):
     full = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    ident = f"chpw:{user['id']}"
+    att = await db.login_attempts.find_one({"identifier": ident}) or {}
+    if (att.get("locked_until") or "") > now_iso():
+        raise HTTPException(429, "Too many wrong attempts. Try again in 15 minutes.")
     if not verify_password(body.current_password, full["password_hash"]):
+        count = att.get("count", 0) + 1
+        await db.login_attempts.update_one({"identifier": ident}, {"$set": {"count": 0 if count >= 5 else count, "locked_until": (now() + timedelta(minutes=15)).isoformat() if count >= 5 else ""}}, upsert=True)
         raise HTTPException(400, "Current password is incorrect")
+    await db.login_attempts.delete_one({"identifier": ident})
     pw = body.new_password
     if pw == body.current_password:
         raise HTTPException(400, "New password must be different from the current one")

@@ -128,6 +128,11 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Any toolkit lookup/sandbox on a SOC challenge (kind=challenge) logs db.toolkit_usage; challenge submissions store investigated=True if toolkit was used before the verdict (counts from now on).
 - Tiers: Evidence Seeker (3, Recruit), Evidence First (10, Analyst), Master Investigator (25, Hunter); progress bar on Badges page; share cards work; art in frontend/public/badges + backend/assets/badges.
 
+## 2026-06 Change Password + Weekly Investigator Leaderboard (DONE — iteration_23 backend 11/11 + frontend; fixes self-tested)
+- /app/account (Account Settings, all roles): POST /api/auth/change-password (current+new, >=8 letters+digits, not username, 5-try/15-min lockout). users.token_version bumped -> JWT "tv" claim invalidates other sessions (access + refresh); current session re-issued; confirmation email. Reset-password also bumps token_version.
+- Dashboard card "Top investigators this week": GET /api/leaderboard/investigators (Mon-Sun UTC, counts first submissions with investigated=true via first_at; last week's champion).
+- api.js interceptor now refreshes for all calls except auth login/register/refresh/logout.
+
 ## Backlog (current)
 - P2: Per-user cooldown on AI quiz/lesson generation
 - P2: Lesson quiz analytics for instructors (pass rates per lesson)

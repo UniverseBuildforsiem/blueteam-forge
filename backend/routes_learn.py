@@ -376,7 +376,8 @@ async def investigator_board(user=Depends(get_current_user)):
     prev = start - timedelta(days=7)
 
     async def week(a, b):
-        rows = await db.challenge_submissions.aggregate([{"$match": {"investigated": True, "created_at": {"$gte": a.isoformat(), "$lt": b.isoformat()}}},
+        rng = {"$gte": a.isoformat(), "$lt": b.isoformat()}
+        rows = await db.challenge_submissions.aggregate([{"$match": {"investigated": True, "$or": [{"first_at": rng}, {"first_at": {"$exists": False}, "created_at": rng}]}},
                                                          {"$group": {"_id": "$user_id", "n": {"$sum": 1}, "last": {"$max": "$created_at"}}}, {"$sort": {"n": -1, "last": 1}}]).to_list(500)
         us = {u["id"]: u for u in await db.users.find({"id": {"$in": [r["_id"] for r in rows]}, "role": "student", "status": "active"},
                                                       {"_id": 0, "id": 1, "name": 1, "username": 1, "xp": 1, "public_profile": 1, "avatar_frame": 1}).to_list(500)}
