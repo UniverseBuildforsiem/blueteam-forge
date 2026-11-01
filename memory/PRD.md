@@ -174,3 +174,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 ## Series share cards (2026-06)
 - series_share.py: GET /api/public/series-share/{slug}.png (1200x627 branded card: post cover + logo, series #/total, title, track, read time; cached) and /api/public/series-share/{slug} OG page redirecting to /soc-series/{slug}; 404 for unwritten posts
 - Post page: ShareBar (LinkedIn, X, WhatsApp, Copy link) under cover and ShareCard preview at the end
+
+## Share XP + landing blogs + renames (2026-06)
+- POST /api/me/series/{slug}/shared: students earn 25 XP ONE time only (users.share_xp_awarded, atomic); /api/me/series/next returns share_xp_eligible; post page share buttons call it and show "+25 XP" chip until earned
+- Landing: LandingBlogs.jsx after "// learning paths" — one section with two tabs: "Zer0 Day Vulnerabilities and Attacks" (3 latest news posts) and "SOC Blog" (first 4 written series posts), View all link
+- Renamed everywhere: news blog = "Zer0 Day Vulnerabilities and Attacks", series = "SOC Blog" (blog tabs, headings, admin tab, share card, weekly email subject); app sidebar link "Blogs"

@@ -47,7 +47,7 @@ def render(p, total, raw):
     d = ImageDraw.Draw(img)
     d.rectangle([24, 24, w - 24, h - 24], outline=CYAN, width=3)
     draw_logo(d)
-    d.text((64, 150), f"SOC ANALYST SERIES  #{p['number']:03d} / {total}", font=font("LiberationMono-Bold.ttf", 22), fill=CYAN)
+    d.text((64, 150), f"SOC BLOG  #{p['number']:03d} / {total}", font=font("LiberationMono-Bold.ttf", 22), fill=CYAN)
     big = font("LiberationSans-Bold.ttf", 56)
     lines = wrap(d, p["title"], big, 760)
     if len(lines) > 4:
@@ -84,4 +84,4 @@ async def share_page(slug: str):
     p, _ = await share_post(slug)
     home = f"{os.environ['FRONTEND_URL'].rstrip('/')}/soc-series/{slug}"
     desc = p.get("excerpt") or "Hands-on SOC analyst guide with real logs, SPL and KQL detections and an investigation playbook."
-    return HTMLResponse(og_page(f"{p['title']} | SOC Analyst Series #{p['number']:03d}", desc, f"/public/series-share/{slug}", home))
+    return HTMLResponse(og_page(f"{p['title']} | SOC Blog #{p['number']:03d}", desc, f"/public/series-share/{slug}", home))

@@ -68,7 +68,7 @@ export function BlogList() {
       <PublicNav />
       <section className="max-w-7xl mx-auto px-6 pt-14 pb-20">
         <BlogTabs active="news" />
-        <div className="eyebrow mb-3">// security blog</div>
+        <div className="eyebrow mb-3">// zer0 day vulnerabilities and attacks</div>
         <h1 className="text-4xl sm:text-5xl font-extrabold max-w-3xl">Today's threats, <span className="neon-text">turned into SOC action.</span></h1>
         <p className="text-slate-400 mt-4 max-w-2xl text-sm md:text-base">Fresh stories from The Hacker News and BleepingComputer every morning, summarised for analysts with the hunts, detections and fixes to run on your shift.</p>
         <DigestToggle />

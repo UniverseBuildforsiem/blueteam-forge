@@ -5,7 +5,7 @@ import os
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 from pymongo.errors import DuplicateKeyError
-from core import db, now, now_iso, logger, admin_only, send_email, email_template, get_current_user
+from core import db, now, now_iso, logger, admin_only, send_email, email_template, get_current_user, award
 from routes_series import all_posts
 
 router = APIRouter(prefix="/api")
@@ -19,7 +19,7 @@ def series_html(name, p, nxt, total, uid):
     base = os.environ["FRONTEND_URL"]
     url = f"{base}/soc-series/{p['slug']}"
     cover = p["cover"] if p["cover"].startswith("http") else base + p["cover"]
-    lines = [f"This week's post in the SOC Analyst Technical Blog Series (#{p['number']:03d} of {total}, {p['section']}):",
+    lines = [f"This week's SOC Blog post (#{p['number']:03d} of {total}, {p['section']}):",
              p["title"], p.get("excerpt") or "", f"About {p.get('read_min', 10)} minutes, with real log samples, SPL and KQL detections and a step-by-step investigation playbook."]
     if nxt:
         lines.append(f"Up next week: {nxt['title']}")
@@ -49,7 +49,7 @@ async def send_series_week(only_user=None):
                 await db.series_sends.insert_one({"user_id": u["id"], "week": week, "post_id": p["id"], "at": now_iso()})
             except DuplicateKeyError:
                 continue
-        if not await send_email(to=u["email"], subject=f"SOC Series #{p['number']:03d}: {p['title'][:80]}", html=series_html(u["name"], p, nxt, total, u["id"])):
+        if not await send_email(to=u["email"], subject=f"SOC Blog #{p['number']:03d}: {p['title'][:80]}", html=series_html(u["name"], p, nxt, total, u["id"])):
             if not only_user:
                 await db.series_sends.delete_one({"user_id": u["id"], "week": week})
             continue
@@ -68,7 +68,18 @@ async def my_next(user=Depends(get_current_user)):
     posts = [p for p in await all_posts({"published": True}, {"_id": 0, "id": 1, "slug": 1, "title": 1, "section": 1, "order": 1, "status": 1}) if p["status"] == "ready"]
     done = set(await db.series_sends.distinct("post_id", {"user_id": user["id"]}))
     left = [p for p in posts if p["id"] not in done]
-    return {"next": left[0] if left else None, "received": len(done), "on": user.get("series_emails") is not False}
+    return {"next": left[0] if left else None, "received": len(done), "on": user.get("series_emails") is not False,
+            "share_xp_eligible": user.get("role") == "student" and not user.get("share_xp_awarded")}
+
+
+@router.post("/me/series/{slug}/shared")
+async def shared(slug: str, user=Depends(get_current_user)):
+    if user.get("role") != "student" or not await db.series_posts.find_one({"slug": slug, "status": "ready", "published": True}, {"_id": 1}):
+        return {"awarded": False}
+    r = await db.users.update_one({"id": user["id"], "share_xp_awarded": {"$ne": True}}, {"$set": {"share_xp_awarded": True, "share_xp_at": now_iso()}})
+    if r.modified_count:
+        await award(user["id"], 25, "Shared a SOC Blog post")
+    return {"awarded": bool(r.modified_count), "xp": 25 if r.modified_count else 0}
 
 
 @router.get("/public/unsubscribe/series", response_class=HTMLResponse)
