@@ -28,7 +28,7 @@ export function ConsultCalendar() {
   const [sel, setSel] = useState(null);
   useEffect(() => { api.get("/admin/consultations").then((r) => setCs(r.data)); api.get("/admin/live-classes/settings").then((r) => setCfg(r.data)); }, []);
   const days = [...Array(7)].map((_, i) => addDays(week, i));
-  const map = useMemo(() => Object.fromEntries(cs.map((c) => { const p = istParts(c.slot_at); return [`${p.date} ${p.hm}`, c]; })), [cs]);
+  const map = useMemo(() => { const m = {}; [...cs].sort((a, b) => (a.status === "cancelled") - (b.status === "cancelled")).forEach((c) => { const p = istParts(c.slot_at); (m[`${p.date} ${p.hm}`] ||= []).push(c); }); return m; }, [cs]);
   const slots = useMemo(() => { const extra = cs.map((c) => istParts(c.slot_at)).filter((p) => days.includes(p.date)).map((p) => p.hm);
     return [...new Set([...times(cfg.consult_start, cfg.consult_end), ...extra])].sort(); }, [cs, cfg, week]); // eslint-disable-line
   const inWeek = cs.filter((c) => days.includes(istParts(c.slot_at).date) && c.status !== "cancelled").length;
@@ -42,9 +42,9 @@ export function ConsultCalendar() {
       <div className="overflow-x-auto"><div className="grid min-w-[900px]" style={{ gridTemplateColumns: "64px repeat(7, minmax(0,1fr))" }} data-testid="consult-calendar-grid">
         <div />{days.map((d) => <div key={d} className={`text-xs font-mono text-center pb-2 ${d === today ? "text-green-300" : "text-slate-400"}`} data-testid={`consult-calendar-day-${d}`}>{label(d)}</div>)}
         {slots.map((t) => [<div key={t} className="text-[10px] font-mono text-slate-500 pr-2 text-right py-1 border-t border-white/5">{t}</div>,
-          ...days.map((d) => { const c = map[`${d} ${t}`]; return (
-            <div key={d + t} className={`border-t border-l border-white/5 h-9 p-0.5 ${d === today ? "bg-green-500/[0.03]" : ""}`}>
-              {c && <button onClick={() => setSel(c)} className={`w-full h-full text-left text-[11px] px-1.5 border rounded-sm truncate transition-transform hover:scale-[1.02] ${SCOL[c.status] || ""}`} data-testid={`consult-calendar-event-${c.id}`}>{c.name} · {c.topic}</button>}
+          ...days.map((d) => { const evs = map[`${d} ${t}`] || []; return (
+            <div key={d + t} className={`border-t border-l border-white/5 min-h-[36px] p-0.5 flex gap-0.5 ${d === today ? "bg-green-500/[0.03]" : ""}`}>
+              {evs.map((c) => <button key={c.id} onClick={() => setSel(c)} title={`${c.name} · ${c.status}`} className={`flex-1 min-w-0 h-8 text-left text-[11px] px-1.5 border rounded-sm truncate transition-transform hover:scale-[1.02] ${SCOL[c.status] || ""}`} data-testid={`consult-calendar-event-${c.id}`}>{evs.length > 1 ? c.name.split(" ")[0] : `${c.name} · ${c.topic}`}</button>)}
             </div>); })])}
       </div></div>
       {sel && <div className="mt-4 border border-white/10 p-4 rounded-sm text-sm space-y-1" data-testid="consult-calendar-detail">
@@ -61,7 +61,12 @@ export function ConsultCalendar() {
 export function ReviewModeration() {
   const [rs, setRs] = useState(null);
   useEffect(() => { api.get("/admin/consult-reviews").then((r) => setRs(r.data)); }, []);
-  const toggle = async (r) => { try { await api.patch(`/admin/consult-reviews/${r.id}`, { hidden: !r.hidden }); setRs(rs.map((x) => (x.id === r.id ? { ...x, hidden: !r.hidden } : x))); } catch (e) { toast.error(errMsg(e)); } };
+  const [busy, setBusy] = useState(null);
+  const toggle = async (r) => {
+    setBusy(r.id);
+    try { await api.patch(`/admin/consult-reviews/${r.id}`, { hidden: !r.hidden }); setRs((cur) => cur.map((x) => (x.id === r.id ? { ...x, hidden: !r.hidden } : x))); } catch (e) { toast.error(errMsg(e)); }
+    setBusy(null);
+  };
   return (
     <Glass className="p-5" data-testid="review-moderation">
       <div className="font-bold mb-1">Consultation reviews</div>
@@ -70,7 +75,7 @@ export function ReviewModeration() {
         <div key={r.id} className={`flex items-start gap-3 border border-white/5 p-3 rounded-sm ${r.hidden ? "opacity-50" : ""}`} data-testid={`review-row-${i}`}>
           <Stars n={r.rating} size="h-3.5 w-3.5" /><div className="flex-1 text-sm"><div className="text-slate-300">{r.comment || <span className="text-slate-500">no comment</span>}</div>
             <div className="text-[11px] font-mono text-slate-500 mt-1">{r.display_name} · {r.topic} · {r.rating >= 4 && r.comment.length >= 10 && !r.hidden ? <span className="text-green-400">on landing page</span> : "not shown"}</div></div>
-          <button className="ghost-btn !text-xs !py-1" onClick={() => toggle(r)} data-testid={`review-toggle-${i}`}>{r.hidden ? <><Eye className="h-3 w-3" />Show</> : <><EyeOff className="h-3 w-3" />Hide</>}</button>
+          <button className="ghost-btn !text-xs !py-1" disabled={busy === r.id} onClick={() => toggle(r)} data-testid={`review-toggle-${i}`}>{r.hidden ? <><Eye className="h-3 w-3" />Show</> : <><EyeOff className="h-3 w-3" />Hide</>}</button>
         </div>))}</div>}
     </Glass>);
 }

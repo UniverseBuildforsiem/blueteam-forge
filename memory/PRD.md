@@ -147,6 +147,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - WhatsApp: no API (user declined) — wa.me click-to-chat to 919381203090 (editable) after enquiries/on consultation page; admin WhatsApp links to each lead.
 - NOTE: RAZORPAY_KEY_ID/SECRET and CASHFREE_CLIENT_ID/SECRET/BASE_URL are NOT set — checkout shows 'payments open soon' until added.
 
+## 2026-06 Consultation Calendar + Post-Session Reviews (DONE — iteration_26 16/16 backend + frontend; fixes self-tested)
+- Admin Live tab: weekly Mon–Sun IST calendar (consult hours rows + extra rows for out-of-hours bookings, stacked clashes, status colours, detail panel with email/WhatsApp), review moderation (hide/show).
+- Reviews: session-reminders cron (*/15) also runs send_review_requests -> paid/completed consultations 90 min–7 days after slot get a token email (/review/:token). 1–5★ + comment upsert; landing ConsultReviews shows non-hidden 4–5★ with comment>=10 chars as 'First L.'; average over all reviews.
+
 ## Backlog (current)
 - P2: Per-user cooldown on AI quiz/lesson generation
 - P2: Lesson quiz analytics for instructors (pass rates per lesson)

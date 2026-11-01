@@ -140,7 +140,7 @@ def display_name(name):
 
 async def send_review_requests():
     for c in await db.consultations.find({"status": {"$in": ["paid", "completed"]}, "review_requested": {"$ne": True}}, NO_ID).to_list(500):
-        if datetime.fromisoformat(c["slot_at"]) > now() - timedelta(minutes=90):
+        if not now() - timedelta(days=7) < datetime.fromisoformat(c["slot_at"]) <= now() - timedelta(minutes=90):
             continue
         token = secrets.token_urlsafe(24)
         claimed = await db.consultations.update_one({"id": c["id"], "review_requested": {"$ne": True}}, {"$set": {"review_requested": True, "review_token": token}})
@@ -152,7 +152,7 @@ async def send_review_requests():
 
 
 async def by_token(token):
-    c = await db.consultations.find_one({"review_token": token}, NO_ID) if len(token) > 10 else None
+    c = await db.consultations.find_one({"review_token": token, "status": {"$in": ["paid", "completed"]}}, NO_ID) if len(token) > 10 else None
     if not c:
         raise HTTPException(404, "This review link is invalid or has expired")
     return c
@@ -180,8 +180,8 @@ async def submit_review(token: str, body: ReviewIn):
 
 @router.get("/public/reviews")
 async def public_reviews():
-    rows = await db.consult_reviews.find({"hidden": False}, NO_ID).sort("created_at", -1).to_list(500)
-    best = [{k: r[k] for k in ("id", "rating", "comment", "display_name", "topic", "created_at")} for r in rows if r["rating"] >= 4 and len(r["comment"]) >= 10][:9]
+    rows = await db.consult_reviews.find({}, NO_ID).sort("created_at", -1).to_list(500)
+    best = [{k: r[k] for k in ("id", "rating", "comment", "display_name", "topic", "created_at")} for r in rows if not r.get("hidden") and r["rating"] >= 4 and len(r["comment"]) >= 10][:9]
     return {"count": len(rows), "average": round(sum(r["rating"] for r in rows) / len(rows), 1) if rows else None, "reviews": best}
 
 

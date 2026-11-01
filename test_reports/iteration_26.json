@@ -1,0 +1,39 @@
+{
+  "summary": "Tested the Expert Consultation Calendar (admin Live tab), post-session review requests via the */15 session-reminders cron, the public /review/<token> page, landing-page reviews and admin review moderation, on backend and frontend. Backend: 16/16 pytest pass. That covers cron 401 with a wrong or missing token, a fast 200 response, background tokens set only for paid/completed slots >=90 min in the past (not recent, future or needs_reschedule ones), the token staying the same across cron runs, 'First L.' names, the 404 on a bad token, 422 on rating 0/6, comment >600 or empty body, the upsert, public filtering, the admin 403 and the hide/show round-trip. Review emails were accepted with 202 according to the backend logs. Frontend: the review form (hover label, stars, submit -> success, pre-fill with 'Update review', invalid token -> review-error), the landing consult-reviews section (placed right after consultation-promo, average text, cards with 'Priya S. · topic', section hidden when every review is hidden) and the admin calendar (Mon–Sun IST grid, 16:00–22:30 rows plus an extra 09:00 row for TESTC0, green paid and orange needs_reschedule colours, detail panel with mailto and wa.me/91… links, prev/next/This week, count) all work. I found 2 bugs: two bookings in the same slot show as only one calendar event, and fast Hide/Show clicks leave stale button states.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/public/reviews/{token}", "issue": "by_token does not check the consultation status, so a review link keeps working if the consultation is later cancelled. Minor."},
+      {"endpoint": "GET /api/public/reviews", "issue": "count/average include every non-hidden review (including 1–3★), so admin Hide changes the public average. Fine if intended, but admins can push the average up by hiding low ratings."},
+      {"endpoint": "send_review_requests", "issue": "The first cron run will email every historical paid/completed consultation whose slot is older than 90 min, with no upper age limit. Consider skipping slots older than about 7 days."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminCalendar ConsultCalendar", "issue": "The `map` is keyed by 'date hm', so when two consultations share a slot only one renders. This hits the exact needs_reschedule case: a clash is created at the same slot_at as an existing paid booking. Reproduced: a needs_reschedule TEST_clash at TESTC1's slot (2 Nov 18:00) hid the paid TESTC1 event entirely, while the count said 3 and only 2 events were visible. A cancelled booking can also hide a paid one at the same slot. Fix: group into arrays per key (and skip cancelled or show it last), then render stacked or split events.", "selector": "[data-testid^=consult-calendar-event-]", "priority": "MEDIUM"},
+      {"component": "AdminCalendar ReviewModeration toggle", "issue": "toggle() calls setRs(rs.map(...)) with a stale closure. If a second toggle is clicked before the first PATCH resolves, the first row's local state is overwritten. Reproduced: after toggling two rows back to Show quickly, Priya's button still read 'Show' although the server had hidden=false and the landing page showed the review. Fix: setRs(prev => prev.map(...)).", "selector": "[data-testid^=review-toggle-]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin Live calendar", "issues": ["The detail panel (consult-calendar-detail) stays open with the previous week's booking after prev/next. Consider clearing sel when the week changes.", "Today is Sunday 1 Nov (IST), so 'This week' shows Oct 26–Nov 1 and the bookings for tomorrow and the day after (TESTC1/TESTC2) only appear after clicking next. This is correct for a Mon–Sun design, but you could auto-advance on Sundays or show a hint that the next week has N bookings.", "The extra-time rows also include cancelled bookings' times."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_consult_reviews_calendar.py", "/app/test_reports/pytest/pytest_results_iter26.xml"],
+  "action_items": [
+    "Fix ConsultCalendar slot collisions: support multiple consultations per slot (needs_reschedule clashes and cancelled + rebooked always share a slot_at).",
+    "Use the functional updater setRs(prev => ...) in the ReviewModeration toggle.",
+    "Optional: clear the selected event on week navigation; cap the age of review requests; consider rechecking status in by_token."
+  ],
+  "critical_code_review_comments": [
+    "AdminCalendar.jsx line 31: Object.fromEntries on cs drops duplicate slot keys.",
+    "AdminCalendar.jsx line 64: stale-closure state update.",
+    "routes_consult.py send_review_requests: no maximum age, so historical bookings get a backfill email blast; safe_send failures are not retried (review_requested is set before sending), so a failed email (e.g. 429) is never resent."
+  ],
+  "updated_files": ["/app/backend/tests/test_consult_reviews_calendar.py"],
+  "success_rate": {"backend": "100%", "frontend": "90%"},
+  "seed_data_creation": "Created TEST_past_paid/TEST_past_done/TEST_recent/TEST_future/TEST_resched (pytest fixture, auto-deleted), TEST_ui (with review token TEST_ui_token_abcdefghijk) and TEST_clash, plus TEST_ cron_runs. All deleted. Review hidden flags are restored to false. TESTC0/1/2 and Priya's review are left untouched.",
+  "test_credentials": "admin@socprofessionals.academy / Admin@123; student@socprofessionals.academy / Student@123 (from /app/memory/test_credentials.md)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && pytest tests/test_consult_reviews_calendar.py -n0 (it seeds and cleans its own TEST_ consultations and sleeps about 6 s for the background cron task). Server date is Sun 1 Nov 2026 (IST), so TESTC1/TESTC2 appear under consult-calendar-next. Auth playbook items were not re-verified this iteration."
+}
