@@ -19,6 +19,7 @@ import LiveClasses from "../components/LiveClasses";
 import ConsultationPromo from "../components/ConsultationPromo";
 import ConsultReviews from "../components/ConsultReviews";
 import LandingBlogs from "../components/LandingBlogs";
+import LandingPaths from "../components/LandingPaths";
 
 const FEED = [
   ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
@@ -231,15 +232,7 @@ export default function Landing() {
           <div><div className="eyebrow mb-3">// learning paths</div><h2 className="text-3xl font-bold">From recruit to elite.</h2></div>
           <Link to="/catalog" className="ghost-btn hidden sm:inline-flex" data-testid="paths-view-catalog">Full catalog</Link>
         </div>
-        <div className="space-y-2">
-          {paths.map((p, i) => (
-            <div key={p.id} data-testid={`landing-path-${p.id}`} className="flex items-center gap-6 border-b border-cyan-500/10 py-5 group">
-              <span className="font-mono text-slate-600 text-sm w-8">0{i + 1}</span>
-              <span className="font-mono text-lg sm:text-xl font-bold group-hover:text-cyan-300 transition-colors flex-1">{p.title}</span>
-              <span className="text-xs font-mono text-slate-500 hidden sm:block">{p.level}</span>
-            </div>
-          ))}
-        </div>
+        <LandingPaths paths={paths} />
       </section>
 
       <LandingBlogs />

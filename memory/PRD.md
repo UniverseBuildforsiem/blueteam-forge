@@ -179,3 +179,7 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - POST /api/me/series/{slug}/shared: students earn 25 XP ONE time only (users.share_xp_awarded, atomic); /api/me/series/next returns share_xp_eligible; post page share buttons call it and show "+25 XP" chip until earned
 - Landing: LandingBlogs.jsx after "// learning paths" — one section with two tabs: "Zer0 Day Vulnerabilities and Attacks" (3 latest news posts) and "SOC Blog" (first 4 written series posts), View all link
 - Renamed everywhere: news blog = "Zer0 Day Vulnerabilities and Attacks", series = "SOC Blog" (blog tabs, headings, admin tab, share card, weekly email subject); app sidebar link "Blogs"
+
+## Landing tweaks (2026-06)
+- Removed "// threat briefing · updated daily" magazine section (LandingIntel now renders only SOP showcase)
+- Learning paths: LandingPaths.jsx image cards (5 AI images in user's reference style, mapped by path id), framer-motion slide-in stagger, slow Ken Burns zoom, hover glow + scanline sweep (index.css .path-card/.path-img)

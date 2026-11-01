@@ -87,8 +87,16 @@
 .ticker-track { animation: ticker 70s linear infinite; }
 .ticker-track:hover { animation-play-state: paused; }
 
+@keyframes kenburns { 0% { transform: scale(1.04) translate(0, 0); } 100% { transform: scale(1.14) translate(-2%, -2%); } }
+.path-img { animation: kenburns 18s ease-in-out infinite alternate; }
+@keyframes scan { from { transform: translateY(-100%); } to { transform: translateY(400%); } }
+.path-card .path-scan { opacity: 0; }
+.path-card:hover .path-scan { opacity: 1; animation: scan 1.6s linear infinite; }
+.path-card { transition: box-shadow .4s ease, border-color .4s ease, transform .4s ease; }
+.path-card:hover { box-shadow: 0 0 0 1px rgba(0,240,255,.6), 0 0 36px rgba(0,240,255,.25); transform: translateY(-4px); }
+
 @media (prefers-reduced-motion: reduce) {
-    .rise, .cursor-blink::after, .ticker-track { animation: none; }
+    .rise, .cursor-blink::after, .ticker-track, .path-img, .path-card:hover .path-scan { animation: none; }
 }
 
 .avatar-frame { position: relative; display: inline-flex; border-radius: 9999px; padding: 2px; isolation: isolate; }

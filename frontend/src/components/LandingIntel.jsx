@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Lock, Unlock, Radio, FileText, Terminal as TermIcon } from "lucide-react";
-import { Glass, SeverityBadge } from "./common";
+import { Glass } from "./common";
 import { api } from "../lib/api";
 
 const SEV_DOT = { Critical: "bg-red-500", High: "bg-orange-400", Medium: "bg-yellow-300", Low: "bg-green-400" };
@@ -20,37 +20,6 @@ export function ThreatTicker({ posts }) {
         </div></div>
       </div>
     </div>);
-}
-
-function BlogMagazine({ posts }) {
-  if (!posts.length) return null;
-  const [lead, ...rest] = posts;
-  return (
-    <section className="max-w-7xl mx-auto px-6 pb-24" data-testid="landing-blog">
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
-        <div><div className="eyebrow mb-3">// threat briefing · updated daily</div><h2 className="text-3xl font-bold max-w-xl">Today's security news, turned into <span className="neon-green">SOC action items.</span></h2></div>
-        <Link to="/blog" className="ghost-btn" data-testid="landing-blog-link">Read the blog <ArrowRight className="h-4 w-4" /></Link>
-      </div>
-      <div className="grid lg:grid-cols-[1.35fr_1fr] gap-5">
-        <Link to={`/blog/${lead.slug}`} className="group relative overflow-hidden rounded-sm border border-cyan-500/20 min-h-[420px] flex" data-testid={`landing-blog-lead-${lead.id}`}>
-          {lead.image ? <img src={lead.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" /> : <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-transparent" />}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F1A] via-[#0B0F1A]/90 to-[#0B0F1A]/20" />
-          <div className="relative mt-auto p-7">
-            <div className="flex items-center gap-2 text-xs font-mono"><SeverityBadge level={lead.severity} /><span className="text-cyan-300">{lead.category}</span><span className="text-slate-400">· {lead.source} · {ago(lead.published_at)}</span></div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold mt-4 leading-tight group-hover:text-cyan-300 transition-colors">{lead.title}</h3>
-            <p className="text-slate-300 mt-3 max-w-xl text-sm">{lead.excerpt}</p>
-            <span className="inline-flex items-center gap-2 mt-5 text-sm font-mono text-green-400">Read the SOC action items <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
-          </div>
-        </Link>
-        <div className="flex flex-col gap-3">
-          {rest.slice(0, 4).map((p, i) => <Link key={p.id} to={`/blog/${p.slug}`} className="group glass rounded-sm p-4 flex gap-4 items-start hover:border-cyan-400/50 transition-colors" data-testid={`landing-blog-item-${p.id}`}>
-            <span className="font-mono text-2xl font-bold text-cyan-500/40 group-hover:text-cyan-300 transition-colors w-8 shrink-0">0{i + 2}</span>
-            <div className="min-w-0"><div className="flex items-center gap-2 text-[11px] font-mono"><span className={`h-1.5 w-1.5 rounded-full ${SEV_DOT[p.severity]}`} /><span className="text-slate-400">{p.severity} · {p.category}</span></div>
-              <div className="font-semibold mt-1 leading-snug group-hover:text-cyan-300 transition-colors">{p.title}</div><div className="text-[11px] font-mono text-slate-500 mt-1">{p.source} · {ago(p.published_at)}</div></div>
-          </Link>)}
-        </div>
-      </div>
-    </section>);
 }
 
 function SopShowcase({ d }) {
@@ -102,5 +71,5 @@ export function useLandingIntel() {
 }
 
 export default function LandingIntel({ posts, sops }) {
-  return (<><BlogMagazine posts={posts} /><SopShowcase d={sops} /></>);
+  return <SopShowcase d={sops} />;
 }
