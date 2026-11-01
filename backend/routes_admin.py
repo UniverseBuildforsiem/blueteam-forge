@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 import secrets
@@ -6,6 +7,7 @@ from datetime import timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from emergentintegrations.llm.chat import LlmChat, UserMessage
 from core import db, now, now_iso, new_id, hash_password, admin_only, staff, audit, send_email, email_template, rank_for
 from sop_data import SOPS
 from path_templates import BUILTIN_TEMPLATES
@@ -274,6 +276,95 @@ async def delete_template(tid: str, user=Depends(admin_only)):
         raise HTTPException(404, "Template not found")
     await audit(user, "delete path template", tid)
     return {"ok": True}
+
+
+# ---------- Practice suggestions & AI lesson writer ----------
+STOP = set("a an the and or of to in for on with from your you what how why is are it its by as at vs into using use day week · & - ( ) l1 l2 101 basics essentials fundamentals introduction review final next steps".split())
+SYN = {"phishing": ["email", "phish", "bec"], "email": ["phishing"], "brute": ["password", "spray", "logon"], "spray": ["brute", "password"], "password": ["brute", "spray", "credential"],
+       "kerberos": ["kerberoasting", "ticket"], "kerberoasting": ["kerberos"], "ransomware": ["encryption", "shadow"], "malware": ["endpoint", "edr", "beacon"],
+       "endpoint": ["malware", "edr", "sysmon"], "powershell": ["script"], "dns": ["tunneling", "tunnel"], "tunneling": ["dns", "exfiltration"], "exfiltration": ["exfil", "data"],
+       "web": ["shell", "sql", "iis"], "siem": ["splunk", "sentinel", "log", "spl", "kql"], "splunk": ["siem", "spl"], "sentinel": ["siem", "kql"], "logs": ["log", "event"],
+       "cloud": ["azure", "m365", "microsoft", "entra"], "m365": ["microsoft", "cloud", "bec"], "lateral": ["movement", "psexec"], "privilege": ["admin", "escalation"],
+       "incident": ["response", "ir"], "triage": ["alert", "verdict"], "intel": ["ioc", "threat"], "linux": ["ssh"], "windows": ["event"], "hunting": ["hunt"], "c2": ["beacon", "beaconing"]}
+
+
+def words(s):
+    ws = {w for w in re.findall(r"[a-z0-9]+", (s or "").lower()) if len(w) > 2 and w not in STOP}
+    return ws | {x for w in ws for x in SYN.get(w, [])}
+
+
+class SuggestIn(BaseModel):
+    title: str = Field(min_length=2, max_length=200)
+    content: str = Field(default="", max_length=20000)
+
+
+@router.post("/builder/suggest")
+async def suggest_practice(body: SuggestIn, user=Depends(staff)):
+    q = words(body.title) | words(body.content[:400])
+    if not q:
+        return []
+    pools = {"lab": [(l, f"{l['title']} {l.get('category', '')} {l.get('description', '')}") for l in await db.labs.find({}, {"_id": 0, "id": 1, "title": 1, "category": 1, "description": 1}).to_list(200)],
+             "quiz": [(x, x["title"]) for x in await db.quizzes.find({}, {"_id": 0, "id": 1, "title": 1}).to_list(200)],
+             "challenge": [(c, f"{c['title']} {c.get('category', '')}") for c in await db.challenges.find({}, {"_id": 0, "id": 1, "title": 1, "category": 1}).to_list(500)],
+             "sop": [(s, f"{s['title']} {s['category']} {' '.join(s['triggers'])}") for s in SOPS]}
+    out = []
+    for typ, items in pools.items():
+        scored = []
+        for it, text in items:
+            tw, title_w = words(text), words(it["title"])
+            score = 2 * len(q & title_w) + len(q & (tw - title_w))
+            if score >= 2:
+                scored.append((score, it))
+        scored.sort(key=lambda x: -x[0])
+        out += [{"type": typ, "id": it["id"], "title": it["title"], "score": sc} for sc, it in scored[:2]]
+    return sorted(out, key=lambda x: -x["score"])[:6]
+
+
+class WriteIn(BaseModel):
+    title: str = Field(min_length=2, max_length=200)
+    path_title: str = Field(default="", max_length=200)
+    module_title: str = Field(default="", max_length=200)
+    level: str = Field(default="Beginner", max_length=30)
+    minutes: int = Field(default=15, ge=1, le=240)
+
+
+WRITE_PROMPT = """Write the lesson "{title}" for the {level} learning path "{path}" (module: "{module}") on SOCProfessionals Academy, a training platform for SOC analysts.
+Target reading/working time: about {minutes} minutes.
+Format: plain text only (no markdown headings, no ** or #). Use short paragraphs, and lines starting with "- " for bullet lists. Use UPPERCASE short labels on their own line for sections.
+Include: a 1-2 sentence intro, the core concepts explained simply, a concrete real-world SOC example (log lines, Event IDs, commands or SPL/KQL where relevant), common mistakes analysts make, and a "KEY TAKEAWAYS" list of 3-5 bullets.
+Keep it between 600 and 900 words. Be accurate and practical. Do not mention that you are an AI."""
+JOBS = set()
+
+
+async def run_write_job(job_id, body: WriteIn):
+    chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"lesson-{job_id}",
+                   system_message="You are a senior SOC analyst and instructional designer who writes clear, practical cybersecurity lessons.").with_model("anthropic", "claude-sonnet-5-5")
+    try:
+        text = await chat.send_message(UserMessage(text=WRITE_PROMPT.format(title=body.title, level=body.level, path=body.path_title or "SOC Analyst",
+                                                                             module=body.module_title or "General", minutes=body.minutes)))
+        text = re.sub(r"^#+\s*", "", re.sub(r"\*\*(.+?)\*\*", r"\1", text.strip()), flags=re.M)
+        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "done", "content": text, "done_at": now_iso()}})
+    except Exception as e:
+        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "error", "error": f"The lesson writer is unavailable right now: {str(e)[:120]}"}})
+
+
+@router.post("/builder/write-lesson")
+async def write_lesson(body: WriteIn, user=Depends(staff)):
+    job_id = new_id()
+    await db.lesson_jobs.insert_one({"id": job_id, "user_id": user["id"], "title": body.title, "status": "running", "created_at": now_iso()})
+    t = asyncio.create_task(run_write_job(job_id, body))
+    JOBS.add(t)
+    t.add_done_callback(JOBS.discard)
+    await audit(user, "ai write lesson", body.title[:80])
+    return {"job_id": job_id, "status": "running"}
+
+
+@router.get("/builder/write-lesson/{job_id}")
+async def write_lesson_status(job_id: str, user=Depends(staff)):
+    j = await db.lesson_jobs.find_one({"id": job_id, "user_id": user["id"]}, {"_id": 0, "status": 1, "content": 1, "error": 1})
+    if not j:
+        raise HTTPException(404, "Job not found")
+    return j
 
 
 # ---------- Path builder assets ----------

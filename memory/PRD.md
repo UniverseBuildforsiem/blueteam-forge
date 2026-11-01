@@ -107,3 +107,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - `path_templates.py`: 5 built-in outline templates (SOC L1 in 30 Days, Threat Hunting Bootcamp, IR Essentials, Cloud SOC M365/Azure, SIEM Engineer). Custom templates in `path_templates` collection (admin saves any path incl. content/attachments).
 - Endpoints (routes_admin.py): GET /api/builder/templates (staff), POST /api/builder/templates/{id}/use → unpublished draft with fresh ids, POST /api/builder/templates (admin, from path_id), DELETE (admin, custom only).
 - UI: `PathTemplates.jsx` — "Start from template" gallery (outline preview) in path Content editors; "Save as template" on existing paths (admin).
+
+## 2026-06 Auto Practice Links + AI Lesson Writer (DONE — self-tested curl + UI)
+- POST /api/builder/suggest {title, content} (staff): keyword + synonym matching over labs, quizzes, challenges, SOPs; top 2 per type, max 6.
+- POST /api/builder/write-lesson (staff) → background job (Claude Sonnet via Emergent LLM key, 600-900 words plain text) in `lesson_jobs`; poll GET /api/builder/write-lesson/{job_id}. Background job avoids ingress timeout.
+- PathBuilder: "Suggest practice" + "Attach all" chips, "Write this lesson" (draft into editor, confirm before replacing). setMods/upL are functional so edits made while the AI writes are preserved.
