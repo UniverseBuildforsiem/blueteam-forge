@@ -102,3 +102,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 ## 2026-06 Admin Panel v2 (DONE — iteration_21 backend 20/20 + self-tested builder)
 - `routes_admin.py`: invite users (72h single-use set-password email via password_reset_tokens kind=invite, `invite_pending` cleared on reset), resend invite, user detail, plan/SOP/ebook access grants + reset XP, hard delete (user data collections; payments kept for accounting; self/last-admin protected), full analytics (/api/admin/analytics/full?days=7|30|90: KPIs w/ change, daily series, revenue by product, engagement, 6-stage funnel, top performers, popular content), /api/builder/assets.
 - Frontend: `AdminAnalytics.jsx`, `AdminUsers.jsx` (invite dialog, detail sheet, type-email-to-delete), `PathBuilder.jsx` (drag & drop + arrows for modules/lessons incl. cross-module, lesson editor, attachments to quiz/lab/challenge/ctf/course/sop, student preview). Students see "practice this lesson" links (Paths.jsx LessonBody).
+
+## 2026-06 Path Templates (DONE — self-tested curl + UI)
+- `path_templates.py`: 5 built-in outline templates (SOC L1 in 30 Days, Threat Hunting Bootcamp, IR Essentials, Cloud SOC M365/Azure, SIEM Engineer). Custom templates in `path_templates` collection (admin saves any path incl. content/attachments).
+- Endpoints (routes_admin.py): GET /api/builder/templates (staff), POST /api/builder/templates/{id}/use → unpublished draft with fresh ids, POST /api/builder/templates (admin, from path_id), DELETE (admin, custom only).
+- UI: `PathTemplates.jsx` — "Start from template" gallery (outline preview) in path Content editors; "Save as template" on existing paths (admin).

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, ChevronLeft } from "lucide-react";
+import { Plus, Trash2, Save, ChevronLeft, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
+import { TemplateGallery, SaveAsTemplate } from "./PathTemplates";
 import { Glass, Empty } from "./common";
 import PathBuilder from "./PathBuilder";
 
@@ -65,6 +67,8 @@ export default function ContentEditor({ kind }) {
   const [items, setItems] = useState([]);
   const [edit, setEdit] = useState(null);
   const [isNew, setIsNew] = useState(false);
+  const [gallery, setGallery] = useState(false);
+  const { user } = useAuth();
   const load = () => api.get(`/manage/${kind}`).then((r) => setItems(r.data));
   useEffect(() => { setEdit(null); load(); }, [kind]); // eslint-disable-line
   const save = async () => {
@@ -79,7 +83,8 @@ export default function ContentEditor({ kind }) {
     return (
       <div>
         <div className="flex justify-between mb-4"><button className="ghost-btn" onClick={() => setEdit(null)} data-testid="builder-back"><ChevronLeft className="h-4 w-4" />Back</button>
-          <div className="flex gap-3 items-center">{"published" in edit && <label className="text-sm font-mono flex items-center gap-2"><input type="checkbox" checked={!!edit.published} onChange={(e) => setEdit({ ...edit, published: e.target.checked })} data-testid="builder-published" />Published</label>}
+          <div className="flex gap-3 items-center">{kind === "paths" && !isNew && user?.role === "admin" && <SaveAsTemplate path={edit} />}
+            {"published" in edit && <label className="text-sm font-mono flex items-center gap-2"><input type="checkbox" checked={!!edit.published} onChange={(e) => setEdit({ ...edit, published: e.target.checked })} data-testid="builder-published" />Published</label>}
             <button className="glow-btn" onClick={save} data-testid="builder-save"><Save className="h-4 w-4" />Save</button></div></div>
         <Form key={edit.id || "new"} d={edit} set={setEdit} />
       </div>
@@ -87,7 +92,11 @@ export default function ContentEditor({ kind }) {
   }
   return (
     <div>
-      <button className="glow-btn mb-4" onClick={() => { setIsNew(true); setEdit(TEMPLATES[kind]()); }} data-testid={`content-new-${kind}`}><Plus className="h-4 w-4" />New</button>
+      <div className="flex gap-2 mb-4">
+        <button className="glow-btn" onClick={() => { setIsNew(true); setEdit(TEMPLATES[kind]()); }} data-testid={`content-new-${kind}`}><Plus className="h-4 w-4" />New</button>
+        {kind === "paths" && <button className="ghost-btn" onClick={() => setGallery(true)} data-testid="content-from-template"><LayoutTemplate className="h-4 w-4" />Start from template</button>}
+      </div>
+      {kind === "paths" && <TemplateGallery open={gallery} setOpen={setGallery} onPick={(d) => { setIsNew(true); setEdit(d); }} />}
       <Glass className="divide-y divide-white/5">{items.length ? items.map((it) => (
         <div key={it.id} className="p-3 flex items-center gap-3" data-testid={`content-item-${it.id}`}>
           <span className="flex-1 text-sm">{it.title}</span>

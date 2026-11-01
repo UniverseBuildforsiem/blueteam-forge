@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from core import db, now, now_iso, new_id, hash_password, admin_only, staff, audit, send_email, email_template, rank_for
 from sop_data import SOPS
+from path_templates import BUILTIN_TEMPLATES
 
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
@@ -212,6 +213,67 @@ async def full_analytics(days: int = 30, user=Depends(admin_only)):
             "roles": dict(Counter(u["role"] for u in us)),
             "popular": {"labs": await popular("lab_progress", "lab_id", "title", "labs"), "challenges": await popular("challenge_submissions", "challenge_id", "title", "challenges"),
                         "quizzes": await popular("quiz_attempts", "quiz_id", "title", "quizzes")}}
+
+
+# ---------- Path templates ----------
+def tpl_card(t):
+    lessons = [l for m in t["modules"] for l in m["lessons"]]
+    return {k: t.get(k) for k in ("id", "title", "level", "category", "duration", "description", "builtin", "created_by", "created_at")} | {
+        "module_count": len(t["modules"]), "lesson_count": len(lessons), "minutes": sum(int(l.get("minutes") or 0) for l in lessons),
+        "outline": [{"title": m["title"], "lessons": [l["title"] for l in m["lessons"]]} for m in t["modules"]]}
+
+
+async def find_template(tid):
+    t = next((x for x in BUILTIN_TEMPLATES if x["id"] == tid), None) or await db.path_templates.find_one({"id": tid}, NO_ID)
+    if not t:
+        raise HTTPException(404, "Template not found")
+    return t
+
+
+@router.get("/builder/templates")
+async def list_templates(user=Depends(staff)):
+    custom = await db.path_templates.find({}, NO_ID).sort("created_at", -1).to_list(200)
+    return [tpl_card(t) for t in BUILTIN_TEMPLATES + custom]
+
+
+@router.post("/builder/templates/{tid}/use")
+async def use_template(tid: str, user=Depends(staff)):
+    t = await find_template(tid)
+    mods = [{"id": f"m-{new_id()[:7]}", "title": m["title"], "lessons": [{"id": f"l-{new_id()[:7]}", "title": l["title"], "minutes": int(l.get("minutes") or 10),
+             "content": l.get("content", ""), "video_url": l.get("video_url", ""), "resources": l.get("resources", []), "attachments": l.get("attachments", [])}
+             for l in m["lessons"]]} for m in t["modules"]]
+    return {"title": t["title"], "level": t.get("level", "Beginner"), "category": t.get("category", ""), "description": t.get("description", ""),
+            "order": 50, "published": False, "modules": mods, "from_template": tid}
+
+
+class SaveTemplateIn(BaseModel):
+    path_id: str
+    title: str = Field(min_length=3, max_length=120)
+    description: str = Field(default="", max_length=600)
+
+
+@router.post("/builder/templates")
+async def save_template(body: SaveTemplateIn, user=Depends(admin_only)):
+    p = await db.paths.find_one({"id": body.path_id}, NO_ID)
+    if not p:
+        raise HTTPException(404, "Path not found")
+    t = {"id": f"tpl-{new_id()}", "title": body.title, "description": body.description or p.get("description", ""), "level": p.get("level"), "category": p.get("category"),
+         "duration": None, "builtin": False, "created_by": user["email"], "created_at": now_iso(),
+         "modules": [{"title": m["title"], "lessons": [{k: l.get(k) for k in ("title", "minutes", "content", "video_url", "resources", "attachments") if l.get(k) is not None} for l in m["lessons"]]} for m in p["modules"]]}
+    await db.path_templates.insert_one(dict(t))
+    await audit(user, "save path template", t["id"])
+    return tpl_card(t)
+
+
+@router.delete("/builder/templates/{tid}")
+async def delete_template(tid: str, user=Depends(admin_only)):
+    if any(x["id"] == tid for x in BUILTIN_TEMPLATES):
+        raise HTTPException(400, "Built-in templates can't be deleted")
+    r = await db.path_templates.delete_one({"id": tid})
+    if not r.deleted_count:
+        raise HTTPException(404, "Template not found")
+    await audit(user, "delete path template", tid)
+    return {"ok": True}
 
 
 # ---------- Path builder assets ----------
