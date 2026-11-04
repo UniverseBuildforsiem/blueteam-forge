@@ -5,8 +5,8 @@ import { api, errMsg } from "../../lib/api";
 import { Glass, Empty } from "../common";
 import IntelReport, { VerdictChip, download } from "./IntelReport";
 
-export const defang = (s) => s.replace(/https?/gi, (m) => m.replace(/t/gi, "x")).replace(/\./g, "[.]").replace(/@/g, "[@]").replace(/:\/\//g, "[://]");
-export const refang = (s) => s.replace(/hxxp/gi, "http").replace(/\[\.\]|\(\.\)|\{\.\}/g, ".").replace(/\[@\]|\[at\]/gi, "@").replace(/\[:\/\/\]/g, "://").replace(/\[:\]/g, ":");
+export { defang, refang } from "./IntelTicket";
+import { defang, refang } from "./IntelTicket";
 
 export function OpenReport({ id, onClose }) {
   const [r, setR] = useState(null);

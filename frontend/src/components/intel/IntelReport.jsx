@@ -1,5 +1,6 @@
 import { ShieldAlert, ShieldCheck, ShieldQuestion, AlertTriangle, Download, ExternalLink } from "lucide-react";
 import { Glass } from "../common";
+import IntelTicket from "./IntelTicket";
 
 export const VERDICT = {
   malicious: { label: "Malicious", cls: "text-red-300 border-red-500/40 bg-red-500/10", Icon: ShieldAlert, bar: "bg-red-500" },
@@ -85,6 +86,7 @@ export default function IntelReport({ r }) {
           : <li className="text-sm text-slate-400">No source reported this indicator as bad. Absence of evidence is not proof it is safe — check context in your logs.</li>}</ul>
         <div className="flex flex-wrap gap-2 mt-4">
           <button className="ghost-btn !text-xs" onClick={() => download(`intel-${r.ioc.replace(/[^a-z0-9.]/gi, "_").slice(0, 60)}.txt`, reportText(r))} data-testid="intel-report-download"><Download className="h-3.5 w-3.5" />Download report</button>
+          {r.type && <IntelTicket r={r} />}
           {ext && <a className="ghost-btn !text-xs" href={ext} target="_blank" rel="noreferrer" data-testid="intel-report-vt-link"><ExternalLink className="h-3.5 w-3.5" />Open on VirusTotal</a>}
         </div>
       </Glass>
