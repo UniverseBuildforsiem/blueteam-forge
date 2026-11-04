@@ -100,7 +100,17 @@ async def get_json(url, **kw):
 
 
 def err(e):
-    return {"status": "error", "error": str(e)[:160] or e.__class__.__name__}
+    if isinstance(e, httpx.HTTPStatusError):
+        return {"status": "error", "error": f"service unavailable (HTTP {e.response.status_code})"}
+    if isinstance(e, httpx.TimeoutException):
+        return {"status": "error", "error": "service timed out"}
+    return {"status": "error", "error": str(e).split("\n")[0][:120] or e.__class__.__name__}
+
+
+def registrable(host):
+    p = host.split(".")
+    n = 3 if len(p) > 2 and len(p[-1]) == 2 and p[-2] in {"co", "com", "net", "org", "gov", "ac", "edu", "ne", "or", "gob", "mil"} else 2
+    return ".".join(p[-n:])
 
 
 async def src_ipapi(ip):

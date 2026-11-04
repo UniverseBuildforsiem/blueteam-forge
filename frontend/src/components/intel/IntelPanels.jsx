@@ -81,7 +81,7 @@ export function ProxyPanel({ onLookup }) {
 
 export function DefangPanel() {
   const [t, setT] = useState("");
-  const copy = () => { navigator.clipboard.writeText(t); toast.success("Copied"); };
+  const copy = async () => { try { await navigator.clipboard.writeText(t); toast.success("Copied"); } catch { toast.error("Could not copy, select the text and copy manually"); } };
   return (
     <Glass className="p-4" data-testid="intel-defang">
       <div className="text-xs text-slate-400 mb-2">Defang indicators before pasting them into tickets, chat or email so nobody clicks them by accident. Refang to turn them back.</div>
@@ -99,8 +99,8 @@ export function HistoryPanel() {
   const [open, setOpen] = useState(null);
   const load = () => api.get("/intel/history").then((r) => setD(r.data));
   useEffect(() => { load(); }, []);
-  const exportCsv = async () => { const r = await api.get("/intel/history/export", { responseType: "blob" }); download("threat-intel-history.csv", r.data, "text/csv"); };
-  const clear = async () => { if (!window.confirm("Clear your lookup history?")) return; await api.delete("/intel/history"); load(); toast.success("History cleared"); };
+  const exportCsv = async () => { try { const r = await api.get("/intel/history/export", { responseType: "blob" }); download("threat-intel-history.csv", r.data, "text/csv"); } catch (e) { toast.error(errMsg(e)); } };
+  const clear = async () => { if (!window.confirm("Clear your lookup history?")) return; try { await api.delete("/intel/history"); load(); toast.success("History cleared"); } catch (e) { toast.error(errMsg(e)); } };
   if (open) return <OpenReport id={open} onClose={() => setOpen(null)} />;
   if (!d) return null;
   return (

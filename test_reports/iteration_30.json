@@ -1,0 +1,39 @@
+{
+  "summary": "Tested the Threat Intel platform end to end. Backend: 25/25 pytest tests pass. All 7 /api/intel/* endpoints return 401 without login. Lookups work: 45.95.147.236 is malicious (VT 11/92, score 85). 185.220.101.1 is malicious with Tor exit, proxy and hosting flags. microsoft.com returns DNS, WHOIS, VT and certificate data. The EICAR MD5 (also accepted in uppercase) is malicious with VT threat label virus.eicar/test and 3 YARA rules. The defanged URL refangs to https://example.com/login. 10.0.0.1, 127.0.0.1, 192.168.x.x, http://10.1.1.1/x and garbage return 400. Extract finds url, ip, hash and domain, and skips private IPs, file names and URL hosts. Bulk with more than 25 items or an empty list returns 422; invalid and private items come back with verdict 'invalid'. History, item, export CSV and per-user isolation all work (another user gets 404). AbuseIPDB shows status no_key. Frontend: logged-out users are redirected to /login. The sidebar nav works, detection chips are correct, all 5 example buttons work, and error toasts show for the private IP and for garbage. Source cards render, and the AbuseIPDB card says 'Not connected yet'. Download report gives intel-<ioc>.txt, and the VirusTotal links are correct with target=_blank. Bulk flow: extract, uncheck, Check 4, results sorted by score, Export CSV, open a row, and back all work. Selecting more than 25 disables Check. Proxy panel shows the public IP card with flags, and Check switches to the IOC tab and runs the lookup. Defang/refang give the exact expected output. Tools: 6 categories and 43 tools; the filter works and links open in a new tab. History (fresh TEST_ user): usage counter, opening a row, Export CSV, and Clear all work; after Clear the list is empty but the quota still shows 1/150. Mobile layout is fine. No page errors except the clipboard one below.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/intel/lookup (certificates source)", "issue": "crt.sh returned 502 for microsoft.com on 2 of 3 runs (third-party flakiness). The card shows the raw httpx text 'Server error 502 Bad Gateway ... For more information check: https://developer.mozilla.org/...'. Show a short message such as 'crt.sh unavailable (HTTP 502)'. Errors are not cached, so each repeat lookup waits again for the 15s timeout."},
+      {"endpoint": "POST /api/intel/lookup (url WHOIS)", "issue": "For URLs, the RDAP domain is the last 2 labels of the host, which is wrong for ccSLDs such as evil.co.uk (looks up co.uk)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "DefangPanel copy", "issue": "navigator.clipboard.writeText is not awaited, so the 'Copied' toast shows even when the write fails. The failure becomes an unhandled promise rejection: 'Write permission denied' was seen in headless. Await it, catch the error and show an error toast.", "selector": "[data-testid='intel-defang-copy']", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "History export/clear", "issue": "exportCsv and clear have no try/catch, so a failed API call fails silently and causes an unhandled rejection.", "affected_selectors": ["[data-testid='intel-history-export']", "[data-testid='intel-history-clear']"]}
+    ],
+    "design_issues": [
+      {"screen": "Open-source tools", "issues": ["When the filter matches nothing, the panel is blank with no 'No tools match' message."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_threat_intel.py", "/app/test_reports/pytest/pytest_intel.xml"],
+  "action_items": [
+    "Optional: make the crt.sh/source error message user-friendly and briefly cache the error result",
+    "Optional: await clipboard.writeText in DefangPanel and handle the failure",
+    "Optional: add an empty state to the tools filter and try/catch to history export/clear"
+  ],
+  "critical_code_review_comments": [
+    "defang() is not idempotent: running Defang twice on '[.]' gives '[[.]]'",
+    "Bulk quota counts private IPs (detect() returns 'ip') even though they are rejected and not saved; the effect is harmless",
+    "IntelReport reasons use key={x}; duplicate reason strings would cause React key warnings",
+    "/myip trusts the first X-Forwarded-For entry, which a client can spoof; this only affects its own display"
+  ],
+  "updated_files": ["/app/backend/tests/test_threat_intel.py"],
+  "success_rate": {"backend": "100%", "frontend": "100% (one LOW clipboard handling bug)"},
+  "seed_data_creation": "Created 2 TEST_ users (test_intel*@example.com) to test History Clear without wiping student data. Deleted both users and their intel_history afterwards, by id. The student account has new intel_history entries from the tests; they are normal lookup records.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run with: pytest tests/test_threat_intel.py -n 0. Results are cached 6h in intel_cache (VT keys vt:<kind>:<value>), so reusing the same indicators avoids VT quota. Login uses cookies, so a requests.Session works. A new user must finish onboarding (onboarding-goal-soc-l1, onboarding-continue-button) before /app pages load. Clear history uses window.confirm, so accept the dialog."
+}

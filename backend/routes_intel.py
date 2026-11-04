@@ -162,7 +162,7 @@ async def run(kind, value, deep=True, wait_vt=True):
             check_ip(host_ip)
             jobs = {"blocklists": S.src_feeds_ip(host_ip), "geo": S.src_ipapi(host_ip)}
         else:
-            jobs = {"dns": S.src_dns(host), "blocklists": S.src_feeds_domain(host), "whois": S.src_rdap("domain", ".".join(host.split(".")[-2:]) if kind == "url" else host)}
+            jobs = {"dns": S.src_dns(host), "blocklists": S.src_feeds_domain(host), "whois": S.src_rdap("domain", S.registrable(host))}
             if deep:
                 jobs["certificates"] = S.src_crtsh(host)
         jobs["virustotal"] = S.src_vt(kind, value, wait_vt)

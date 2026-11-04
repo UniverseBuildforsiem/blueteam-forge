@@ -184,3 +184,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Removed "// threat briefing · updated daily" magazine section (LandingIntel now renders only SOP showcase)
 - Learning paths: LandingPaths.jsx image cards (5 AI images in user's reference style, mapped by path id), framer-motion slide-in stagger, slow Ken Burns zoom, hover glow + scanline sweep (index.css .path-card/.path-img)
 - Path preview popup (2026-06): landing path cards open a dialog (LandingPaths.jsx PathPreview) with outline from GET /api/public/paths/{id}/outline (module/lesson titles, minutes, video/quiz flags, totals; no content). Logged out: "Sign up to start this path" stores localStorage pending_path -> after onboarding/login lands on /app/paths/{id} (takePendingCase); "View pricing" scrolls to #pricing. Logged in: "Open this path".
+
+## Threat Intel platform (2026-06) — /app/threat-intel (logged-in only)
+- Backend routes_intel.py + intel_sources.py: POST /api/intel/lookup (auto-detect + refang; IP/domain/URL/hash), /extract, /bulk (max 25), GET /myip, /history, /history/{id}, /history/export (CSV), DELETE /history (hides; quota counts by owner)
+- Sources: ip-api (geo/ISP/ASN/proxy/hosting), Shodan InternetDB (ports/CVEs/tags), RDAP WHOIS, Google DoH DNS, crt.sh certs, CIRCL hashlookup (known-good), feeds cached 1h in memory (Tor exits, Feodo C2, Spamhaus DROP, Phishing Army), VirusTotal v3 (VT_API_KEY; 4/min + 480/day limiter, 6h cache), AbuseIPDB (ABUSEIPDB_API_KEY — NOT SET yet, card shows "not connected"). db.intel_cache TTL.
+- Risk score 0-100 → malicious/suspicious/clean("No threats found")/unknown with reasons. Quotas: student 150/day, 20/min.
+- Frontend tabs: IOC lookup, Bulk extractor, Proxy & IP finder, Defang/refang, Open-source tools directory (43 tools), History. Report download (.txt), CSV exports.

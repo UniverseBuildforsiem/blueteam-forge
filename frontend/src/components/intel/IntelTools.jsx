@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { Glass } from "../common";
+import { Glass, Empty } from "../common";
 
 const TOOLS = {
   "IP & network tracing": [
@@ -74,5 +74,6 @@ export default function IntelTools() {
                 <Glass className="p-4 h-full transition-colors group-hover:border-cyan-500/40"><div className="flex items-center gap-2 font-bold text-sm group-hover:text-cyan-300">{n}<ExternalLink className="h-3 w-3 text-slate-500 ml-auto" /></div>
                   <p className="text-xs text-slate-400 mt-1.5">{d}</p></Glass></a>))}</div></div>) : null;
       })}
+      {!Object.values(TOOLS).flat().some(([n, , d]) => `${n} ${d}`.toLowerCase().includes(q.toLowerCase())) && <Empty text="no tools match your filter" />}
     </div>);
 }
