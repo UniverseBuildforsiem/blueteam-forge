@@ -17,6 +17,7 @@ import PublicProfile from "./pages/PublicProfile";
 import Talent from "./pages/Talent";
 import Dashboard from "./pages/app/Dashboard";
 import { Paths, PathDetail } from "./pages/app/Paths";
+import ThreatIntel from "./pages/ThreatIntel";
 import Sessions from "./pages/app/Sessions";
 import { Quizzes, QuizPlayer } from "./pages/app/Quizzes";
 import Progress from "./pages/app/Progress";
@@ -65,6 +66,7 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="paths" element={<Paths />} />
               <Route path="paths/:id" element={<PathDetail />} />
+              <Route path="threat-intel" element={<ThreatIntel />} />
               <Route path="sessions" element={<Sessions />} />
               <Route path="quizzes" element={<Quizzes />} />
               <Route path="quizzes/:id" element={<QuizPlayer />} />
