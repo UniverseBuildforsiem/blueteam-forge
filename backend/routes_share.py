@@ -24,10 +24,14 @@ def api_base():
     return os.environ["FRONTEND_URL"].rstrip("/") + "/api"
 
 
+LOGO_IMG = Image.open(Path(__file__).parent / "assets" / "logo.png").convert("RGBA").resize((64, 64))
+
+
 def draw_logo(d):
     logo = font("LiberationMono-Bold.ttf", 40)
-    d.text((64, 60), "> SOC", font=logo, fill=(248, 250, 252))
-    x = 64 + d.textlength("> SOC", font=logo)
+    d._image.paste(LOGO_IMG, (60, 44), LOGO_IMG)
+    d.text((134, 60), "SOC", font=logo, fill=(248, 250, 252))
+    x = 134 + d.textlength("SOC", font=logo)
     d.text((x, 60), "Professionals", font=logo, fill=GREEN)
     d.text((x + d.textlength("Professionals", font=logo) + 14, 76), "ACADEMY", font=font("LiberationMono-Bold.ttf", 20), fill=MUTED)
 

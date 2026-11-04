@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { ShieldHalf } from "lucide-react";
 
 const SEV = {
   Critical: "bg-red-500/15 text-red-400 border-red-500/40",
@@ -20,7 +19,7 @@ export const Glass = ({ className = "", children, ...p }) => (
 
 export const Logo = ({ to = "/" }) => (
   <Link to={to} data-testid="brand-logo" className="flex items-center gap-2 font-mono font-extrabold tracking-tight text-lg">
-    <ShieldHalf className="h-6 w-6 text-[#00F0FF]" />
+    <img src="/logo.png" alt="SOCProfessionals Academy logo" className="h-10 w-10 object-contain drop-shadow-[0_0_8px_rgba(0,240,255,0.35)]" data-testid="brand-logo-img" />
     <span className="flex flex-col leading-none">
       <span>SOC<span className="neon-green">Professionals</span></span>
       <span className="text-[9px] font-mono tracking-[0.35em] text-slate-400 mt-1">ACADEMY</span>

@@ -51,7 +51,7 @@ function Body({ k, d, type }) {
 }
 
 function SourceCard({ k, s, type }) {
-  const msg = { no_key: "Not connected yet — admin can add a free API key to enable this source.", not_found: "No record found for this indicator.", skipped: s.error, error: `Source unavailable: ${s.error}` }[s.status];
+  const msg = { guest: "Create a free account to add VirusTotal and AbuseIPDB results.", no_key: "Not connected yet — admin can add a free API key to enable this source.", not_found: "No record found for this indicator.", skipped: s.error, error: `Source unavailable: ${s.error}` }[s.status];
   return (
     <Glass className="p-4" data-testid={`intel-source-${k}`}>
       <div className="flex items-center gap-2 mb-3"><h4 className="text-sm font-bold">{TITLES[k] || k}</h4>{s.cached && <span className="text-[10px] font-mono text-slate-500">cached</span>}

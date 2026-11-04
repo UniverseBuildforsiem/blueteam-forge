@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Radar, Globe2, Fingerprint, ShieldAlert, Network, ClipboardList, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { Radar, Globe2, Fingerprint, ShieldAlert, Network, ClipboardList, ArrowRight, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { api, errMsg } from "../lib/api";
 import { Glass } from "./common";
+import IntelReport from "./intel/IntelReport";
 
 const FEATURES = [
   [Network, "IP tracing", "Location, ISP, ASN, open ports, CVEs and ownership for any public IP."],
@@ -19,13 +22,25 @@ export default function LandingThreatIntel() {
   const nav = useNavigate();
   const [q, setQ] = useState("");
   const [ask, setAsk] = useState(false);
-  const go = (v = q) => {
+  const [r, setR] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [left, setLeft] = useState(null);
+  const gid = () => { let g = localStorage.getItem("guest_id"); if (!g) { g = `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`; localStorage.setItem("guest_id", g); } return g; };
+  useEffect(() => { if (!user) api.get("/public/intel/guest", { params: { guest_id: gid() } }).then((x) => setLeft(x.data.remaining)).catch(() => {}); }, [user]);
+  const go = async (v = q) => {
     const ioc = v.trim();
     if (!ioc) return;
     setQ(ioc);
     if (user) return nav(`/app/threat-intel?q=${encodeURIComponent(ioc)}`);
     localStorage.setItem("pending_intel", JSON.stringify({ q: ioc, at: Date.now() }));
-    setAsk(true);
+    if (left === 0) return setAsk(true);
+    setBusy(true); setR(null);
+    try {
+      const { data } = await api.post("/public/intel/lookup", { ioc, guest_id: gid() });
+      setR(data); setLeft(data.remaining); localStorage.removeItem("pending_intel");
+    } catch (e) {
+      if (e.response?.status === 402) { setLeft(0); setAsk(true); } else toast.error(errMsg(e));
+    } finally { setBusy(false); }
   };
   return (
     <section id="threat-intel" className="max-w-7xl mx-auto px-6 pb-24" data-testid="landing-threat-intel">
@@ -40,12 +55,13 @@ export default function LandingThreatIntel() {
                 <Radar className="h-4 w-4 text-cyan-400" />
                 <input value={q} onChange={(e) => { setQ(e.target.value); setAsk(false); }} placeholder="IP, domain, URL or file hash" className="bg-transparent py-3 text-sm font-mono outline-none flex-1" data-testid="landing-intel-input" />
               </div>
-              <button className="glow-btn" disabled={!q.trim()} data-testid="landing-intel-submit">Investigate <ArrowRight className="h-4 w-4" /></button>
+              <button className="glow-btn" disabled={!q.trim() || busy} data-testid="landing-intel-submit">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{busy ? "Checking..." : "Investigate"} {!busy && <ArrowRight className="h-4 w-4" />}</button>
             </form>
+            {!user && left !== null && <div className="mt-3 text-[11px] font-mono" data-testid="landing-intel-left"><span className={left ? "text-green-400" : "text-amber-300"}>{left} of 3 free lookups left</span><span className="text-slate-500"> · no sign-up needed</span></div>}
             <div className="flex flex-wrap items-center gap-2 mt-3 text-xs"><span className="text-slate-500 font-mono">try:</span>
               {EXAMPLES.map((x) => <button key={x} onClick={() => go(x)} className="font-mono border border-white/10 px-2 py-1 text-slate-400 hover:border-cyan-500/40 hover:text-cyan-300 truncate max-w-[220px]" data-testid={`landing-intel-example-${x.slice(0, 12)}`}>{x}</button>)}</div>
             {ask && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 border-t border-white/10 pt-4 flex flex-wrap items-center gap-3" data-testid="landing-intel-auth">
-              <span className="text-sm text-slate-300 flex-1">Log in or create a free account and your lookup for <code className="text-cyan-300">{q}</code> runs automatically.</span>
+              <span className="text-sm text-slate-300 flex-1">You've used your 3 free lookups. Log in or create a free account and your lookup for <code className="text-cyan-300">{q}</code> runs automatically.</span>
               <button className="ghost-btn !text-xs" onClick={() => nav("/login")} data-testid="landing-intel-login">Log in</button>
               <button className="glow-btn !text-xs" onClick={() => nav("/register")} data-testid="landing-intel-register">Sign up free</button>
             </motion.div>}
@@ -60,5 +76,9 @@ export default function LandingThreatIntel() {
             </motion.div>))}
         </div>
       </div>
+      {r && <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-8" data-testid="landing-intel-result"><IntelReport r={r} />
+        {left === 0 && <Glass className="p-4 mt-4 flex flex-wrap items-center gap-3 border-green-500/30"><span className="text-sm flex-1">That was your last free lookup. Sign up free for 150 lookups a day, VirusTotal results, bulk checks and history.</span>
+          <button className="glow-btn !text-xs" onClick={() => nav("/register")} data-testid="landing-intel-result-register">Sign up free</button></Glass>}
+      </motion.div>}
     </section>);
 }

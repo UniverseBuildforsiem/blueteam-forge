@@ -1,5 +1,6 @@
 import asyncio
 import csv
+import hashlib
 import io
 import ipaddress
 import re
@@ -12,6 +13,7 @@ from core import db, now, now_iso, new_id, get_current_user
 import intel_sources as S
 
 router = APIRouter(prefix="/api/intel")
+guest_router = APIRouter(prefix="/api")
 DAILY = {"student": 150, "instructor": 400, "admin": 1000}
 BULK_MAX = 25
 
@@ -143,7 +145,7 @@ def verdict(p, src):
     return "clean" if rep else "unknown"
 
 
-async def run(kind, value, deep=True, wait_vt=True):
+async def run(kind, value, deep=True, wait_vt=True, guest=False):
     jobs = {}
     if kind == "ip":
         check_ip(value)
@@ -168,8 +170,14 @@ async def run(kind, value, deep=True, wait_vt=True):
         jobs["virustotal"] = S.src_vt(kind, value, wait_vt)
     elif kind == "hash":
         jobs = {"known_good": S.src_hashlookup(value), "virustotal": S.src_vt("hash", value, wait_vt)}
+    locked = {}
+    if guest:
+        for k in ("virustotal", "abuseipdb"):
+            if k in jobs:
+                jobs.pop(k).close()
+                locked[k] = {"status": "guest"}
     res = await asyncio.gather(*jobs.values())
-    src = dict(zip(jobs.keys(), res))
+    src = {**dict(zip(jobs.keys(), res)), **locked}
     reasons = []
     if kind == "ip":
         p = score_ip(src, reasons)
@@ -251,6 +259,40 @@ async def bulk(body: BulkIn, user=Depends(get_current_user)):
     return {"results": res, "remaining": left}
 
 
+class GuestIn(BaseModel):
+    ioc: str = Field(min_length=1, max_length=2048)
+    guest_id: str = Field(min_length=8, max_length=64)
+
+
+GUEST_FREE = 3
+
+
+def client_ip(request):
+    return (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() or (request.client.host if request.client else "")
+
+
+@guest_router.post("/public/intel/lookup")
+async def guest_lookup(body: GuestIn, request: Request):
+    kind, value = S.detect(body.ioc)
+    if not kind:
+        raise HTTPException(400, "Enter a public IP, domain, URL or MD5/SHA-1/SHA-256 hash.")
+    keys = [f"ip:{hashlib.sha256(client_ip(request).encode()).hexdigest()[:24]}", f"id:{body.guest_id}"]
+    used = max([(d.get("n", 0)) for d in await db.intel_guest.find({"key": {"$in": keys}}, {"_id": 0, "n": 1}).to_list(2)] or [0])
+    if used >= GUEST_FREE:
+        raise HTTPException(402, "You've used your 3 free lookups. Create a free account to keep investigating.")
+    r = await run(kind, value, guest=True)
+    for k in keys:
+        await db.intel_guest.update_one({"key": k}, {"$inc": {"n": 1}, "$set": {"last": now_iso()}}, upsert=True)
+    return {**r, "at": now_iso(), "remaining": GUEST_FREE - used - 1}
+
+
+@guest_router.get("/public/intel/guest")
+async def guest_status(request: Request, guest_id: str = ""):
+    keys = [f"ip:{hashlib.sha256(client_ip(request).encode()).hexdigest()[:24]}", f"id:{guest_id[:64]}"]
+    used = max([(d.get("n", 0)) for d in await db.intel_guest.find({"key": {"$in": keys}}, {"_id": 0, "n": 1}).to_list(2)] or [0])
+    return {"remaining": max(0, GUEST_FREE - used), "free": GUEST_FREE}
+
+
 @router.get("/myip")
 async def myip(request: Request, user=Depends(get_current_user)):
     ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() or (request.client.host if request.client else "")
@@ -298,3 +340,4 @@ async def ensure_intel():
     await db.intel_cache.create_index("expires_at", expireAfterSeconds=0)
     await db.intel_history.create_index([("user_id", 1), ("at", -1)])
     await db.intel_history.create_index([("owner", 1), ("at", -1)])
+    await db.intel_guest.create_index("key", unique=True)
