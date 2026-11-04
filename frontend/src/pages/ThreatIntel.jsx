@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Radar, Loader2, Info } from "lucide-react";
 import { api, errMsg } from "../lib/api";
@@ -21,6 +22,11 @@ export default function ThreatIntel() {
     try { const { data } = await api.post("/intel/lookup", { ioc: v }); setR(data); } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
   };
   const k = kindOf(ioc);
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const q = params.get("q");
+    if (q) { setParams({}, { replace: true }); run(q); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="p-6 lg:p-10 max-w-7xl" data-testid="threat-intel-page">
       <div className="eyebrow mb-2">// threat intel platform</div>

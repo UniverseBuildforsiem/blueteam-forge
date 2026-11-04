@@ -29,10 +29,12 @@ const F = ({ label, ...p }) => (
 const ErrorLine = ({ e }) => e ? <div data-testid="auth-error" className="text-sm text-red-400 font-mono mb-4">! {e}</div> : null;
 
 export const takePendingCase = () => {
-  let c = null, p = null;
-  try { c = JSON.parse(localStorage.getItem("pending_case")); p = JSON.parse(localStorage.getItem("pending_path")); } catch { c = null; }
+  let c = null, p = null, t = null;
+  try { c = JSON.parse(localStorage.getItem("pending_case")); p = JSON.parse(localStorage.getItem("pending_path")); t = JSON.parse(localStorage.getItem("pending_intel")); } catch { c = null; }
   localStorage.removeItem("pending_case");
   localStorage.removeItem("pending_path");
+  localStorage.removeItem("pending_intel");
+  if (t?.q && Date.now() - t.at < 3600e3) return `/app/threat-intel?q=${encodeURIComponent(t.q)}`;
   if (p?.id && Date.now() - p.at < 3600e3) return `/app/paths/${p.id}`;
   return c?.id && Date.now() - c.at < 3600e3 ? `/app/challenges?case=${c.id}` : null;
 };

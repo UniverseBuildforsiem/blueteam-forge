@@ -20,6 +20,7 @@ import ConsultationPromo from "../components/ConsultationPromo";
 import ConsultReviews from "../components/ConsultReviews";
 import LandingBlogs from "../components/LandingBlogs";
 import LandingPaths from "../components/LandingPaths";
+import LandingThreatIntel from "../components/LandingThreatIntel";
 
 const FEED = [
   ["Critical", "SOC145", "Ransomware behavior on FS-01", "svch0st.exe", "12,000 files renamed to .lockd in 3 minutes and shadow copies deleted. Is the file server being encrypted?"],
@@ -234,6 +235,8 @@ export default function Landing() {
         </div>
         <LandingPaths paths={paths} />
       </section>
+
+      <LandingThreatIntel />
 
       <LandingBlogs />
 
