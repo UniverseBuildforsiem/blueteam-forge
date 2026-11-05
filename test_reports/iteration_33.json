@@ -1,0 +1,38 @@
+{
+  "summary": "Tested the SOP Mastery Badges and the cyber button restyle. Backend: 18/18 pytest pass (6 new in test_sop_badges.py plus 12 from iteration 32 in test_sop_lab.py). Admin has all 7 sop-* badges with kind 'sop' and correct totals: identity 11, cloud-identity 11, endpoint 16, network 6, application 9, email-security 1, data-protection 1. Admin cloud-identity progress is [1,11] from the earlier password-spray pass. The student has 7 badges, all at 0 progress; the dashboard badge list includes them; sharing an unearned badge returns 404. UI badge flow: before passing, /app/badges showed 'N/M labs passed' on all 7 locked SOP cards, with art /badges/sop-*.jpg and no broken images. I then passed sop-users-reported-malware-email (Email Security) as admin in the UI with the answer key from one failing API submit. Result: 100%, toasts 'Badge unlocked: Email Security Master' and '+50 XP — lab passed!'. /app/badges then showed Email Security Master as EARNED in colour with a Share button, and the header changed to '1 earned · 18 still locked'. A second pass returns badge=null and xp=0. Share card: POST returns share_url and image_url; the PNG is valid at 1200x627 with title, description, art, ANALYST LEVEL and rank; the OG page has the badge name. Cyber buttons: checked landing, /sops, /soc-series, /app, /app/threat-intel, and admin Users and Settings at 1920px, plus landing, /sops, /soc-series, /app, /app/badges and /app/threat-intel at 390px. A JS scan found no button with text overflow or clipped svg icons. Angled cut corners show on primary and secondary buttons. Hover works: the glow button lightens to #5ff6ff and the ::after sweep moves; the ghost button gets a bright border, dark #07222b inner fill and cyan-100 text. The disabled Investigate button shows opacity 0.5. Small !text-xs buttons look fine. No horizontal scroll at 390px. I could not check the click glitch frame-by-frame because it lasts 0.28s; I only checked the CSS.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/me/badges (sop_badges description)", "issue": "Grammar: 'Pass every Email Security SOP practice lab (1 labs)'. Shows on the badge card and the share PNG for Email Security and Data Protection. Use singular 'lab' when there is 1."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminUsers danger buttons (Delete confirm, Suspend)", "issue": "ghost-btn now draws its border from the element background plus an inset ::before, so '!border-red-500/40' does nothing. Red-text danger buttons get a cyan neon border. Needs a red variant, e.g. a .ghost-btn.danger class that sets background: rgba(239,68,68,.5).", "selector": "/app/frontend/src/components/AdminUsers.jsx lines 41, 107", "priority": "LOW"},
+      {"component": "Account LinkedIn button", "issue": "'!border-[#0A66C2]/60' does nothing (the border stays cyan). 'hover:!bg-[#0A66C2]/15' replaces the neon border colour on hover, so the border nearly disappears.", "selector": "/app/frontend/src/pages/app/Account.jsx line 88", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Landing header at 390px", "issues": ["The Sign up glow-btn (px-6) pushes against the logo, and the wordmark is cut off at 'SOCProfessional'. Use smaller padding on mobile (e.g. !px-4) or shrink the logo."]},
+      {"screen": "Global cyber buttons", "issues": ["clip-path plus overflow-hidden hides any focus outline or ring, so keyboard focus is barely visible. Add a :focus-visible style such as an inner box-shadow or brighter background.", "The prefers-reduced-motion block does not cover the cyber-glitch :active animation or the hover sweep."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_sop_badges.py", "/app/backend/tests/test_sop_lab.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Optional: say 'lab' instead of 'labs' when the count is 1 in the sop_badges description (routes_learn.py).",
+    "Add a red danger variant for ghost-btn and use it in AdminUsers (Delete/Suspend), which currently have red text on a cyan border; fix the LinkedIn button border on Account.jsx the same way.",
+    "Mobile header: reduce Sign up button padding so the logo wordmark is not cut off at 390px.",
+    "Add a :focus-visible style for .glow-btn/.ghost-btn, and include the cyber-glitch and sweep animations in prefers-reduced-motion."
+  ],
+  "critical_code_review_comments": [
+    "submit_lab works out the badge only on first pass, by re-running sop_badges. This is correct, and 'badge' is null on later passes.",
+    "sop_badges only counts SOPs that have a ready lab and a ready SOP. If labs are added later, a category's total grows and a badge that was earned becomes un-earned. This may be intended, but share links for that badge would then return 404.",
+    "Analyst-level SOP badges (Email Security, Data Protection) do not trigger the level-up reveal because REVEAL_LEVELS is only Elite and Hunter. This is consistent with the existing design."
+  ],
+  "updated_files": ["/app/backend/tests/test_sop_badges.py (new)", "/app/backend/tests/test_sop_lab.py (test data only: verdict/severity 'x' changed to valid values, because the backend now uses Literal validation and returns 422)"],
+  "success_rate": {"backend": "100%", "frontend": "95%"},
+  "seed_data_creation": "No new records. As requested, admin passed sop-users-reported-malware-email: admin XP went 95 -> 145 and Email Security Master is now earned. Admin also has a few extra sop_lab_attempts rows on that lab and on sop-m365-password-spray.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Admin already has Email Security Master, so test_pass_email_lab_and_badge now only checks that a later pass gives badge=null and xp=0. To test the first-pass badge toast again, use Data Protection (1 lab) with admin. Get the lab's sop_id from the Data Protection category in /api/public/sops. To get the answer key, make one failing submit with valid verdict and severity values; the response includes the correct answers. Admin login redirects to /admin, not /app. The student gets 403 on labs and gets a Hunter level-up modal (Lab Rat) on /app. Run with: pytest tests/test_sop_badges.py tests/test_sop_lab.py -n 0"
+}

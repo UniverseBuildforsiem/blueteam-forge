@@ -35,7 +35,7 @@ def answer_key(admin):
     """Submit once with zeros to learn the shuffled correct indices (used for grading tests)."""
     lab = admin.get(f"{BASE_URL}/api/sop-labs/{SID}").json()
     n = len(lab["questions"])
-    r = admin.post(f"{BASE_URL}/api/sop-labs/{SID}/submit", json={"answers": [0] * n, "verdict": "x", "severity": "x", "containment": []})
+    r = admin.post(f"{BASE_URL}/api/sop-labs/{SID}/submit", json={"answers": [0] * n, "verdict": "false_positive", "severity": "Low", "containment": []})
     assert r.status_code == 200, r.text
     return lab, r.json()
 
@@ -120,7 +120,7 @@ class TestSubmit:
         positions = []
         for sid in ready:
             lab = admin.get(f"{BASE_URL}/api/sop-labs/{sid}").json()
-            r = admin.post(f"{BASE_URL}/api/sop-labs/{sid}/submit", json={"answers": [0] * len(lab["questions"]), "verdict": "x", "severity": "x", "containment": []})
+            r = admin.post(f"{BASE_URL}/api/sop-labs/{sid}/submit", json={"answers": [0] * len(lab["questions"]), "verdict": "false_positive", "severity": "Low", "containment": []})
             positions += [q["answer"] for q in r.json()["questions"]]
         assert len(set(positions)) >= 3, positions
         assert positions.count(0) < len(positions) * 0.6

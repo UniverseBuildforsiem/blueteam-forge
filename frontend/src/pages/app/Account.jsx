@@ -85,7 +85,7 @@ export function Certificates() {
           <div className="text-xs font-mono text-slate-400 mt-1">{c.id} · {c.score}% · {c.issued_at.slice(0, 10)} · <span className={c.status === "valid" ? "text-green-400" : "text-red-400"}>{c.status}</span></div>
           <div className="flex flex-wrap gap-2 mt-5"><a href={`${API}/public/certificates/${c.id}/pdf`} target="_blank" rel="noreferrer" className="glow-btn" data-testid={`certificate-pdf-${c.id}`}><Download className="h-4 w-4" />PDF</a>
             <Link to={`/verify/${c.id}`} className="ghost-btn" data-testid={`certificate-verify-${c.id}`}><ExternalLink className="h-4 w-4" />Verify page</Link>
-            {c.status === "valid" && <a href={linkedInUrl(c)} target="_blank" rel="noreferrer" className="ghost-btn !border-[#0A66C2]/60 !text-[#7FB8F0] hover:!bg-[#0A66C2]/15" data-testid={`certificate-linkedin-${c.id}`}><Linkedin className="h-4 w-4" />Add to LinkedIn profile</a>}</div>
+            {c.status === "valid" && <a href={linkedInUrl(c)} target="_blank" rel="noreferrer" className="ghost-btn ghost-linkedin !text-[#7FB8F0] hover:!bg-[#0A66C2]/15" data-testid={`certificate-linkedin-${c.id}`}><Linkedin className="h-4 w-4" />Add to LinkedIn profile</a>}</div>
         </Glass>))}</div> : <Empty text="no certificates yet — finish a path to earn one" />}
     </div>
   );

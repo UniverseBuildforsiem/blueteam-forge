@@ -24,7 +24,7 @@ export default function PublicNav() {
         <div className="flex items-center gap-3">
           {user ? <Link to="/app" className="glow-btn !py-2" data-testid="nav-dashboard-button">Dashboard</Link> : <>
             <Link to="/login" className="hidden sm:inline text-sm font-mono text-slate-300 hover:text-cyan-300 whitespace-nowrap" data-testid="nav-login-button">Log in</Link>
-            <Link to="/register" className="glow-btn !py-2 whitespace-nowrap" data-testid="nav-signup-button">Sign up</Link></>}
+            <Link to="/register" className="glow-btn !py-2 !px-4 sm:!px-6 whitespace-nowrap" data-testid="nav-signup-button">Sign up</Link></>}
           <button className="md:hidden text-slate-300" onClick={() => setOpen(!open)} data-testid="nav-mobile-toggle" aria-label="Menu">{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
         </div>
       </div>

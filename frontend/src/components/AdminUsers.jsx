@@ -38,7 +38,7 @@ function DeleteBox({ u, onDeleted }) {
       <div className="text-sm font-bold text-red-300">Delete user permanently</div>
       <p className="text-xs text-slate-400 mt-1">Removes the account and all of their progress, submissions, purchases and activity (payment records are kept for accounting). This cannot be undone. Type <span className="font-mono text-slate-200">{u.email}</span> to confirm.</p>
       <div className="flex gap-2 mt-3"><input className="field" value={txt} onChange={(e) => setTxt(e.target.value)} data-testid="user-delete-confirm-input" />
-        <button className="ghost-btn !border-red-500/40 !text-red-300 disabled:opacity-40" disabled={txt.trim().toLowerCase() !== u.email} onClick={del} data-testid="user-delete-button"><Trash2 className="h-4 w-4" />Delete</button></div>
+        <button className="ghost-btn ghost-danger !text-red-300 disabled:opacity-40" disabled={txt.trim().toLowerCase() !== u.email} onClick={del} data-testid="user-delete-button"><Trash2 className="h-4 w-4" />Delete</button></div>
     </div>);
 }
 
@@ -104,7 +104,7 @@ export default function AdminUsers() {
           <td className="px-4 font-mono text-xs text-slate-400">{u.email}</td>
           <td className="px-4"><select className="field !py-1 !w-32 text-xs" value={u.role} disabled={u.id === me.id} onChange={(e) => upd(u.id, { role: e.target.value })} data-testid={`admin-role-select-${u.username}`}>{["student", "instructor", "admin"].map((r) => <option key={r}>{r}</option>)}</select></td>
           <td className={`px-4 text-xs font-mono ${u.status === "active" ? "text-green-400" : "text-red-400"}`}>{u.status}</td><td className="px-4 text-xs font-mono">{u.plan}</td><td className="px-4 text-xs font-mono text-green-400">{u.xp || 0}</td><td className="px-4 text-xs text-slate-500">{u.created_at.slice(0, 10)}</td>
-          <td className="px-4 whitespace-nowrap">{u.id !== me.id && <button className={`ghost-btn !py-1 !text-xs ${u.status === "active" ? "!border-red-500/40 !text-red-300" : ""}`} onClick={() => upd(u.id, { status: u.status === "active" ? "suspended" : "active" })} data-testid={`admin-status-toggle-${u.username}`}>{u.status === "active" ? "Suspend" : "Approve"}</button>}</td>
+          <td className="px-4 whitespace-nowrap">{u.id !== me.id && <button className={`ghost-btn !py-1 !text-xs ${u.status === "active" ? "ghost-danger !text-red-300" : ""}`} onClick={() => upd(u.id, { status: u.status === "active" ? "suspended" : "active" })} data-testid={`admin-status-toggle-${u.username}`}>{u.status === "active" ? "Suspend" : "Approve"}</button>}</td>
         </tr>)}</tbody></table>{!list.length && <Empty text="no users match" />}</Glass>
       <InviteDialog open={inv} setOpen={setInv} onDone={load} />
       <UserDetail uid={sel} onClose={() => setSel(null)} onChanged={load} />
