@@ -327,7 +327,26 @@ BADGE_LEVEL = {"first-blood": ("Recruit", "first-blood.jpg"), "on-fire": ("Recru
                "lab-rat": ("Hunter", "lab-rat.jpg"), "drill-7": ("Hunter", "drill-7.jpg"),
                "pathfinder": ("Elite", "pathfinder.jpg"), "drill-30": ("Elite", "drill-30.jpg"),
                "evidence-bronze": ("Recruit", "evidence-bronze.jpg"), "evidence-silver": ("Analyst", "evidence-silver.jpg"), "evidence-gold": ("Hunter", "evidence-gold.jpg")}
+SOP_CATS = [("Identity", "Hunter"), ("Cloud Identity", "Hunter"), ("Endpoint", "Elite"), ("Network", "Hunter"), ("Application", "Hunter"), ("Email Security", "Analyst"), ("Data Protection", "Analyst")]
+SOP_BADGE = {f"sop-{c.lower().replace(' ', '-')}": c for c, _ in SOP_CATS}
+BADGE_LEVEL.update({f"sop-{c.lower().replace(' ', '-')}": (lvl, f"sop-{c.lower().replace(' ', '-')}.jpg") for c, lvl in SOP_CATS})
 REVEAL_LEVELS = ("Elite", "Hunter")
+
+
+async def sop_badges(uid):
+    labs = set(await db.sop_labs.distinct("sop_id", {"status": "ready"}))
+    by_cat = {}
+    async for s in db.sops_extra.find({"status": "ready", "id": {"$in": list(labs)}}, {"_id": 0, "id": 1, "category": 1}):
+        by_cat.setdefault(s["category"], set()).add(s["id"])
+    passed = set(await db.sop_lab_attempts.distinct("sop_id", {"user_id": uid, "passed": True}))
+    out = []
+    for bid, cat in SOP_BADGE.items():
+        ids = by_cat.get(cat, set())
+        if ids:
+            done = len(ids & passed)
+            out.append({"id": bid, "name": f"{cat} Master", "description": f"Pass every {cat} SOP practice lab ({len(ids)} labs)", "earned": done == len(ids),
+                        "progress": [done, len(ids)], "kind": "sop"})
+    return out
 
 
 def pending_level_up(user, badges):
@@ -365,7 +384,7 @@ async def compute_badges(u):
     investigated = await db.challenge_submissions.count_documents({"user_id": uid, "investigated": True})
     earned.update({k: investigated >= n for k, n in EVIDENCE_TIERS.items()})
     return [{"id": i, "name": n, "description": d, "earned": earned[i], **({"progress": [min(investigated, EVIDENCE_TIERS[i]), EVIDENCE_TIERS[i]]} if i in EVIDENCE_TIERS else {})}
-            for i, n, d in BADGES] + await course_badges(uid)
+            for i, n, d in BADGES] + await sop_badges(uid) + await course_badges(uid)
 
 
 def short_title(t):

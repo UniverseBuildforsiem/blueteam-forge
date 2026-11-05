@@ -25,7 +25,7 @@ const BadgeCard = ({ b }) => {
       </div>
       <p className="text-xs text-slate-400 mt-2" data-testid={`collection-rule-${b.id}`}>{locked ? "How to unlock: " : ""}{b.description}</p>
       {locked && b.progress && <div className="w-full mt-3" data-testid={`collection-progress-${b.id}`}><div className="h-1 bg-white/5"><div className="h-1 bg-cyan-400" style={{ width: `${(100 * b.progress[0]) / b.progress[1]}%` }} /></div>
-        <div className="text-[10px] font-mono text-slate-500 mt-1">{b.progress[0]}/{b.progress[1]} alerts investigated</div></div>}
+        <div className="text-[10px] font-mono text-slate-500 mt-1">{b.progress[0]}/{b.progress[1]} {b.kind === "sop" ? "labs passed" : "alerts investigated"}</div></div>}
       {!locked && b.kind !== "course" && <div className="mt-4"><ShareCardButton endpoint={`/me/badges/${b.id}/share-card`} title={`Share your ${b.name} badge`} testId={`collection-share-${b.id}`} /></div>}
     </Glass>
   );

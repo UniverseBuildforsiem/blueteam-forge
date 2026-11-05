@@ -18,6 +18,13 @@ export const BADGE_ART = {
   "evidence-bronze": ["Recruit", "/badges/evidence-bronze.jpg"],
   "evidence-silver": ["Analyst", "/badges/evidence-silver.jpg"],
   "evidence-gold": ["Hunter", "/badges/evidence-gold.jpg"],
+  "sop-identity": ["Hunter", "/badges/sop-identity.jpg"],
+  "sop-cloud-identity": ["Hunter", "/badges/sop-cloud-identity.jpg"],
+  "sop-endpoint": ["Elite", "/badges/sop-endpoint.jpg"],
+  "sop-network": ["Hunter", "/badges/sop-network.jpg"],
+  "sop-application": ["Hunter", "/badges/sop-application.jpg"],
+  "sop-email-security": ["Analyst", "/badges/sop-email-security.jpg"],
+  "sop-data-protection": ["Analyst", "/badges/sop-data-protection.jpg"],
 };
 
 export const badgeArt = (b) => {

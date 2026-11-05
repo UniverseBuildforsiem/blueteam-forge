@@ -46,7 +46,7 @@ function Walkthrough({ lab, onDone }) {
   const last = n;
   const submit = async () => {
     setBusy(true);
-    try { const { data } = await api.post(`/sop-labs/${lab.sop_id}/submit`, { answers: ans, verdict, severity: sev, containment: cont }); onDone(data); if (data.xp) toast.success(`+${data.xp} XP — lab passed!`); }
+    try { const { data } = await api.post(`/sop-labs/${lab.sop_id}/submit`, { answers: ans, verdict, severity: sev, containment: cont }); onDone(data); if (data.xp) toast.success(`+${data.xp} XP — lab passed!`); if (data.badge) toast.success(`Badge unlocked: ${data.badge}`, { description: "See it on your Badges page" }); }
     catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
   };
   const ready = step < n ? ans[step] !== null : verdict && sev && cont.length;

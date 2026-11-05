@@ -151,7 +151,12 @@ async def submit_lab(sid: str, body: SubmitIn, user=Depends(get_current_user)):
     await db.sop_lab_attempts.insert_one({"id": new_id(), "user_id": user["id"], "sop_id": sid, "score": score, "passed": passed, "at": now_iso()})
     if first:
         await award(user["id"], XP, f"Passed SOP lab: {lab['alert']['title'][:60]}")
-    return {"score": score, "passed": passed, "xp": XP if first else 0, "pass_mark": PASS, "questions": q_res,
+    badge = None
+    if first:
+        from routes_learn import sop_badges
+        cat_id = f"sop-{(await find_sop(sid) or {}).get('category', '').lower().replace(' ', '-')}"
+        badge = next((b["name"] for b in await sop_badges(user["id"]) if b["id"] == cat_id and b["earned"]), None)
+    return {"score": score, "passed": passed, "xp": XP if first else 0, "badge": badge, "pass_mark": PASS, "questions": q_res,
             "verdict": {"your": body.verdict, "answer": lab["verdict"], "correct": body.verdict == lab["verdict"], "explain": lab["verdict_explain"]},
             "severity": {"your": body.severity, "answer": lab["severity"], "correct": body.severity == lab["severity"]},
             "containment": [{"action": c["action"], "correct": bool(c.get("correct")), "picked": i in picked} for i, c in enumerate(lab["containment"])],
