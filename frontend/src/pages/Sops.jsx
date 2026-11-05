@@ -85,6 +85,8 @@ export function SopList() {
               </Glass>
             </Link>))}
         </div>
+        {d && !shown.length && <div className="text-center py-12" data-testid="sop-empty"><Empty text="no SOPs match your search" />
+          <button className="ghost-btn !text-xs mt-3" onClick={() => { setQ(""); setCat(""); }} data-testid="sop-clear-filters">Clear filters</button></div>}
       </section>
       <Footer />
     </div>

@@ -290,7 +290,7 @@ def client_ip(request):
 
 
 def guest_keys(request, gid):
-    return [f"ip:{hashlib.sha256(client_ip(request).encode()).hexdigest()[:24]}", f"id:{gid[:64]}"]
+    return [f"id:{gid[:64]}", f"ip:{hashlib.sha256(client_ip(request).encode()).hexdigest()[:24]}"]
 
 
 async def guest_used(keys):
@@ -298,17 +298,18 @@ async def guest_used(keys):
 
 
 async def claim(keys):
-    got = []
+    got, ns = [], []
     for k in keys:
         try:
             r = await db.intel_guest.find_one_and_update({"key": k, "n": {"$lt": GUEST_FREE}}, {"$inc": {"n": 1}, "$set": {"last": now_iso()}}, upsert=True, return_document=True)
-            got.append(k)
         except DuplicateKeyError:
             r = None
         if not r:
             await release(got)
             return None
-    return GUEST_FREE - max([(await db.intel_guest.find_one({"key": k}, {"_id": 0, "n": 1}))["n"] for k in keys])
+        got.append(k)
+        ns.append(r["n"])
+    return GUEST_FREE - max(ns)
 
 
 async def release(keys):

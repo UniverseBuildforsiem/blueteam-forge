@@ -1,0 +1,39 @@
+{
+  "summary": "Tested guest threat-intel on landing (UI + backend race/XFF spoofing), logo/favicon, and SOP library (search, category filters, new AI SOPs, analysis checklist, access rules). Almost everything works. Guest flow: counter 3->2->1->0, invalid IOC shows a toast and does not use a lookup, VirusTotal and AbuseIPDB show the GUEST lock message, the sign-up banner appears after the 3rd lookup, the 4th shows Log in/Sign up, and after student login the app goes to /app/threat-intel?q=1.1.1.1 and runs the lookup automatically. A fresh guest_id on the same IP still shows 0 left. Backend: 6 parallel lookups give exactly 3x200 and 3x402. Spoofed X-Forwarded-For (3 variants) plus a new guest_id gets 402. SOPs: 25 listed, the 3 new ids are present and locked for logged-out users with no steps/queries/analysis returned, admin gets the full SOP (9 analysis items, 5 phases, 4 SPL+KQL queries, escalation/SLA/MITRE/closure). Issues: the footer has no logo; under concurrency the 'remaining' value in responses can be wrong ([0,0,2] instead of [0,1,2]); no empty state when a SOP search finds nothing.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/public/intel/lookup", "issue": "In claim(), 'remaining' is worked out by re-reading the counters after both $inc calls, not from the atomic update result. Under 6 parallel requests the 3 successes returned remaining=[0,0,2] instead of [0,1,2]. Quota enforcement is still correct (exactly 3 succeed). Fix: use the n values from find_one_and_update's return doc (max over the keys)."},
+      {"endpoint": "POST /api/public/intel/lookup", "issue": "Edge case: claim() bumps the ip key before checking the id key. If the id key fails (guest_id already used up from another IP), the ip key is briefly at a higher count, so a parallel valid request from the same IP can get a false 402. Low impact."},
+      {"endpoint": "Guest quota design", "issue": "The quota is per real IP, so every visitor behind one NAT (office, campus, mobile CGNAT) shares just 3 lookups in total. This is a product decision; just be aware of it."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Footer (PublicNav.jsx Footer)", "issue": "The review asked for the logo in the footer, but the footer is plain text with no brand-logo-img. Only the public nav and the app sidebar have the logo.", "selector": "footer [data-testid=brand-logo-img]", "priority": "MEDIUM"},
+      {"component": "SopList", "issue": "A search with no matches (e.g. 'zzzqqq') shows an empty grid with no 'No SOPs match' message or clear-filter option.", "selector": "[data-testid=sop-grid]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Logged-in user on landing", "issue": "Race: the guest status call and the counter run before AuthContext loads the user. Right after page load the '3 of 3 free lookups left' counter showed for a logged-in student, and a submit at that moment could take the guest path and use up the IP quota. Once auth had loaded (4s), submit correctly went to /app/threat-intel?q=... (the page then strips ?q= after running it). Fix: wait for the auth loading flag before showing the counter or running a guest lookup.", "affected_selectors": ["[data-testid=landing-intel-left]", "[data-testid=landing-intel-submit]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_guest_intel_race_sops.py", "/app/test_reports/pytest/pytest_iter31.xml"],
+  "action_items": [
+    "Add the logo (Logo component / brand-logo-img) to the Footer in PublicNav.jsx",
+    "claim(): get 'remaining' from the atomic find_one_and_update return values, not a separate re-read",
+    "LandingThreatIntel: skip the guest counter and guest lookup while auth is still loading",
+    "SopList: add an empty state when the search or category filter returns 0 results"
+  ],
+  "critical_code_review_comments": [
+    "routes_intel.client_ip trusts the right-most non-proxy hop (and drops the last hop). This tested fine against spoofing through the current ingress. If the ingress chain changes (e.g. no Cloudflare), check again which hop is the real client.",
+    "guest_status with guest_id='' uses key 'id:', which is harmless because max() is taken with the ip key.",
+    "Old /app/backend/tests/test_guest_intel_logo.py relies on spoofed XFF to isolate guests. That no longer works, so it will fail or mislead unless db.intel_guest is cleared and it runs alone. Prefer test_guest_intel_race_sops.py."
+  ],
+  "updated_files": ["/app/backend/tests/test_guest_intel_race_sops.py"],
+  "success_rate": {"backend": "92% (12/13; the only failure is the cosmetic 'remaining' value under concurrency)", "frontend": "90%"},
+  "seed_data_creation": "None. db.intel_guest was cleared before the backend race test and again at the end (now empty), as requested.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run the guest tests with `-n 0`. All traffic shares one real IP, so clear db.intel_guest (test_database) first and only 3 guest lookups are available in total. Login testids: login-email-input, login-password-input, login-submit-button. SOP generation was still running (25 SOPs at test time). New SOPs have no 'hunt' fields, so there are no 'hunt in SIEM' links on them."
+}

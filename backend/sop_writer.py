@@ -8,7 +8,7 @@ from core import db, now_iso, new_id, logger
 from sop_data import SLA
 from sop_extra_data import EXTRA
 
-SEM = asyncio.Semaphore(3)
+SEM = asyncio.Semaphore(6)
 TASKS = set()
 FIELDS = ("summary", "objective", "scope", "triggers", "tools", "roles", "analysis", "steps", "queries", "escalation", "mitre", "closure")
 

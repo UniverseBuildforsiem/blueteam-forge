@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="13" time="6.391" timestamp="2026-11-05T20:08:29.677947+00:00" hostname="agent-env-df36c26a-12a0-4d8f-9d10-8db8a18a612d"><testcase classname="tests.test_guest_intel_race_sops.TestGuestQuota" name="test_fresh_status_3" time="0.209" /><testcase classname="tests.test_guest_intel_race_sops.TestGuestQuota" name="test_invalid_ioc_400_not_counted" time="0.288" /><testcase classname="tests.test_guest_intel_race_sops.TestGuestQuota" name="test_parallel_6_exactly_3_succeed" time="1.227"><failure message="AssertionError: assert [0, 0, 2] == [0, 1, 2]&#10;  &#10;  At index 1 diff: 0 != 1&#10;  &#10;  Full diff: (-: missing in left side, +: extra in left side)&#10;    [&#10;        0,&#10;  -     1,...&#10;  &#10;  ...Full output truncated, use '-vv' to show">tests/test_guest_intel_race_sops.py:50: in test_parallel_6_exactly_3_succeed
+    assert sorted(x["remaining"] for x in ok) == [0, 1, 2]
+E   AssertionError: assert [0, 0, 2] == [0, 1, 2]
+E     
+E     At index 1 diff: 0 != 1
+E     
+E     Full diff: (-: missing in left side, +: extra in left side)
+E       [
+E           0,
+E     -     1,...
+E     
+E     ...Full output truncated, use '-vv' to show</failure></testcase><testcase classname="tests.test_guest_intel_race_sops.TestGuestQuota" name="test_status_zero_after" time="0.149" /><testcase classname="tests.test_guest_intel_race_sops.TestGuestQuota" name="test_new_guest_id_same_ip_402" time="0.142" /><testcase classname="tests.test_guest_intel_race_sops.TestGuestQuota" name="test_spoofed_xff_new_guest_402" time="0.936" /><testcase classname="tests.test_guest_intel_race_sops.TestSops" name="test_list_contains_new_sops" time="0.155" /><testcase classname="tests.test_guest_intel_race_sops.TestSops" name="test_logged_out_detail_locked[sop-okta-impossible-travel]" time="0.134" /><testcase classname="tests.test_guest_intel_race_sops.TestSops" name="test_logged_out_detail_locked[sop-m365-password-spray]" time="0.148" /><testcase classname="tests.test_guest_intel_race_sops.TestSops" name="test_logged_out_detail_locked[sop-hosts-file-modified]" time="0.142" /><testcase classname="tests.test_guest_intel_race_sops.TestSops" name="test_student_free_plan_locked" time="2.031" /><testcase classname="tests.test_guest_intel_race_sops.TestSops" name="test_admin_full_new_sop" time="0.532" /><testcase classname="tests.test_guest_intel_race_sops.TestSops" name="test_unknown_sop_404" time="0.199" /></testsuite></testsuites>

@@ -47,6 +47,7 @@ export default function PublicNav() {
 
 export const Footer = () => (
   <footer className="border-t border-cyan-500/10 py-10 text-center text-xs font-mono text-slate-500">
+    <img src="/logo.png" alt="SOCProfessionals Academy logo" className="h-12 w-12 mx-auto mb-3 object-contain opacity-90" data-testid="footer-logo-img" />
     © {new Date().getFullYear()} SOCProfessionals Academy · All labs are simulated and safe · Built for aspiring blue teamers
   </footer>
 );

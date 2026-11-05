@@ -26,10 +26,10 @@ export default function LandingThreatIntel() {
   const [busy, setBusy] = useState(false);
   const [left, setLeft] = useState(null);
   const gid = () => { let g = localStorage.getItem("guest_id"); if (!g) { g = `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`; localStorage.setItem("guest_id", g); } return g; };
-  useEffect(() => { if (!user) api.get("/public/intel/guest", { params: { guest_id: gid() } }).then((x) => setLeft(x.data.remaining)).catch(() => {}); }, [user]);
+  useEffect(() => { if (user === false) api.get("/public/intel/guest", { params: { guest_id: gid() } }).then((x) => setLeft(x.data.remaining)).catch(() => {}); }, [user]);
   const go = async (v = q) => {
     const ioc = v.trim();
-    if (!ioc) return;
+    if (!ioc || user === null) return;
     setQ(ioc);
     if (user) return nav(`/app/threat-intel?q=${encodeURIComponent(ioc)}`);
     localStorage.setItem("pending_intel", JSON.stringify({ q: ioc, at: Date.now() }));
@@ -57,7 +57,7 @@ export default function LandingThreatIntel() {
               </div>
               <button className="glow-btn" disabled={!q.trim() || busy} data-testid="landing-intel-submit">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{busy ? "Checking..." : "Investigate"} {!busy && <ArrowRight className="h-4 w-4" />}</button>
             </form>
-            {!user && left !== null && <div className="mt-3 text-[11px] font-mono" data-testid="landing-intel-left"><span className={left ? "text-green-400" : "text-amber-300"}>{left} of 3 free lookups left</span><span className="text-slate-500"> · no sign-up needed</span></div>}
+            {user === false && left !== null && <div className="mt-3 text-[11px] font-mono" data-testid="landing-intel-left"><span className={left ? "text-green-400" : "text-amber-300"}>{left} of 3 free lookups left</span><span className="text-slate-500"> · no sign-up needed</span></div>}
             <div className="flex flex-wrap items-center gap-2 mt-3 text-xs"><span className="text-slate-500 font-mono">try:</span>
               {EXAMPLES.map((x) => <button key={x} onClick={() => go(x)} className="font-mono border border-white/10 px-2 py-1 text-slate-400 hover:border-cyan-500/40 hover:text-cyan-300 truncate max-w-[220px]" data-testid={`landing-intel-example-${x.slice(0, 12)}`}>{x}</button>)}</div>
             {ask && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 border-t border-white/10 pt-4 flex flex-wrap items-center gap-3" data-testid="landing-intel-auth">
