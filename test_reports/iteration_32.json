@@ -1,0 +1,39 @@
+{
+  "summary": "Tested the SOP Practice Lab (backend + UI) and the landing page's top-10 SOP section. All requested features work. Backend: 12/12 pytest pass. All 55 labs are ready, and 55 of the 67 SOP cards have has_lab. GET /api/sop-labs/{id} does not return answers, explanations, verdict, severity or evidence flags (each log only has ts/source/line). It returns 403 for the non-paying student, 404 for an unknown id and 401 when logged out. Submit returns 400 for a wrong answer count. A perfect submit scores 100 and gives +50 XP once (admin xp went 45 -> 95); the second pass gives 0 XP and xp stays the same. Picking every containment action lowers the score. Answer positions are shuffled across labs and grading uses the shuffled indices. UI: the landing grid shows exactly 10 cards, all Critical. 'View all 67 SOPs' links to /sops. /sops shows 55 sop-lab-chip elements. On the SOP detail page, logged-out users and the student see sop-lab-locked and no start button; admin sees sop-lab-start pointing to /app/sop-lab/{id}. The student opening the lab URL directly gets an 'Unlock the SOP library' message and a back link. Admin lab: alert, entities and context render; the log filter works and shows an empty state; Next stays disabled until an option is picked; Back keeps the selection; Submit stays disabled until verdict, severity and containment are chosen. Results show the score, per-question marks, explanations, verdict/severity marks and 6 highlighted evidence log lines. Retry resets the lab and clears the highlights. lab-best is shown after reload. There is no horizontal scroll on mobile.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/sop-labs/{id}/submit", "issue": "Out-of-range answers (99 or -1) and invalid verdict/severity strings return 200 (graded as wrong) instead of 422/400. A -1 answer makes the frontend show 'Your answer: undefined'. Validate answers in 0..3 and restrict verdict/severity to Literal values."},
+      {"endpoint": "GET /api/sop-labs/{id}", "issue": "If a ready lab exists but find_sop() returns None, s['title'] raises a 500. Add a None guard that returns 404."},
+      {"endpoint": "lab data", "issue": "Lab sop-m365-password-spray has 22 log lines; the spec says 14-20 and there is no validation for it. 4 labs (m365-password-spray, shellcode-injection, svchost-spawning-cmd, exec-unusual-directory) have log lines longer than 260 chars; the prompt limit is 220."},
+      {"endpoint": "access rule", "issue": "None of the 5 free static SOPs (phishing, bruteforce, malware, powershell, impossible-travel) has a lab, so the 'free SOPs are practisable' path never applies. Non-paying students cannot open any lab. This may be intended; please confirm."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Lab results", "issue": "lab-best header is not updated after a submit; it only refreshes on reload. Minor.", "affected_selectors": ["[data-testid='lab-best']"]}
+    ],
+    "design_issues": [
+      {"screen": "/app/sop-lab/{id} mobile 390px", "issues": ["The final severity row uses grid-cols-4, so the 'Medium' and 'Critical' labels are cramped and clipped at the button edges. Use grid-cols-2 sm:grid-cols-4 or smaller padding."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_sop_lab.py", "/app/test_reports/pytest/pytest_sop_lab.xml"],
+  "action_items": [
+    "Validate submit body: answers in 0..3, verdict in {true_positive,false_positive}, severity in SEVERITIES",
+    "Guard find_sop None in get_lab",
+    "Make the severity grid responsive on mobile",
+    "Optional: update lab-best after submit; enforce the 14-20 log count and the line length cap in build_lab validation"
+  ],
+  "critical_code_review_comments": [
+    "The shuffle is seeded per sop_id only, so every user gets the same order. Answer keys can be shared, which is acceptable for practice.",
+    "The submit response exposes the full answer key even when the attempt fails, so a user can submit zeros and then retry for 100%. XP is only +50 once per lab, so the impact is low, but consider rate-limiting or hiding answers until a pass or a few attempts.",
+    "can_practise does not check FREE_IDS for labs, because the free SOPs have no labs."
+  ],
+  "updated_files": ["/app/backend/tests/test_sop_lab.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Admin account: about 12 sop_lab_attempts were added across 6 labs. Admin xp went 45 -> 95 from the +50 first pass on sop-m365-password-spray, which changes the seeded admin's XP. Admin now has a best score of 100 on that lab, so its first-pass XP can no longer be re-tested with admin. One attempt was also made on sop-shellcode-injection via mobile UI (not submitted).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run with `pytest tests/test_sop_lab.py -n 0`. Admin has already passed sop-m365-password-spray, so test_perfect_score_100 now only checks that no XP is given on later passes. To test first-pass XP, use another lab with admin. The student gets 403 on all labs. Login testids: login-email-input / login-password-input / login-submit-button."
+}

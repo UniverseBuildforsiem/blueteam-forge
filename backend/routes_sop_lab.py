@@ -1,7 +1,7 @@
 import asyncio
 import random
 import os
-from typing import List
+from typing import List, Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -111,6 +111,8 @@ async def get_lab(sid: str, user=Depends(get_current_user)):
     if not lab:
         raise HTTPException(404, "No practice lab for this SOP yet")
     s = await find_sop(sid)
+    if not s:
+        raise HTTPException(404, "No practice lab for this SOP yet")
     if not await can_practise(user, sid):
         raise HTTPException(403, "Unlock the SOP library to practise this lab")
     best = await db.sop_lab_attempts.find_one({"user_id": user["id"], "sop_id": sid}, {"_id": 0, "score": 1, "passed": 1}, sort=[("score", -1)])
@@ -121,8 +123,8 @@ async def get_lab(sid: str, user=Depends(get_current_user)):
 
 class SubmitIn(BaseModel):
     answers: List[int] = Field(max_length=10)
-    verdict: str
-    severity: str
+    verdict: Literal["true_positive", "false_positive"]
+    severity: Literal["Low", "Medium", "High", "Critical"]
     containment: List[int] = Field(max_length=10)
 
 
@@ -135,7 +137,7 @@ async def submit_lab(sid: str, body: SubmitIn, user=Depends(get_current_user)):
         raise HTTPException(403, "Unlock the SOP library to practise this lab")
     qs, cont = shuffled(lab, sid)
     lab["containment"] = cont
-    if len(body.answers) != len(qs):
+    if len(body.answers) != len(qs) or any(not 0 <= a < len(q["options"]) for q, a in zip(qs, body.answers)):
         raise HTTPException(400, "Answer every question")
     q_res = [{"q": q["q"], "your": a, "answer": q["answer"], "correct": a == q["answer"], "explain": q["explain"], "options": q["options"]} for q, a in zip(qs, body.answers)]
     picked = set(i for i in body.containment if 0 <= i < len(lab["containment"]))

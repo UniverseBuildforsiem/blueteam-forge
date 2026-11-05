@@ -61,7 +61,7 @@ function Walkthrough({ lab, onDone }) {
         <div><div className="text-[11px] font-mono text-cyan-300 uppercase mb-2">your verdict</div>
           <div className="grid grid-cols-2 gap-2">{[["true_positive", "True positive"], ["false_positive", "False positive"]].map(([k, l]) => <Opt key={k} on={verdict === k} onClick={() => setVerdict(k)} data-testid={`lab-verdict-${k}`}>{l}</Opt>)}</div></div>
         <div><div className="text-[11px] font-mono text-cyan-300 uppercase mb-2">final severity</div>
-          <div className="grid grid-cols-4 gap-2">{lab.severities.map((s) => <Opt key={s} on={sev === s} onClick={() => setSev(s)} data-testid={`lab-sev-${s.toLowerCase()}`}>{s}</Opt>)}</div></div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{lab.severities.map((s) => <Opt key={s} on={sev === s} onClick={() => setSev(s)} data-testid={`lab-sev-${s.toLowerCase()}`}>{s}</Opt>)}</div></div>
         <div><div className="text-[11px] font-mono text-cyan-300 uppercase mb-2">response actions (pick all that apply)</div>
           <div className="space-y-2">{lab.containment.map((c, i) => <Opt key={i} on={cont.includes(i)} onClick={() => setCont(cont.includes(i) ? cont.filter((x) => x !== i) : [...cont, i])} data-testid={`lab-cont-${i}`}>{c}</Opt>)}</div></div>
       </div>}
@@ -116,7 +116,7 @@ export default function SopLab() {
       {lab.best && <div className="text-xs font-mono text-slate-400 mt-1" data-testid="lab-best">best score {lab.best.score}%{lab.best.passed ? " · passed" : ""}</div>}
       <div className="grid lg:grid-cols-[1.15fr_1fr] gap-5 mt-6">
         <div className="space-y-5"><AlertCard lab={lab} /><Logs logs={lab.logs} evidence={evidence} /></div>
-        <div>{res ? <Results r={res} sopId={id} onRetry={() => { setRes(null); setKey(key + 1); }} /> : <Walkthrough key={key} lab={lab} onDone={setRes} />}</div>
+        <div>{res ? <Results r={res} sopId={id} onRetry={() => { setRes(null); setKey(key + 1); }} /> : <Walkthrough key={key} lab={lab} onDone={(r) => { setRes(r); if (!lab.best || r.score > lab.best.score) setLab({ ...lab, best: { score: r.score, passed: r.passed || !!lab.best?.passed } }); }} />}</div>
       </div>
     </div>);
 }
