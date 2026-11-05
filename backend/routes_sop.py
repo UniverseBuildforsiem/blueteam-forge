@@ -33,15 +33,16 @@ async def owns_sops(user):
     return bool(await db.purchases.find_one({"user_id": user["id"], "product_id": SOP_PRODUCT}))
 
 
-def card(s, owned):
+def card(s, owned, labs=()):
     return {k: s[k] for k in ("id", "title", "category", "severity", "summary", "mitre", "version", "updated")} | {
-        "free": s["id"] in FREE_IDS, "locked": s["id"] not in FREE_IDS and not owned, "step_count": len(s["steps"]), "query_count": len(s["queries"])}
+        "free": s["id"] in FREE_IDS, "has_lab": s["id"] in labs, "locked": s["id"] not in FREE_IDS and not owned, "step_count": len(s["steps"]), "query_count": len(s["queries"])}
 
 
 @router.get("/public/sops")
 async def list_sops(user=Depends(optional_user)):
     owned = await owns_sops(user)
-    return {"price": PRICE, "free_count": FREE, "owned": owned, "logged_in": bool(user), "sops": [card(s, owned) for s in await all_sops()]}
+    labs = set(await db.sop_labs.distinct("sop_id", {"status": "ready"}))
+    return {"price": PRICE, "free_count": FREE, "owned": owned, "logged_in": bool(user), "sops": [card(s, owned, labs) for s in await all_sops()]}
 
 
 @router.get("/public/sops/{sid}")
@@ -50,9 +51,10 @@ async def get_sop(sid: str, user=Depends(optional_user)):
     if not s:
         raise HTTPException(404, "SOP not found")
     owned = await owns_sops(user)
+    labs = {sid} if await db.sop_labs.find_one({"sop_id": sid, "status": "ready"}, {"_id": 1}) else set()
     if sid not in FREE_IDS and not owned:
-        return {**card(s, owned), "objective": s["objective"], "triggers": s["triggers"], "price": PRICE, "phases": [p["phase"] for p in s["steps"]]}
-    return {**s, **card(s, owned), "price": PRICE}
+        return {**card(s, owned, labs), "objective": s["objective"], "triggers": s["triggers"], "price": PRICE, "phases": [p["phase"] for p in s["steps"]]}
+    return {**s, **card(s, owned, labs), "price": PRICE}
 
 
 async def send_sop_receipt(user_id, payment):

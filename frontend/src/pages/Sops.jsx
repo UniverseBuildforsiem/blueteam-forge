@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Lock, Unlock, Copy, Check, FileText, Users, AlertTriangle, ListChecks, Wrench, Timer, CheckCircle2, Radar, Search } from "lucide-react";
+import { ArrowLeft, Lock, Unlock, Copy, Check, FileText, Users, AlertTriangle, ListChecks, Wrench, Timer, CheckCircle2, Radar, Search, FlaskConical, ArrowRight } from "lucide-react";
 import { huntUrl } from "./Blog";
 import PublicNav, { Footer } from "../components/PublicNav";
 import { Glass, SeverityBadge, Empty } from "../components/common";
@@ -81,7 +81,7 @@ export function SopList() {
                   <span className="ml-auto" data-testid={`sop-status-${s.id}`}>{s.locked ? <span className="text-slate-500 inline-flex items-center gap-1"><Lock className="h-3.5 w-3.5" />locked</span> : s.free ? <span className="text-green-400">free</span> : <span className="text-green-400 inline-flex items-center gap-1"><Unlock className="h-3.5 w-3.5" />unlocked</span>}</span></div>
                 <h3 className="font-bold mt-4 group-hover:text-cyan-300 transition-colors flex items-start gap-2"><FileText className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />{s.title}</h3>
                 <p className="text-sm text-slate-400 mt-2 flex-1">{s.summary}</p>
-                <div className="text-[11px] font-mono text-slate-500 mt-4">{s.step_count} phases · {s.query_count} SPL + KQL queries · v{s.version}</div>
+                <div className="text-[11px] font-mono text-slate-500 mt-4">{s.step_count} phases · {s.query_count} SPL + KQL queries · v{s.version}{s.has_lab && <span className="ml-2 text-green-400 border border-green-500/30 px-1.5 py-0.5" data-testid={`sop-lab-chip-${s.id}`}>practice lab</span>}</div>
               </Glass>
             </Link>))}
         </div>
@@ -140,6 +140,12 @@ export function SopDetail() {
           <div className="flex flex-wrap items-center gap-2 text-xs font-mono mt-6"><SeverityBadge level={s.severity} /><span className="text-cyan-400">{s.category}</span><span className="text-slate-500">· v{s.version} · updated {s.updated}</span></div>
           <h1 className="text-3xl sm:text-4xl font-extrabold mt-4" data-testid="sop-title">{s.title}</h1>
           <p className="text-slate-400 mt-3">{s.summary}</p>
+          {s.has_lab && <Glass className="p-5 mt-6 flex flex-wrap items-center gap-4 border-green-500/30" data-testid="sop-lab-banner">
+            <FlaskConical className="h-8 w-8 text-green-400" />
+            <div className="flex-1 min-w-[220px]"><div className="font-bold">Practice lab available</div><div className="text-sm text-slate-400">Work a realistic simulated alert with raw logs using this SOP, auto-graded with +50 XP when you pass.</div></div>
+            {s.locked ? <span className="text-xs font-mono text-slate-500" data-testid="sop-lab-locked">unlock the SOP to practise</span>
+              : <Link to={`/app/sop-lab/${s.id}`} className="glow-btn !text-xs" data-testid="sop-lab-start">Start practice lab <ArrowRight className="h-3.5 w-3.5" /></Link>}
+          </Glass>}
           <Glass className="p-5 mt-6"><div className="eyebrow mb-2">objective</div><p className="text-sm text-slate-300">{s.objective}</p></Glass>
           <div className="mt-4"><List icon={AlertTriangle} title="triggers" items={s.triggers} testId="sop-triggers" /></div>
           {s.locked ? <Locked s={s} onPaid={() => { toast.success("All SOPs unlocked!"); load(); }} /> : <>

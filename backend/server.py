@@ -19,6 +19,7 @@ from routes_series import router as series_router, ensure_series
 from series_cover import router as cover_router
 from series_share import router as series_share_router
 from sop_writer import ensure_sop_extra
+from routes_sop_lab import router as sop_lab_router, ensure_sop_labs
 from routes_intel import router as intel_router, guest_router as intel_guest_router, ensure_intel
 from series_email import router as series_email_router, ensure_series_email
 from routes_instructor import router as instructor_router
@@ -28,7 +29,7 @@ from routes_consult import router as consult_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCProfessionals Academy API")
-for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router, series_share_router, intel_router, intel_guest_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router, series_share_router, intel_router, intel_guest_router, sop_lab_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])
@@ -110,6 +111,7 @@ async def startup():
     await ensure_series_email()
     await ensure_intel()
     await ensure_sop_extra()
+    await ensure_sop_labs()
     await ensure_promos()
     logger.info("Seed complete")
 

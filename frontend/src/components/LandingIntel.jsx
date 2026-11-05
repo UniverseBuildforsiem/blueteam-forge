@@ -27,6 +27,8 @@ function SopShowcase({ d }) {
   const [lang, setLang] = useState("spl");
   useEffect(() => { api.get("/public/sops/sop-phishing").then((r) => setFeat(r.data)).catch(() => {}); }, []);
   if (!d) return null;
+  const RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+  const top = [...d.sops].sort((a, b) => (RANK[a.severity] ?? 4) - (RANK[b.severity] ?? 4)).slice(0, 10);
   const q = feat?.queries?.[0];
   return (
     <section className="relative border-y border-cyan-500/10 bg-black/40 py-24 mb-24 overflow-hidden" data-testid="landing-sops">
@@ -49,12 +51,16 @@ function SopShowcase({ d }) {
             <span className="text-sm font-mono text-slate-400" data-testid="landing-sop-offer"><span className="text-green-400">{d.free_count} free</span> · all {d.sops.length} for <span className="text-cyan-300 text-lg">₹{d.price}</span></span>
           </div>
         </div>
+        <div>
+        <div className="flex items-baseline justify-between mb-3"><span className="text-[11px] font-mono uppercase text-cyan-300">top 10 critical incidents</span></div>
         <div className="grid sm:grid-cols-2 gap-3" data-testid="landing-sop-grid">
-          {d.sops.map((s, i) => <Link key={s.id} to={`/sops/${s.id}`} style={{ animationDelay: `${i * 60}ms` }} className="rise group glass rounded-sm p-4 hover:border-cyan-400/50 transition-colors" data-testid={`landing-sop-${s.id}`}>
-            <div className="flex items-center justify-between text-[10px] font-mono"><span className="text-cyan-400">{s.category}</span>{s.locked ? <Lock className="h-3.5 w-3.5 text-slate-500" /> : <Unlock className="h-3.5 w-3.5 text-green-400" />}</div>
+          {top.map((s, i) => <Link key={s.id} to={`/sops/${s.id}`} style={{ animationDelay: `${i * 60}ms` }} className="rise group glass rounded-sm p-4 hover:border-cyan-400/50 transition-colors" data-testid={`landing-sop-${s.id}`}>
+            <div className="flex items-center justify-between text-[10px] font-mono"><span className="text-cyan-400">{s.category} · <span className={s.severity === "Critical" ? "text-red-400" : "text-orange-400"}>{s.severity}</span></span>{s.locked ? <Lock className="h-3.5 w-3.5 text-slate-500" /> : <Unlock className="h-3.5 w-3.5 text-green-400" />}</div>
             <div className="text-sm font-semibold mt-2 flex items-start gap-2 group-hover:text-cyan-300 transition-colors"><FileText className="h-4 w-4 shrink-0 mt-0.5 text-slate-500" />{s.title}</div>
-            <div className="text-[10px] font-mono text-slate-500 mt-2">{s.free ? <span className="text-green-400">FREE</span> : "PREMIUM"} · {s.query_count} queries</div>
+            <div className="text-[10px] font-mono text-slate-500 mt-2">{s.free ? <span className="text-green-400">FREE</span> : "PREMIUM"} · {s.query_count} queries{s.has_lab && <span className="text-green-400"> · practice lab</span>}</div>
           </Link>)}
+        </div>
+        <Link to="/sops" className="mt-4 flex items-center justify-center gap-2 border border-dashed border-cyan-500/30 py-3 text-sm font-mono text-cyan-300 hover:bg-cyan-500/5 transition-colors" data-testid="landing-sops-view-all">View all {d.sops.length} SOPs <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </div>
     </section>);
