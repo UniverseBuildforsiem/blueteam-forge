@@ -7,7 +7,15 @@ router = APIRouter(prefix="/api")
 SOP_PRODUCT = "sop-bundle"
 PRICE, FREE = 499, 5
 FREE_IDS = {s["id"] for s in SOPS[:FREE]}
-BY_ID = {s["id"]: s for s in SOPS}
+
+
+async def all_sops():
+    extra = await db.sops_extra.find({"status": "ready"}, {"_id": 0, "status": 0, "error": 0}).sort("order", 1).to_list(500)
+    return SOPS + extra
+
+
+async def find_sop(sid):
+    return next((s for s in SOPS if s["id"] == sid), None) or await db.sops_extra.find_one({"id": sid, "status": "ready"}, {"_id": 0, "status": 0, "error": 0})
 
 
 async def optional_user(request: Request):
@@ -33,12 +41,12 @@ def card(s, owned):
 @router.get("/public/sops")
 async def list_sops(user=Depends(optional_user)):
     owned = await owns_sops(user)
-    return {"price": PRICE, "free_count": FREE, "owned": owned, "logged_in": bool(user), "sops": [card(s, owned) for s in SOPS]}
+    return {"price": PRICE, "free_count": FREE, "owned": owned, "logged_in": bool(user), "sops": [card(s, owned) for s in await all_sops()]}
 
 
 @router.get("/public/sops/{sid}")
 async def get_sop(sid: str, user=Depends(optional_user)):
-    s = BY_ID.get(sid)
+    s = await find_sop(sid)
     if not s:
         raise HTTPException(404, "SOP not found")
     owned = await owns_sops(user)
@@ -53,5 +61,5 @@ async def send_sop_receipt(user_id, payment):
         return
     lines = ["Thanks for unlocking the full SOC SOP Library. Here is your receipt.", f"Item: {payment['plan_name']}", f"Amount paid: ₹{payment['amount']:,}",
              f"Order ID: {payment['id']}", f"Payment method: {payment['provider'].title()}", f"Date: {now_iso()[:10]}",
-             f"All {len(SOPS)} SOPs with SPL and KQL queries are now open in your account."]
+             f"All {len(await all_sops())} SOPs with SPL and KQL queries are now open in your account."]
     await send_email(to=u["email"], subject="Your SOC SOP Library receipt", html=email_template(u["name"], lines, f"{os.environ['FRONTEND_URL']}/sops", "Open the SOP library"))

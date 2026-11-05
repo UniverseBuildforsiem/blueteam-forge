@@ -18,6 +18,7 @@ from routes_blog import router as blog_router, ensure_blog
 from routes_series import router as series_router, ensure_series
 from series_cover import router as cover_router
 from series_share import router as series_share_router
+from sop_writer import ensure_sop_extra
 from routes_intel import router as intel_router, guest_router as intel_guest_router, ensure_intel
 from series_email import router as series_email_router, ensure_series_email
 from routes_instructor import router as instructor_router
@@ -108,6 +109,7 @@ async def startup():
     await ensure_series()
     await ensure_series_email()
     await ensure_intel()
+    await ensure_sop_extra()
     await ensure_promos()
     logger.info("Seed complete")
 

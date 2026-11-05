@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from core import db, now, now_iso, new_id, hash_password, admin_only, staff, audit, send_email, email_template, rank_for
-from sop_data import SOPS
+from routes_sop import all_sops
 from path_templates import BUILTIN_TEMPLATES
 
 router = APIRouter(prefix="/api")
@@ -313,7 +313,7 @@ async def suggest_practice(body: SuggestIn, user=Depends(staff)):
     pools = {"lab": [(l, f"{l['title']} {l.get('category', '')} {l.get('description', '')}") for l in await db.labs.find({}, {"_id": 0, "id": 1, "title": 1, "category": 1, "description": 1}).to_list(200)],
              "quiz": [(x, x["title"]) for x in await db.quizzes.find({}, {"_id": 0, "id": 1, "title": 1}).to_list(200)],
              "challenge": [(c, f"{c['title']} {c.get('category', '')}") for c in await db.challenges.find({}, {"_id": 0, "id": 1, "title": 1, "category": 1}).to_list(500)],
-             "sop": [(s, f"{s['title']} {s['category']} {' '.join(s['triggers'])}") for s in SOPS]}
+             "sop": [(s, f"{s['title']} {s['category']} {' '.join(s['triggers'])}") for s in await all_sops()]}
     out = []
     for typ, items in pools.items():
         scored = []
@@ -429,4 +429,4 @@ async def path_assets(user=Depends(staff)):
         return await db[coll].find(f or {}, {"_id": 0, "id": 1, "title": 1}).sort("title", 1).to_list(500)
     return {"quiz": await pick("quizzes"), "lab": await pick("labs"), "challenge": await pick("challenges"), "ctf": await pick("ctfs"),
             "course": await db.courses.find({"active": True}, {"_id": 0, "id": 1, "title": 1, "url": 1}).sort("order", 1).to_list(200),
-            "sop": [{"id": s["id"], "title": s["title"]} for s in SOPS]}
+            "sop": [{"id": s["id"], "title": s["title"]} for s in await all_sops()]}

@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from core import db, now, now_iso, new_id, get_current_user
+from pymongo.errors import DuplicateKeyError
 import intel_sources as S
 
 router = APIRouter(prefix="/api/intel")
@@ -267,8 +268,52 @@ class GuestIn(BaseModel):
 GUEST_FREE = 3
 
 
+CF_NETS = [ipaddress.ip_network(n) for n in ("173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22", "141.101.64.0/18", "108.162.192.0/18", "190.93.240.0/20", "188.114.96.0/20",
+                                             "197.234.240.0/22", "198.41.128.0/17", "162.158.0.0/15", "104.16.0.0/13", "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22",
+                                             "2400:cb00::/32", "2606:4700::/32", "2803:f800::/32", "2405:b500::/32", "2405:8100::/32", "2a06:98c0::/29", "2c0f:f248::/32")]
+
+
+def _proxy(ip):
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return True
+    return a.is_private or any(a.version == n.version and a in n for n in CF_NETS)
+
+
 def client_ip(request):
-    return (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() or (request.client.host if request.client else "")
+    hops = [h.strip() for h in (request.headers.get("x-forwarded-for") or "").split(",") if h.strip()]
+    for h in reversed(hops[:-1] if len(hops) > 1 else hops):
+        if not _proxy(h):
+            return h
+    return hops[0] if hops else (request.client.host if request.client else "")
+
+
+def guest_keys(request, gid):
+    return [f"ip:{hashlib.sha256(client_ip(request).encode()).hexdigest()[:24]}", f"id:{gid[:64]}"]
+
+
+async def guest_used(keys):
+    return max([d.get("n", 0) for d in await db.intel_guest.find({"key": {"$in": keys}}, {"_id": 0, "n": 1}).to_list(2)] or [0])
+
+
+async def claim(keys):
+    got = []
+    for k in keys:
+        try:
+            r = await db.intel_guest.find_one_and_update({"key": k, "n": {"$lt": GUEST_FREE}}, {"$inc": {"n": 1}, "$set": {"last": now_iso()}}, upsert=True, return_document=True)
+            got.append(k)
+        except DuplicateKeyError:
+            r = None
+        if not r:
+            await release(got)
+            return None
+    return GUEST_FREE - max([(await db.intel_guest.find_one({"key": k}, {"_id": 0, "n": 1}))["n"] for k in keys])
+
+
+async def release(keys):
+    for k in keys:
+        await db.intel_guest.update_one({"key": k, "n": {"$gt": 0}}, {"$inc": {"n": -1}})
 
 
 @guest_router.post("/public/intel/lookup")
@@ -276,26 +321,26 @@ async def guest_lookup(body: GuestIn, request: Request):
     kind, value = S.detect(body.ioc)
     if not kind:
         raise HTTPException(400, "Enter a public IP, domain, URL or MD5/SHA-1/SHA-256 hash.")
-    keys = [f"ip:{hashlib.sha256(client_ip(request).encode()).hexdigest()[:24]}", f"id:{body.guest_id}"]
-    used = max([(d.get("n", 0)) for d in await db.intel_guest.find({"key": {"$in": keys}}, {"_id": 0, "n": 1}).to_list(2)] or [0])
-    if used >= GUEST_FREE:
-        raise HTTPException(402, "You've used your 3 free lookups. Create a free account to keep investigating.")
-    r = await run(kind, value, guest=True)
-    for k in keys:
-        await db.intel_guest.update_one({"key": k}, {"$inc": {"n": 1}, "$set": {"last": now_iso()}}, upsert=True)
-    return {**r, "at": now_iso(), "remaining": GUEST_FREE - used - 1}
+    keys = guest_keys(request, body.guest_id)
+    left = await claim(keys)
+    if left is None:
+        raise HTTPException(402, f"You've used your {GUEST_FREE} free lookups. Create a free account to keep investigating.")
+    try:
+        r = await run(kind, value, guest=True)
+    except BaseException:
+        await release(keys)
+        raise
+    return {**r, "at": now_iso(), "remaining": left}
 
 
 @guest_router.get("/public/intel/guest")
 async def guest_status(request: Request, guest_id: str = ""):
-    keys = [f"ip:{hashlib.sha256(client_ip(request).encode()).hexdigest()[:24]}", f"id:{guest_id[:64]}"]
-    used = max([(d.get("n", 0)) for d in await db.intel_guest.find({"key": {"$in": keys}}, {"_id": 0, "n": 1}).to_list(2)] or [0])
-    return {"remaining": max(0, GUEST_FREE - used), "free": GUEST_FREE}
+    return {"remaining": max(0, GUEST_FREE - await guest_used(guest_keys(request, guest_id))), "free": GUEST_FREE}
 
 
 @router.get("/myip")
 async def myip(request: Request, user=Depends(get_current_user)):
-    ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() or (request.client.host if request.client else "")
+    ip = client_ip(request)
     try:
         check_ip(ip)
     except Exception:

@@ -39,7 +39,7 @@ export default function LandingThreatIntel() {
       const { data } = await api.post("/public/intel/lookup", { ioc, guest_id: gid() });
       setR(data); setLeft(data.remaining); localStorage.removeItem("pending_intel");
     } catch (e) {
-      if (e.response?.status === 402) { setLeft(0); setAsk(true); } else toast.error(errMsg(e));
+      if (e.response?.status === 402) { setLeft(0); setAsk(true); } else { localStorage.removeItem("pending_intel"); toast.error(errMsg(e)); }
     } finally { setBusy(false); }
   };
   return (

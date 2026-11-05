@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Lock, Unlock, Copy, Check, FileText, Users, AlertTriangle, ListChecks, Wrench, Timer, CheckCircle2, Radar } from "lucide-react";
+import { ArrowLeft, Lock, Unlock, Copy, Check, FileText, Users, AlertTriangle, ListChecks, Wrench, Timer, CheckCircle2, Radar, Search } from "lucide-react";
 import { huntUrl } from "./Blog";
 import PublicNav, { Footer } from "../components/PublicNav";
 import { Glass, SeverityBadge, Empty } from "../components/common";
@@ -44,9 +44,13 @@ function UnlockBox({ price, onPaid, from }) {
 
 export function SopList() {
   const [d, setD] = useState(null);
+  const [q, setQ] = useState("");
+  const [cat, setCat] = useState("");
   const load = () => api.get("/public/sops").then((r) => setD(r.data));
   useEffect(() => { load(); }, []);
   useCfReturn(load);
+  const cats = [...new Set((d?.sops || []).map((s) => s.category))].sort();
+  const shown = (d?.sops || []).filter((s) => (!cat || s.category === cat) && (!q || `${s.title} ${s.summary} ${s.mitre?.join(" ")}`.toLowerCase().includes(q.toLowerCase())));
   return (
     <div className="grid-bg min-h-screen">
       <PublicNav />
@@ -63,8 +67,14 @@ export function SopList() {
               <div className="mt-4"><UnlockBox price={d.price} onPaid={() => { toast.success("All SOPs unlocked!"); load(); }} from="/sops" /></div></>}
           </Glass>}
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-12" data-testid="sop-grid">
-          {d?.sops.map((s) => (
+        {d && <div className="flex flex-wrap items-center gap-2 mt-12" data-testid="sop-filters">
+          <div className="flex items-center gap-2 bg-black/40 border border-white/10 px-3 rounded-sm"><Search className="h-4 w-4 text-slate-500" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search alerts, e.g. Okta, LSASS" className="bg-transparent py-2 text-sm outline-none w-56" data-testid="sop-search" /></div>
+          {["", ...cats].map((c) => <button key={c || "all"} onClick={() => setCat(c)} data-testid={`sop-cat-${(c || "all").toLowerCase().replace(/\s+/g, "-")}`}
+            className={`px-3 py-1.5 text-xs font-mono border rounded-sm transition-colors ${cat === c ? "border-cyan-400 text-cyan-300 bg-cyan-500/10" : "border-white/10 text-slate-400 hover:border-cyan-500/40"}`}>{c || `All (${d.sops.length})`}</button>)}
+        </div>}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6" data-testid="sop-grid">
+          {shown.map((s) => (
             <Link key={s.id} to={`/sops/${s.id}`} className="group" data-testid={`sop-card-${s.id}`}>
               <Glass className={`p-6 h-full flex flex-col transition-transform duration-300 group-hover:-translate-y-1 ${s.locked ? "opacity-80" : ""}`}>
                 <div className="flex items-center gap-2 text-[11px] font-mono"><SeverityBadge level={s.severity} /><span className="text-cyan-400">{s.category}</span>
@@ -137,6 +147,18 @@ export function SopDetail() {
               <Glass className="p-5" data-testid="sop-roles"><div className="eyebrow mb-3 flex items-center gap-2"><Users className="h-4 w-4" />roles</div>
                 {s.roles.map((r) => <div key={r.role} className="text-sm mb-2"><span className="font-mono text-cyan-300">{r.role}</span><span className="text-slate-400"> — {r.duty}</span></div>)}</Glass>
             </div>
+            {s.analysis?.length > 0 && <>
+              <div className="eyebrow mt-12 mb-4 flex items-center gap-2"><Search className="h-4 w-4" />analysis checklist</div>
+              <div className="space-y-3" data-testid="sop-analysis">{s.analysis.map((a, i) => (
+                <Glass key={i} className="p-5" data-testid={`sop-analysis-${i}`}>
+                  <div className="font-bold text-sm flex gap-2"><span className="font-mono text-cyan-400">Q{i + 1}</span>{a.check}</div>
+                  <p className="text-sm text-slate-300 mt-2"><span className="text-[11px] font-mono uppercase text-slate-500 mr-2">how</span>{a.how}</p>
+                  <div className="grid md:grid-cols-2 gap-3 mt-3 text-sm">
+                    <div className="border border-red-500/20 bg-red-500/5 p-3"><div className="text-[11px] font-mono uppercase text-red-300 mb-1">true positive if</div><span className="text-slate-300">{a.malicious_if}</span></div>
+                    <div className="border border-green-500/20 bg-green-500/5 p-3"><div className="text-[11px] font-mono uppercase text-green-300 mb-1">false positive if</div><span className="text-slate-300">{a.benign_if}</span></div>
+                  </div>
+                </Glass>))}</div>
+            </>}
             <div className="eyebrow mt-12 mb-4 flex items-center gap-2"><ListChecks className="h-4 w-4" />procedure</div>
             <div className="space-y-4" data-testid="sop-steps">{s.steps.map((p, i) => (
               <Glass key={p.phase} className="p-5 border-l-2 border-l-cyan-400/60" data-testid={`sop-phase-${i}`}>
