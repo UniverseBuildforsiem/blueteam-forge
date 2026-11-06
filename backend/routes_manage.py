@@ -63,15 +63,13 @@ def validate(col, doc):
             for t in doc["tasks"]:
                 assert t.get("id") and t.get("question") and t.get("answer")
         if col == "ctfs":
+            doc["hints"] = [h for h in doc["hints"] if str(h.get("text", "")).strip()]
             if re.match(r"^\s*SOCF\{", str(doc["flag"]), re.I):
                 raise HTTPException(422, "Enter the plain answer only, without SOCF{...}")
             doc["flag"] = str(doc["flag"]).strip()
             if (doc.get("ioc") or "").strip():
-                import intel_sources as IS
-                kind, value = IS.detect(doc["ioc"])
-                if not kind:
-                    raise HTTPException(422, "The IOC must be a public IP, domain, URL or MD5/SHA-1/SHA-256 hash")
-                doc["ioc"] = value
+                from routes_intel import public_ioc
+                doc["ioc"] = public_ioc(doc["ioc"])[1]
             else:
                 doc.pop("ioc", None)
                 if doc.get("category") == "Threat Intel":

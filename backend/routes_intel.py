@@ -48,6 +48,18 @@ def check_ip(ip):
         raise HTTPException(400, "That is a private or reserved IP. Only public internet IPs can be checked.")
 
 
+def public_ioc(raw):
+    kind, value = S.detect(raw.strip()[:2048])
+    if not kind:
+        raise HTTPException(422, f"Not a public IP, domain, URL or MD5/SHA-1/SHA-256 hash: {raw[:60]}")
+    if kind == "ip":
+        try:
+            check_ip(value)
+        except HTTPException:
+            raise HTTPException(422, f"{value} is a private or reserved IP. Use a public internet IP.")
+    return kind, value
+
+
 def age_days(iso):
     try:
         return (now() - datetime.fromisoformat(iso.replace("Z", "+00:00"))).days

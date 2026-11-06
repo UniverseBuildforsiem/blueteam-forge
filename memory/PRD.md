@@ -215,3 +215,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - New CTF category "Threat Intel": CTF docs can carry an `ioc` (validated/normalised via intel_sources.detect). Fixed answer set by instructor.
 - Path Builder CTF creator: IOC field, "Look it up" inline intel report, "Draft Intel CTF with AI" (AI reads current lookup and picks a stable fact as answer).
 - Shared CtfDialog (components/CtfDialog.jsx) used by CTF Arena and lessons; Intel CTFs run the Threat Intel lookup inside the popup. Lesson CTF attachments open as popup on the lesson (no redirect).
+
+## Jun 2026 — Bulk Intel CTFs + CTF writeups
+- Instructor/Admin CTF manager: Bulk Intel CTFs panel (paste up to 10 public IOCs -> POST /api/builder/ctf-bulk, 3 parallel AI jobs) with review cards, save one / save all / discard.
+- CTF editor uses a proper form (CtfFields) instead of JSON. Blank hints stripped on save. IOC must be public (routes_intel.public_ioc).
+- CTF `writeup` field: AI drafts it, instructor edits; hidden from /api/ctf until solved; shown in CtfDialog after solve. 8 seeded CTFs backfilled with writeups.

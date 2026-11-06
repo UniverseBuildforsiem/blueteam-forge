@@ -1,0 +1,35 @@
+{
+  "summary": "Tested Bulk Intel CTFs, CTF writeups and the new CTF editor form. Backend pytest: 5 of 6 pass. All 8 seeded CTFs have writeups. GET /ctf leaves out writeup (and flag) for unsolved CTFs and includes it after solving (ctf-net-2, ' 3389 ' trimmed). /builder/ctf-bulk returns 403 for a student, 400 for an invalid IOC or duplicates, and 422 for an empty list or more than 10. A real bulk run with 8.8.8.8 and the EICAR md5 finished in under 20s: category Threat Intel, ioc set, flags 15169 and eicar, writeups and hints filled, no SOCF. A single non-intel draft also returns a writeup. A manual writeup update persists. The one failure: a private IP (10.0.0.1) is accepted up front. UI (instructor): the bulk-intel-ctfs panel works. With 11 indicators the count shows 11/10 in red and Draft is disabled; it is also disabled when empty. An invalid IOC shows an error toast and creates no card. Two IOCs created cards showing 'drafting...', then editable fields. Edits saved correctly: save-0 shows 'saved to arena' and the list refreshes, save-all hides once fewer than 2 are ready, and discard removes a card. The CTF editor form (ctf-edit-*) loads every field, with no JSON editor. Writeup and points edits persist after reopening. New CTF save works; empty fields and a bad IOC show error toasts. Student: the Threat Intel column shows the saved bulk CTFs. ctf-net-2 had no writeup before solving; hint 100->80, wrong flag toast, 3389 solved, writeup shown, hint buttons hidden after the solve. The bulk intel CTF dialog has an intel box, the lookup shows 15169, and the solve shows the edited writeup. The lesson CTF popup (ctf-web-1) shows the writeup only after solving and the URL is unchanged. Path Builder ctf-creator: ctf-new-writeup starts empty and the AI draft fills it (592 chars).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/builder/ctf-bulk", "issue": "Private or reserved IPs (e.g. 10.0.0.1) pass the up-front check because IS.detect only checks the syntax. The job then fails later, and the card shows the misleading text 'The CTF writer is unavailable right now: 400: That is a private or reserved IP...'. Reject private IPs in ctf_bulk (and in /manage/ctfs validate() for ioc) using the same public-IP check intel_run uses. Also stop adding the 'unavailable' prefix to validation errors in run_ctf_job."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ContentEditor load() race (Instructor > Content)", "issue": "Clicking content-kind-ctfs right after the page loads leaves the Courses (paths) list showing under the CTF tab. The slow /manage/paths response arrives after /manage/ctfs and overwrites items, because stale responses are not ignored. Reproduced twice. Clicking Edit on one of those rows opens a path document in the CTF form. Fix: in the useEffect, track the current kind or a cancelled flag and ignore stale responses (or clear items on kind change).", "selector": "[data-testid=content-kind-ctfs]", "priority": "MEDIUM"},
+      {"component": "CTF editor (ContentEditor FORMS.ctfs) / CtfDialog", "issue": "The editor's save does not run ctfPayload(), so blank hint rows are saved, for example [{text:'Think TLS'},{text:'',cost:20}]. The default template already has one blank hint. Students then see 'Unlock hint (-20 pts)' for an empty hint. Clicking it records a 20-pt cost on the server, but the button stays and the shown points stay at 100, so the penalty is hidden. Fix: filter empty hints in save (use ctfPayload for kind ctfs) or in the backend validate().", "selector": "[data-testid=ctf-hint-1]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_bulk_intel_ctf_writeups.py", "/app/backend/tests/ui_setup_iter37.py", "/app/test_reports/pytest/pytest_iter37.xml"],
+  "action_items": [
+    "Fix the stale-response race in ContentEditor load() when switching kinds",
+    "Drop empty hints when saving a CTF from the editor form (frontend ctfPayload or backend validate)",
+    "Reject private or reserved IPs up front in /builder/ctf-bulk and in the manage ctf ioc validation; clean up the 'CTF writer is unavailable' prefix on validation errors"
+  ],
+  "critical_code_review_comments": [
+    "BulkIntelCtfs saveOne and saveAll have no per-card busy guard. A double click on save or Save all creates duplicate CTFs in the arena.",
+    "Bulk drafts live only in component state. Leaving the tab or page while drafting loses all drafts, even though the jobs finish on the server.",
+    "pollJob(…, 60) gives about 180s. With 10 IOCs at 3 in parallel and up to 40s each, the last cards can time out and show 'took too long'.",
+    "ContentEditor sends ioc:'' for non-intel CTFs. It works, but this is inconsistent with ctfPayload, which sends undefined."
+  ],
+  "updated_files": ["/app/backend/tests/test_bulk_intel_ctf_writeups.py", "/app/backend/tests/ui_setup_iter37.py"],
+  "success_rate": {"backend": "83% (5/6; one minor validation gap)", "frontend": "~90% (all requested flows work; 2 medium bugs)"},
+  "seed_data_creation": "Created and then deleted by id: 2 bulk-drafted TEST_ intel CTFs (UI), TEST_Form New CTF, pytest TEST_ CTFs (3), the TEST_Writeup Path, 2 fresh test_ students and their solves and hints. The DB is back to the 8 seeded CTFs. Seeded data was not modified. Real lookups used: about 4 bulk/intel drafts and 1 student lookup.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run 'python tests/ui_setup_iter37.py <ctf ids to clean later>' to create an onboarded student and a TEST path whose lesson attaches ctf-web-1 (state in /tmp/iter37.json); run it with the 'cleanup' arg afterwards. In the Instructor panel, wait about 3s before clicking content-kind-ctfs (race bug). test_bulk_validation fails on purpose on the 10.0.0.1 assertion until private IPs are rejected."
+}

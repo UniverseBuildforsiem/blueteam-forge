@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Trash2, Save, ChevronLeft, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg } from "../lib/api";
@@ -71,8 +71,9 @@ export default function ContentEditor({ kind }) {
   const [isNew, setIsNew] = useState(false);
   const [gallery, setGallery] = useState(false);
   const { user } = useAuth();
-  const load = () => api.get(`/manage/${kind}`).then((r) => setItems(r.data));
-  useEffect(() => { setEdit(null); load(); }, [kind]); // eslint-disable-line
+  const kindRef = useRef(kind);
+  const load = () => { const k = kind; return api.get(`/manage/${k}`).then((r) => { if (kindRef.current === k) setItems(r.data); }); };
+  useEffect(() => { kindRef.current = kind; setItems([]); setEdit(null); load(); }, [kind]); // eslint-disable-line
   const save = async () => {
     try {
       if (isNew) await api.post(`/manage/${kind}`, edit); else await api.put(`/manage/${kind}/${edit.id}`, edit);

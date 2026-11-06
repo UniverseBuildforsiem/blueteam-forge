@@ -461,11 +461,8 @@ async def run_ctf_job(job_id, body: CtfGenIn, gate=None):
                    system_message="You are a senior SOC analyst who designs accurate, solvable CTF challenges. You always reply with valid JSON only.").with_model("anthropic", "claude-sonnet-5-5")
     try:
         if body.ioc.strip():
-            import intel_sources as IS
-            from routes_intel import run as intel_run
-            kind, value = IS.detect(body.ioc)
-            if not kind:
-                raise ValueError("enter a public IP, domain, URL or hash")
+            from routes_intel import run as intel_run, public_ioc
+            kind, value = public_ioc(body.ioc)
             intel = await intel_run(kind, value, deep=True)
             prompt = INTEL_PROMPT.format(title=body.title, level=body.level, ioc=value, writeup=WRITEUP, intel=json.dumps(intel["sources"], default=str)[:9000])
         else:
@@ -474,6 +471,8 @@ async def run_ctf_job(job_id, body: CtfGenIn, gate=None):
         if value:
             ctf.update(category="Threat Intel", ioc=value)
         await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "done", "ctf": ctf, "done_at": now_iso()}})
+    except HTTPException as e:
+        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "error", "error": str(e.detail)[:200]}})
     except Exception as e:
         await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "error", "error": f"The CTF writer is unavailable right now: {str(e)[:120]}"}})
 
@@ -499,13 +498,13 @@ BULK_GATE = asyncio.Semaphore(3)
 
 @router.post("/builder/ctf-bulk")
 async def ctf_bulk(body: CtfBulkIn, user=Depends(staff)):
-    import intel_sources as IS
-    vals, bad = [], []
+    from routes_intel import public_ioc
+    vals = []
     for raw in body.iocs:
-        kind, value = IS.detect(raw.strip()[:2048])
-        (vals if kind and value not in vals else bad).append(value if kind else raw)
-    if bad:
-        raise HTTPException(400, f"Not a valid or unique public IP, domain, URL or hash: {', '.join(b[:60] for b in bad[:3])}")
+        value = public_ioc(raw)[1]
+        if value in vals:
+            raise HTTPException(400, f"Duplicate indicator: {value[:60]}")
+        vals.append(value)
     jobs = []
     for v in vals:
         job_id = new_id()
