@@ -94,6 +94,8 @@ async def ctf_board(user=Depends(get_current_user)):
     unlocked = {(h["ctf_id"], h["idx"]) for h in await db.ctf_hints.find({"user_id": user["id"]}, NO_ID).to_list(500)}
     for c in cs:
         c["solved"] = c["id"] in solved
+        if not c["solved"]:
+            c.pop("writeup", None)
         c["solves"] = await db.ctf_solves.count_documents({"ctf_id": c["id"]})
         c["hints"] = [{"idx": i, "cost": h["cost"], "text": h["text"] if (c["id"], i) in unlocked else None} for i, h in enumerate(c["hints"])]
     return cs

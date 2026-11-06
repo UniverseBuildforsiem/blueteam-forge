@@ -76,6 +76,8 @@ async def plain_ctf_flags():
             m = re.match(r"^SOCF\{(.*)\}$", c["flag"])
             upd = {"flag": m.group(1) if m else c["flag"], "description": re.sub(r"\s*SOCF\{[^}]*\}", "", c["description"])}
         await db.ctfs.update_one({"id": c["id"]}, {"$set": upd})
+    for c in S.CTFS:
+        await db.ctfs.update_one({"id": c["id"], "writeup": {"$in": [None, ""]}}, {"$set": {"writeup": c["writeup"]}})
 
 
 @app.on_event("startup")

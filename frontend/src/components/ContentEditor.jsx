@@ -6,6 +6,8 @@ import { useAuth } from "../context/AuthContext";
 import { TemplateGallery, SaveAsTemplate } from "./PathTemplates";
 import { Glass, Empty } from "./common";
 import PathBuilder from "./PathBuilder";
+import { CtfFields } from "./CtfCreator";
+import { BulkIntelCtfs } from "./BulkIntelCtfs";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const Lbl = ({ l, children }) => <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
@@ -14,7 +16,7 @@ const TEMPLATES = {
   paths: () => ({ title: "", description: "", level: "Beginner", category: "Foundations", order: 10, published: false, modules: [] }),
   quizzes: () => ({ title: "", topic: "", time_limit_sec: 0, pass_mark: 70, path_id: null, published: false, questions: [] }),
   sessions: () => ({ title: "", description: "", instructor: "", start: new Date(Date.now() + 864e5).toISOString(), duration_min: 60, join_link: "", capacity: 50, recording_url: "" }),
-  ctfs: () => ({ category: "Log Analysis", title: "", points: 100, flag: "", description: "", hints: [{ text: "", cost: 20 }], published: false }),
+  ctfs: () => ({ category: "Log Analysis", title: "", points: 100, flag: "", description: "", hints: [{ text: "", cost: 20 }], writeup: "", published: false }),
   challenges: () => ({ title: "", category: "Phishing", severity: "Medium", points: 100, verdict: "TP", description: "", alert: { rule: "", host: "", user: "" }, evidence: [], keywords: [], published: false }),
   labs: () => ({ title: "", description: "", difficulty: "Beginner", duration: "30 min", published: false, tasks: [{ id: "t1", title: "", question: "", answer: "", hint: "" }], kali: { fs: { "/home/analyst/README.txt": "" }, net: { whois: {}, dns: {}, nmap: {}, curl: {} }, pcap: "", cracked: {} } }),
 };
@@ -61,7 +63,7 @@ function JsonForm({ d, set }) {
     {err && <div className="text-xs text-red-400 font-mono mt-1">{err}</div>}<div className="text-xs text-slate-500 mt-1 font-mono">Labs ship as JSON seed data: tasks, Kali filesystem, network fixtures, pcap summary and cracked hashes.</div></div>;
 }
 
-const FORMS = { paths: PathBuilder, quizzes: QuizBuilder, sessions: SessionForm, ctfs: JsonForm, challenges: JsonForm, labs: JsonForm };
+const FORMS = { paths: PathBuilder, quizzes: QuizBuilder, sessions: SessionForm, ctfs: ({ d, set }) => <CtfFields f={d} setF={set} tid="ctf-edit" />, challenges: JsonForm, labs: JsonForm };
 
 export default function ContentEditor({ kind }) {
   const [items, setItems] = useState([]);
@@ -97,6 +99,7 @@ export default function ContentEditor({ kind }) {
         {kind === "paths" && <button className="ghost-btn" onClick={() => setGallery(true)} data-testid="content-from-template"><LayoutTemplate className="h-4 w-4" />Start from template</button>}
       </div>
       {kind === "paths" && <TemplateGallery open={gallery} setOpen={setGallery} onPick={(d) => { setIsNew(true); setEdit(d); }} />}
+      {kind === "ctfs" && <BulkIntelCtfs onSaved={load} />}
       <Glass className="divide-y divide-white/5">{items.length ? items.map((it) => (
         <div key={it.id} className="p-3 flex items-center gap-3" data-testid={`content-item-${it.id}`}>
           <span className="flex-1 text-sm">{it.title}</span>

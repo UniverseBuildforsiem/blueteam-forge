@@ -421,19 +421,20 @@ class CtfGenIn(BaseModel):
 
 
 CTF_CATS = ["Log Analysis", "Forensics", "Network", "Malware", "Web", "Threat Intel"]
+WRITEUP = "3-5 sentence writeup shown after solving: where the answer is, the exact steps/fields used to find it, and why it matters to a SOC analyst"
 INTEL_PROMPT = """Design one jeopardy-style "Threat Intel" CTF challenge for SOC analysts ({level} level) that practises the lesson "{title}".
 The player must investigate the indicator {ioc} using the platform's Threat Intel lookup (geo, ASN/owner, open ports, blocklists, WHOIS, DNS, VirusTotal, AbuseIPDB).
 Below is the CURRENT lookup result. Ask exactly one question whose answer is clearly visible in this result and unlikely to change soon (prefer: country, ASN number, organisation/owner, an open port, registrar, file type, malware family name, true/false like "is it a Tor exit node"). Avoid scores, counts and dates that change daily.
 The description must name the indicator, give a short realistic SOC scenario, tell the player to investigate it in Threat Intel, and end with the question (state the expected answer style, e.g. "two-letter country code" or "AS number digits only").
 The answer (flag) is a short exact plain value. Never wrap it in a flag format like SOCF{{}} and never mention a flag format.
-Return ONLY JSON: {{"category": "Threat Intel", "title": "short catchy title", "points": 100 or 150 or 200, "flag": "...", "description": "...", "hints": [{{"text": "which source/field to look at", "cost": 20}}, {{"text": "...", "cost": 40}}]}}
+Return ONLY JSON: {{"category": "Threat Intel", "title": "short catchy title", "points": 100 or 150 or 200, "flag": "...", "description": "...", "hints": [{{"text": "which source/field to look at", "cost": 20}}, {{"text": "...", "cost": 40}}], "writeup": "{writeup}"}}
 
 LOOKUP RESULT (JSON):
 {intel}"""
 CTF_PROMPT = """Design one jeopardy-style CTF challenge for SOC analysts ({level} level) that practises the lesson "{title}".
 The description must contain a realistic artifact the player analyses (log lines, a command, headers, a decoded payload, packet notes...) and end with one clear question.
 The answer (flag) is a short exact plain value such as an IP, port, Event ID, filename or one lowercase word. Never wrap it in a flag format like SOCF{{}} or FLAG{{}} and never mention a flag format.
-Return ONLY JSON in this shape: {{"category": one of {cats}, "title": "short catchy title", "points": 100 or 150 or 200, "flag": "...", "description": "...", "hints": [{{"text": "...", "cost": 20}}, {{"text": "...", "cost": 40}}]}}
+Return ONLY JSON in this shape: {{"category": one of {cats}, "title": "short catchy title", "points": 100 or 150 or 200, "flag": "...", "description": "...", "hints": [{{"text": "...", "cost": 20}}, {{"text": "...", "cost": 40}}], "writeup": "{writeup}"}}
 
 LESSON CONTENT (may be empty):
 {content}"""
@@ -445,13 +446,17 @@ def parse_ctf(text):
     flag = re.sub(r"^\s*[A-Za-z]+\{(.*)\}\s*$", r"\1", str(d.get("flag", ""))).strip()
     out = {"category": d.get("category") if d.get("category") in CTF_CATS else "Log Analysis", "title": str(d.get("title", "")).strip()[:80],
            "points": int(d.get("points", 100)) if int(d.get("points", 100)) in (100, 150, 200) else 100, "flag": flag,
-           "description": str(d.get("description", "")).strip(), "hints": [{"text": str(h["text"]).strip(), "cost": int(h.get("cost", 20))} for h in d.get("hints", [])[:3] if h.get("text")]}
+           "description": str(d.get("description", "")).strip(), "hints": [{"text": str(h["text"]).strip(), "cost": int(h.get("cost", 20))} for h in d.get("hints", [])[:3] if h.get("text")],
+           "writeup": str(d.get("writeup", "")).strip()}
     if not (out["title"] and out["flag"] and out["description"]):
         raise ValueError("the AI returned an incomplete challenge — please try again")
     return out
 
 
-async def run_ctf_job(job_id, body: CtfGenIn):
+async def run_ctf_job(job_id, body: CtfGenIn, gate=None):
+    if gate:
+        async with gate:
+            return await run_ctf_job(job_id, body)
     chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"lctf-{job_id}",
                    system_message="You are a senior SOC analyst who designs accurate, solvable CTF challenges. You always reply with valid JSON only.").with_model("anthropic", "claude-sonnet-5-5")
     try:
@@ -462,9 +467,9 @@ async def run_ctf_job(job_id, body: CtfGenIn):
             if not kind:
                 raise ValueError("enter a public IP, domain, URL or hash")
             intel = await intel_run(kind, value, deep=True)
-            prompt = INTEL_PROMPT.format(title=body.title, level=body.level, ioc=value, intel=json.dumps(intel["sources"], default=str)[:9000])
+            prompt = INTEL_PROMPT.format(title=body.title, level=body.level, ioc=value, writeup=WRITEUP, intel=json.dumps(intel["sources"], default=str)[:9000])
         else:
-            value, prompt = "", CTF_PROMPT.format(title=body.title, level=body.level, cats=json.dumps(CTF_CATS[:5]), content=body.content[:8000])
+            value, prompt = "", CTF_PROMPT.format(title=body.title, level=body.level, writeup=WRITEUP, cats=json.dumps(CTF_CATS[:5]), content=body.content[:8000])
         ctf = parse_ctf(await chat.send_message(UserMessage(text=prompt)))
         if value:
             ctf.update(category="Threat Intel", ioc=value)
@@ -482,6 +487,36 @@ async def ctf_draft(body: CtfGenIn, user=Depends(staff)):
     t.add_done_callback(JOBS.discard)
     await audit(user, "ai ctf draft", body.title[:80])
     return {"job_id": job_id, "status": "running"}
+
+
+class CtfBulkIn(BaseModel):
+    iocs: list[str] = Field(min_length=1, max_length=10)
+    level: str = Field(default="Beginner", max_length=30)
+
+
+BULK_GATE = asyncio.Semaphore(3)
+
+
+@router.post("/builder/ctf-bulk")
+async def ctf_bulk(body: CtfBulkIn, user=Depends(staff)):
+    import intel_sources as IS
+    vals, bad = [], []
+    for raw in body.iocs:
+        kind, value = IS.detect(raw.strip()[:2048])
+        (vals if kind and value not in vals else bad).append(value if kind else raw)
+    if bad:
+        raise HTTPException(400, f"Not a valid or unique public IP, domain, URL or hash: {', '.join(b[:60] for b in bad[:3])}")
+    jobs = []
+    for v in vals:
+        job_id = new_id()
+        await db.lesson_jobs.insert_one({"id": job_id, "user_id": user["id"], "kind": "ctf", "title": v, "status": "running", "created_at": now_iso()})
+        t = asyncio.create_task(run_ctf_job(job_id, CtfGenIn(title=f"Threat Intel investigation of {v}"[:200], level=body.level, ioc=v), BULK_GATE))
+        JOBS.add(t)
+        t.add_done_callback(JOBS.discard)
+        jobs.append({"ioc": v, "job_id": job_id})
+    await audit(user, "ai bulk intel ctfs", f"{len(jobs)} iocs")
+    return {"jobs": jobs}
+
 
 
 @router.get("/builder/write-lesson/{job_id}")

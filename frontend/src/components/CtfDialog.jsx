@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Flag, Lightbulb, CheckCircle2, Radar, Loader2 } from "lucide-react";
+import { Flag, Lightbulb, CheckCircle2, Radar, Loader2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { api, errMsg } from "../lib/api";
@@ -32,7 +32,9 @@ export function CtfDialog({ c, onClose, onChange }) {
           {c.ioc && <IntelInline ioc={c.ioc} />}
           <div className="space-y-2">{c.hints.map((h) => h.text ? <div key={h.idx} className="text-xs font-mono text-yellow-300">hint: {h.text}</div>
             : !c.solved && <button key={h.idx} onClick={() => hint(h.idx)} className="ghost-btn !text-xs" data-testid={`ctf-hint-${h.idx}`}><Lightbulb className="h-3.5 w-3.5" />Unlock hint (-{h.cost} pts)</button>)}</div>
-          {c.solved ? <div className="text-green-400 font-mono flex items-center gap-2" data-testid="ctf-solved"><CheckCircle2 className="h-5 w-5" />Solved</div> :
+          {c.solved ? <><div className="text-green-400 font-mono flex items-center gap-2" data-testid="ctf-solved"><CheckCircle2 className="h-5 w-5" />Solved</div>
+            {c.writeup && <div className="border-l-2 border-green-400/60 bg-green-500/5 p-4" data-testid="ctf-writeup"><div className="text-[11px] font-mono uppercase text-green-300 mb-2 flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5" />Writeup</div>
+              <p className="text-sm text-slate-300 whitespace-pre-line leading-relaxed">{c.writeup}</p></div>}</> :
             <div className="flex gap-2"><input className="field font-mono" value={flag} onChange={(e) => setFlag(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Your answer" data-testid="ctf-flag-input" />
               <button className="glow-btn" onClick={submit} data-testid="ctf-flag-submit">Submit</button></div>}</>}
       </DialogContent>
