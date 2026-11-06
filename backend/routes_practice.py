@@ -110,7 +110,7 @@ async def ctf_submit(cid: str, body: FlagIn, user=Depends(get_current_user)):
         raise HTTPException(404, "Challenge not found")
     if await db.ctf_solves.find_one({"user_id": user["id"], "ctf_id": cid}):
         return {"correct": True, "already": True}
-    if body.flag.strip() != c["flag"]:
+    if body.flag.strip().lower() != c["flag"].strip().lower():
         return {"correct": False}
     spent = sum(h["cost"] for h in await db.ctf_hints.find({"user_id": user["id"], "ctf_id": cid}, NO_ID).to_list(20))
     pts = max(c["points"] - spent, 0)

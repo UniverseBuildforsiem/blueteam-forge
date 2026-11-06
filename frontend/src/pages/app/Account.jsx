@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Award, Download, ExternalLink, Check, Linkedin, UserRound, Copy, Briefcase } from "lucide-react";
+import { Award, Download, ExternalLink, Check, Linkedin, UserRound, Copy, Briefcase, Link2 } from "lucide-react";
 import { Switch } from "../../components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
@@ -9,11 +9,28 @@ import { useAuth } from "../../context/AuthContext";
 import { Glass, PageHeader, Empty } from "../../components/common";
 import ChangePasswordCard from "../../components/ChangePasswordCard";
 
+function LinkedAccountsCard() {
+  const { user } = useAuth();
+  const rows = [["Google", user.google_linked, "google"], ["Email & password", user.password_set !== false, "password"]];
+  return (
+    <Glass className="p-5 mb-6" data-testid="linked-accounts-card">
+      <div className="flex items-center gap-3 mb-4"><Link2 className="h-5 w-5 text-cyan-400" /><div><div className="font-bold">Linked sign-in methods</div>
+        <div className="text-xs text-slate-400">Ways you can log in to {user.email}</div></div></div>
+      <div className="divide-y divide-white/5">{rows.map(([n, on, k]) => (
+        <div key={k} className="flex items-center justify-between py-2.5 text-sm" data-testid={`linked-${k}`}>
+          <span>{n}</span>
+          <span className={`text-[11px] font-mono px-2 py-0.5 border ${on ? "text-green-400 border-green-500/30 bg-green-500/5" : "text-slate-500 border-white/10"}`} data-testid={`linked-${k}-status`}>{on ? "linked" : k === "google" ? "not linked" : "not set"}</span>
+        </div>))}</div>
+      {!user.google_linked && <p className="text-[11px] font-mono text-slate-500 mt-3">Tip: use "Continue with Google" on the login page with this same email to link Google.</p>}
+    </Glass>);
+}
+
 export function AccountSettings() {
   const { user } = useAuth();
   return (
     <div className="max-w-4xl">
       <PageHeader eyebrow="// account" title="Account settings" sub={`Signed in as ${user.email} · ${user.role}`} />
+      <LinkedAccountsCard />
       <ChangePasswordCard />
     </div>);
 }

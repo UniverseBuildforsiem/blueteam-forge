@@ -115,7 +115,7 @@ async def google_login(body: GoogleIn, response: Response):
         if settings.get("allow_signups") is False:
             raise HTTPException(403, "New signups are currently closed")
         user = {"id": new_id(), "name": (g.get("name") or email.split("@")[0])[:60], "email": email, "username": await unique_username(email),
-                "password_hash": hash_password(secrets.token_urlsafe(24)), "google_linked": True, "avatar": g.get("picture"),
+                "password_hash": hash_password(secrets.token_urlsafe(24)), "password_set": False, "google_linked": True, "avatar": g.get("picture"),
                 "role": "student", "status": "active", "plan": "free", "goal": None, "current_path": None, "onboarded": False,
                 "xp": 0, "streak": 0, "last_active": None, "created_at": now_iso()}
         await db.users.insert_one(user)
@@ -181,7 +181,7 @@ async def reset(body: ResetIn):
         exp = exp.replace(tzinfo=now().tzinfo)
     if exp < now():
         raise HTTPException(400, "Reset link expired")
-    await db.users.update_one({"id": rec["user_id"]}, {"$set": {"password_hash": hash_password(body.password)}, "$unset": {"invite_pending": ""}, "$inc": {"token_version": 1}})
+    await db.users.update_one({"id": rec["user_id"]}, {"$set": {"password_hash": hash_password(body.password), "password_set": True}, "$unset": {"invite_pending": ""}, "$inc": {"token_version": 1}})
     await db.password_reset_tokens.update_one({"token": body.token}, {"$set": {"used": True}})
     return {"ok": True}
 
@@ -191,9 +191,32 @@ class ChangePasswordIn(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+def strong_enough(pw, full):
+    return re.search(r"[A-Za-z]", pw) and re.search(r"\d", pw) and pw.lower() not in (full["email"].split("@")[0], full.get("username", ""))
+
+
+class SetPasswordIn(BaseModel):
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+@router.post("/set-password")
+async def set_password(body: SetPasswordIn, response: Response, user=Depends(get_current_user)):
+    full = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    if full.get("password_set") is not False:
+        raise HTTPException(400, "You already have a password — use Change password instead")
+    if not strong_enough(body.new_password, full):
+        raise HTTPException(400, "Use at least 8 characters with letters and numbers, not your username")
+    await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": hash_password(body.new_password), "password_set": True, "password_changed_at": now_iso()}, "$inc": {"token_version": 1}})
+    set_auth_cookies(response, await db.users.find_one({"id": user["id"]}, {"_id": 0, "id": 1, "email": 1, "token_version": 1}))
+    await audit(user, "set own password", user["id"])
+    return {"ok": True}
+
+
 @router.post("/change-password")
 async def change_password(body: ChangePasswordIn, response: Response, user=Depends(get_current_user)):
     full = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    if full.get("password_set") is False:
+        raise HTTPException(400, "You signed up with Google — set a password first")
     ident = f"chpw:{user['id']}"
     att = await db.login_attempts.find_one({"identifier": ident}) or {}
     if (att.get("locked_until") or "") > now_iso():
@@ -206,7 +229,7 @@ async def change_password(body: ChangePasswordIn, response: Response, user=Depen
     pw = body.new_password
     if pw == body.current_password:
         raise HTTPException(400, "New password must be different from the current one")
-    if not (re.search(r"[A-Za-z]", pw) and re.search(r"\d", pw)) or pw.lower() in (full["email"].split("@")[0], full.get("username", "")):
+    if not strong_enough(pw, full):
         raise HTTPException(400, "Use at least 8 characters with letters and numbers, not your username")
     await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": hash_password(pw), "password_changed_at": now_iso()}, "$inc": {"token_version": 1}})
     set_auth_cookies(response, await db.users.find_one({"id": user["id"]}, {"_id": 0, "id": 1, "email": 1, "token_version": 1}))

@@ -413,10 +413,59 @@ async def lesson_quiz(body: QuizGenIn, user=Depends(staff)):
     return {"job_id": job_id, "status": "running"}
 
 
+class CtfGenIn(BaseModel):
+    title: str = Field(min_length=2, max_length=200)
+    content: str = Field(default="", max_length=20000)
+    level: str = Field(default="Beginner", max_length=30)
+
+
+CTF_CATS = ["Log Analysis", "Forensics", "Network", "Malware", "Web"]
+CTF_PROMPT = """Design one jeopardy-style CTF challenge for SOC analysts ({level} level) that practises the lesson "{title}".
+The description must contain a realistic artifact the player analyses (log lines, a command, headers, a decoded payload, packet notes...) and end with one clear question.
+The answer (flag) is a short exact plain value such as an IP, port, Event ID, filename or one lowercase word. Never wrap it in a flag format like SOCF{{}} or FLAG{{}} and never mention a flag format.
+Return ONLY JSON in this shape: {{"category": one of {cats}, "title": "short catchy title", "points": 100 or 150 or 200, "flag": "...", "description": "...", "hints": [{{"text": "...", "cost": 20}}, {{"text": "...", "cost": 40}}]}}
+
+LESSON CONTENT (may be empty):
+{content}"""
+
+
+def parse_ctf(text):
+    m = re.search(r"\{.*\}", text, re.S)
+    d = json.loads(m.group(0)) if m else {}
+    flag = re.sub(r"^\s*[A-Za-z]+\{(.*)\}\s*$", r"\1", str(d.get("flag", ""))).strip()
+    out = {"category": d.get("category") if d.get("category") in CTF_CATS else "Log Analysis", "title": str(d.get("title", "")).strip()[:80],
+           "points": int(d.get("points", 100)) if int(d.get("points", 100)) in (100, 150, 200) else 100, "flag": flag,
+           "description": str(d.get("description", "")).strip(), "hints": [{"text": str(h["text"]).strip(), "cost": int(h.get("cost", 20))} for h in d.get("hints", [])[:3] if h.get("text")]}
+    if not (out["title"] and out["flag"] and out["description"]):
+        raise ValueError("the AI returned an incomplete challenge — please try again")
+    return out
+
+
+async def run_ctf_job(job_id, body: CtfGenIn):
+    chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"lctf-{job_id}",
+                   system_message="You are a senior SOC analyst who designs accurate, solvable CTF challenges. You always reply with valid JSON only.").with_model("anthropic", "claude-sonnet-5-5")
+    try:
+        text = await chat.send_message(UserMessage(text=CTF_PROMPT.format(title=body.title, level=body.level, cats=json.dumps(CTF_CATS), content=body.content[:8000])))
+        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "done", "ctf": parse_ctf(text), "done_at": now_iso()}})
+    except Exception as e:
+        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "error", "error": f"The CTF writer is unavailable right now: {str(e)[:120]}"}})
+
+
+@router.post("/builder/ctf-draft")
+async def ctf_draft(body: CtfGenIn, user=Depends(staff)):
+    job_id = new_id()
+    await db.lesson_jobs.insert_one({"id": job_id, "user_id": user["id"], "kind": "ctf", "title": body.title, "status": "running", "created_at": now_iso()})
+    t = asyncio.create_task(run_ctf_job(job_id, body))
+    JOBS.add(t)
+    t.add_done_callback(JOBS.discard)
+    await audit(user, "ai ctf draft", body.title[:80])
+    return {"job_id": job_id, "status": "running"}
+
+
 @router.get("/builder/write-lesson/{job_id}")
 @router.get("/builder/jobs/{job_id}")
 async def write_lesson_status(job_id: str, user=Depends(staff)):
-    j = await db.lesson_jobs.find_one({"id": job_id, "user_id": user["id"]}, {"_id": 0, "status": 1, "content": 1, "questions": 1, "error": 1})
+    j = await db.lesson_jobs.find_one({"id": job_id, "user_id": user["id"]}, {"_id": 0, "status": 1, "content": 1, "questions": 1, "ctf": 1, "error": 1})
     if not j:
         raise HTTPException(404, "Job not found")
     return j

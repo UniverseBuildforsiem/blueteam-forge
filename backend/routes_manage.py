@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import uuid
 from collections import Counter, defaultdict
 from datetime import timedelta
@@ -62,6 +63,9 @@ def validate(col, doc):
             for t in doc["tasks"]:
                 assert t.get("id") and t.get("question") and t.get("answer")
         if col == "ctfs":
+            if re.match(r"^\s*SOCF\{", str(doc["flag"]), re.I):
+                raise HTTPException(422, "Enter the plain answer only, without SOCF{...}")
+            doc["flag"] = str(doc["flag"]).strip()
             for h in doc["hints"]:
                 assert "text" in h and int(h["cost"]) >= 0
     except (AssertionError, KeyError, TypeError, ValueError):

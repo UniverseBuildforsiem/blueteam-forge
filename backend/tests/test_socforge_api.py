@@ -179,10 +179,10 @@ class TestPractice:
     def test_ctf(self, newuser):
         board = newuser.get(f"{API}/ctf").json()
         assert "flag" not in board[0]
-        assert newuser.post(f"{API}/ctf/ctf-log-1/submit", json={"flag": "SOCF{nope}"}).json()["correct"] is False
+        assert newuser.post(f"{API}/ctf/ctf-log-1/submit", json={"flag": "nope"}).json()["correct"] is False
         h = newuser.post(f"{API}/ctf/ctf-net-2/hint/0")
         assert h.status_code == 200 and h.json()["text"]
-        r = newuser.post(f"{API}/ctf/ctf-log-1/submit", json={"flag": "SOCF{45.155.205.12}"}).json()
+        r = newuser.post(f"{API}/ctf/ctf-log-1/submit", json={"flag": "45.155.205.12"}).json()
         assert r["correct"] and r["points"] == 100
         sb = newuser.get(f"{API}/ctf/scoreboard").json()
         assert any(x["user_id"] == newuser.uid for x in sb)
@@ -190,7 +190,7 @@ class TestPractice:
     def test_ctf_hint_cost(self, newuser):
         board = {c["id"]: c for c in newuser.get(f"{API}/ctf").json()}
         cost = board["ctf-net-2"]["hints"][0]["cost"]
-        r = newuser.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "SOCF{3389}"}).json()
+        r = newuser.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "3389"}).json()
         assert r["points"] == 100 - cost
 
     def test_lab(self, newuser):

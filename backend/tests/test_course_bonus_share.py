@@ -76,7 +76,7 @@ def test_bonus_paid_once_after_watch(created):
         assert k in keys["ctf-net"]
     x0 = xp(s)
     time.sleep(0.05)
-    sub = s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "SOCF{3389}"}).json()
+    sub = s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "3389"}).json()
     assert sub["correct"] is True
     pts = sub["points"]
     d = s.get(f"{API}/me/courses/progress").json()
@@ -93,7 +93,7 @@ def test_bonus_paid_once_after_watch(created):
     # unwatch + rewatch + new completion should not repay
     s.delete(f"{API}/me/courses/{WS}/complete")
     s.post(f"{API}/me/courses/{WS}/complete")
-    s.post(f"{API}/ctf/ctf-net-1/submit", json={"flag": "SOCF{60}"})
+    s.post(f"{API}/ctf/ctf-net-1/submit", json={"flag": "60"})
     x1 = xp(s)
     assert s.get(f"{API}/me/courses/progress").json()["awarded"] == []
     assert xp(s) == x1
@@ -103,7 +103,7 @@ def test_bonus_paid_once_after_watch(created):
 def test_completion_before_watch_no_bonus(created):
     s, me = new_student()
     created.append(me["id"])
-    assert s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "SOCF{3389}"}).json()["correct"]
+    assert s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "3389"}).json()["correct"]
     time.sleep(0.05)
     s.post(f"{API}/me/courses/{WS}/complete")
     x0 = xp(s)
@@ -122,7 +122,7 @@ def test_dashboard_applies_bonus(created):
     created.append(me["id"])
     s.post(f"{API}/me/courses/{WS}/complete")
     time.sleep(0.05)
-    pts = s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "SOCF{3389}"}).json()["points"]
+    pts = s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "3389"}).json()["points"]
     x0 = xp(s)
     assert s.get(f"{API}/dashboard").status_code == 200
     assert xp(s) == x0 + 100
@@ -137,7 +137,7 @@ def test_parallel_calls_pay_once(created):
     created.append(me["id"])
     s.post(f"{API}/me/courses/{WS}/complete")
     time.sleep(0.05)
-    pts = s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "SOCF{3389}"}).json()["points"]
+    pts = s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "3389"}).json()["points"]
     x0 = xp(s)
     with cf.ThreadPoolExecutor(6) as ex:
         list(ex.map(lambda _: s.get(f"{API}/me/courses/progress"), range(6)))

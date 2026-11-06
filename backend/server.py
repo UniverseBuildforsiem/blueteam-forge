@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
@@ -66,9 +67,21 @@ async def rebrand():
     await db.settings.update_many({"support_email": "support@socforge.io"}, {"$set": {"support_email": "support@socprofessionals.academy"}})
 
 
+async def plain_ctf_flags():
+    seeded = {c["id"]: c for c in S.CTFS}
+    async for c in db.ctfs.find({"$or": [{"flag": {"$regex": "^SOCF\\{"}}, {"description": {"$regex": "SOCF\\{"}}]}, {"_id": 0}):
+        if c["id"] in seeded:
+            upd = {k: seeded[c["id"]][k] for k in ("flag", "description")}
+        else:
+            m = re.match(r"^SOCF\{(.*)\}$", c["flag"])
+            upd = {"flag": m.group(1) if m else c["flag"], "description": re.sub(r"\s*SOCF\{[^}]*\}", "", c["description"])}
+        await db.ctfs.update_one({"id": c["id"]}, {"$set": upd})
+
+
 @app.on_event("startup")
 async def startup():
     await rebrand()
+    await plain_ctf_flags()
     await db.users.create_index("email", unique=True)
     await db.users.create_index("username", unique=True)
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)

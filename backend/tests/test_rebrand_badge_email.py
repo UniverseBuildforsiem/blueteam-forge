@@ -114,7 +114,7 @@ def bonus_student():
     s, me = new_student("badge")
     assert s.post(f"{API}/me/courses/{WS}/complete").status_code == 200
     time.sleep(1.1)
-    r = s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "SOCF{3389}"})
+    r = s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "3389"})
     assert r.json().get("correct") is True, r.text
     return s, me
 
@@ -154,7 +154,7 @@ def test_badge_email_skipped_when_course_emails_off():
     assert r.json()["course_emails"] is False
     s.post(f"{API}/me/courses/{WS}/complete")
     time.sleep(1.1)
-    assert s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "SOCF{3389}"}).json()["correct"]
+    assert s.post(f"{API}/ctf/ctf-net-2/submit", json={"flag": "3389"}).json()["correct"]
     pos = log_size()
     d = s.get(f"{API}/dashboard")
     assert d.status_code == 200

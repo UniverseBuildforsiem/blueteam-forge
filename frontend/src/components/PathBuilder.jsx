@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Eye, Pencil, X, Layers, FileText, Sparkles, Wand2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Eye, Pencil, X, Layers, FileText, Sparkles, Wand2, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg } from "../lib/api";
 import { Glass, Empty } from "./common";
 import { LessonBody } from "../pages/app/Paths";
 import { LessonQuizBuilder } from "./LessonQuizBuilder";
 import { BulkQuiz } from "./BulkQuiz";
+import { CtfCreator } from "./CtfCreator";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const Lbl = ({ l, children }) => <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
@@ -14,10 +15,12 @@ const newLesson = () => ({ id: `l-${uid()}`, title: "New lesson", content: "", v
 
 const move = (arr, from, to) => { const a = [...arr]; const [x] = a.splice(from, 1); a.splice(to, 0, x); return a; };
 
-function Attachments({ l, upL, assets }) {
+function Attachments({ l, upL, assets, onAsset, level }) {
   const [type, setType] = useState("quiz");
   const [id, setId] = useState("");
+  const [creating, setCreating] = useState(false);
   const opts = assets?.[type] || [];
+  const created = (c) => { onAsset("ctf", { id: c.id, title: c.title }); upL((cur) => ({ ...cur, attachments: [...(cur.attachments || []), { type: "ctf", id: c.id, title: c.title }] })); setCreating(false); };
   const add = () => {
     const it = opts.find((o) => String(o.id) === id);
     if (!it || (l.attachments || []).some((a) => a.type === type && String(a.id) === id)) return;
@@ -32,7 +35,9 @@ function Attachments({ l, upL, assets }) {
         <select className="field !w-40 text-xs" value={type} onChange={(e) => { setType(e.target.value); setId(""); }} data-testid="builder-attach-type">{TYPES.map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select>
         <select className="field text-xs" value={id} onChange={(e) => setId(e.target.value)} data-testid="builder-attach-item"><option value="">Choose {type}...</option>{opts.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}</select>
         <button className="ghost-btn !text-xs" onClick={add} disabled={!id} data-testid="builder-attach-add"><Plus className="h-3.5 w-3.5" />Attach</button>
+        {!creating && <button className="ghost-btn !text-xs whitespace-nowrap" onClick={() => setCreating(true)} data-testid="builder-create-ctf"><Flag className="h-3.5 w-3.5" />New CTF</button>}
       </div>
+      {creating && <CtfCreator lesson={l} level={level} onCreated={created} onClose={() => setCreating(false)} />}
     </div>);
 }
 
@@ -76,7 +81,7 @@ function WriteButton({ l, upL, ctx }) {
     <Wand2 className={`h-3.5 w-3.5 ${busy ? "animate-pulse" : ""}`} />{busy ? "Writing lesson (about 30s)..." : "Write this lesson"}</button>;
 }
 
-function LessonEditor({ l, upL, assets, ctx }) {
+function LessonEditor({ l, upL, assets, onAsset, ctx }) {
   const [tab, setTab] = useState("edit");
   const res = l.resources?.length ? l.resources : [];
   return (
@@ -92,7 +97,7 @@ function LessonEditor({ l, upL, assets, ctx }) {
         <div><div className="flex items-center justify-between"><span className="text-[11px] font-mono uppercase text-slate-500">Content</span><WriteButton l={l} upL={upL} ctx={ctx} /></div>
           <textarea className="field h-44 text-sm mt-1" placeholder="Lesson content (line breaks and '- ' bullets)" value={l.content} onChange={(e) => upL({ ...l, content: e.target.value })} data-testid="builder-lesson-content" />
           <LessonQuizBuilder l={l} upL={upL} level={ctx.level} /></div>
-        <Lbl l="Practice: attach quizzes, labs, challenges, CTFs, courses or SOPs"><Attachments l={l} upL={upL} assets={assets} /><Suggestions l={l} upL={upL} /></Lbl>
+        <Lbl l="Practice: attach quizzes, labs, challenges, CTFs, courses or SOPs"><Attachments l={l} upL={upL} assets={assets} onAsset={onAsset} level={ctx.level} /><Suggestions l={l} upL={upL} /></Lbl>
         <Lbl l="Downloadable resources">
           <div className="space-y-2">{res.map((r, i) => <div key={i} className="flex gap-2">
             <input className="field text-xs" placeholder="Name" value={r.name} onChange={(e) => upL({ ...l, resources: res.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} data-testid={`builder-resource-name-${i}`} />
@@ -179,7 +184,7 @@ export default function PathBuilder({ d, set }) {
         <BulkQuiz mods={mods} level={d.level || "Beginner"} updateLesson={(lid, fn) => setMods((ms) => ms.map((m) => ({ ...m, lessons: m.lessons.map((x) => (x.id === lid ? fn(x) : x)) })))} /></div>
       <div className="grid lg:grid-cols-[340px_1fr] gap-4 items-start">
         <Outline mods={mods} setMods={setMods} sel={sel} setSel={setSel} />
-        {lesson ? <LessonEditor key={lesson.id} l={lesson} upL={upL} assets={assets} ctx={{ path_title: d.title || "", module_title: mods[pos.mi].title || "", level: d.level || "Beginner" }} /> : <Glass className="p-8"><Empty text="add or select a lesson to edit it" /></Glass>}
+        {lesson ? <LessonEditor key={lesson.id} l={lesson} upL={upL} assets={assets} onAsset={(t, it) => setAssets((a) => ({ ...(a || {}), [t]: [...(a?.[t] || []), it] }))} ctx={{ path_title: d.title || "", module_title: mods[pos.mi].title || "", level: d.level || "Beginner" }} /> : <Glass className="p-8"><Empty text="add or select a lesson to edit it" /></Glass>}
       </div>
     </div>);
 }

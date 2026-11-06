@@ -14,7 +14,7 @@ const TEMPLATES = {
   paths: () => ({ title: "", description: "", level: "Beginner", category: "Foundations", order: 10, published: false, modules: [] }),
   quizzes: () => ({ title: "", topic: "", time_limit_sec: 0, pass_mark: 70, path_id: null, published: false, questions: [] }),
   sessions: () => ({ title: "", description: "", instructor: "", start: new Date(Date.now() + 864e5).toISOString(), duration_min: 60, join_link: "", capacity: 50, recording_url: "" }),
-  ctfs: () => ({ category: "Log Analysis", title: "", points: 100, flag: "SOCF{}", description: "", hints: [{ text: "", cost: 20 }], published: false }),
+  ctfs: () => ({ category: "Log Analysis", title: "", points: 100, flag: "", description: "", hints: [{ text: "", cost: 20 }], published: false }),
   challenges: () => ({ title: "", category: "Phishing", severity: "Medium", points: 100, verdict: "TP", description: "", alert: { rule: "", host: "", user: "" }, evidence: [], keywords: [], published: false }),
   labs: () => ({ title: "", description: "", difficulty: "Beginner", duration: "30 min", published: false, tasks: [{ id: "t1", title: "", question: "", answer: "", hint: "" }], kali: { fs: { "/home/analyst/README.txt": "" }, net: { whois: {}, dns: {}, nmap: {}, curl: {} }, pcap: "", cracked: {} } }),
 };

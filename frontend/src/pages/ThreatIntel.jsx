@@ -12,7 +12,7 @@ const TABS = [["lookup", "IOC lookup"], ["bulk", "Bulk extractor"], ["proxy", "P
 const EXAMPLES = [["Tor exit IP", "185.220.101.1"], ["Cloudflare DNS", "1.1.1.1"], ["Domain", "microsoft.com"], ["EICAR test hash", "44d88612fea8a8f36de82e1278abb02f"], ["Defanged URL", "hxxps://example[.]com/login"]];
 const kindOf = (v) => { const s = v.trim().replace(/\[\.\]/g, "."); if (/^h(xx|tt)ps?:\/\//i.test(s)) return "URL"; if (/^(\d{1,3}\.){3}\d{1,3}$/.test(s) || /^[0-9a-f:]+:[0-9a-f:]*$/i.test(s)) return "IP"; if (/^([a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64})$/i.test(s)) return "HASH"; if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(s)) return "DOMAIN"; return null; };
 
-export default function ThreatIntel() {
+export default function ThreatIntel({ embedded }) {
   const [tab, setTab] = useState("lookup");
   const [ioc, setIoc] = useState("");
   const [r, setR] = useState(null);
@@ -28,7 +28,7 @@ export default function ThreatIntel() {
     if (q) { setParams({}, { replace: true }); run(q); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className="p-6 lg:p-10 max-w-7xl" data-testid="threat-intel-page">
+    <div className={embedded ? "" : "p-6 lg:p-10 max-w-7xl"} data-testid="threat-intel-page">
       <div className="eyebrow mb-2">// threat intel platform</div>
       <h1 className="text-3xl sm:text-4xl font-extrabold">Threat Intel Lookup</h1>
       <p className="text-sm text-slate-400 mt-2 max-w-3xl">Trace IPs, check malware hashes and signatures, investigate domains and URLs, and spot proxies, VPNs and Tor — using live open-source intel feeds, VirusTotal and AbuseIPDB in one place.</p>

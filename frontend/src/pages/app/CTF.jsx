@@ -6,7 +6,7 @@ import { api, errMsg } from "../../lib/api";
 import { Glass, PageHeader, ProfileLink } from "../../components/common";
 import { RankAvatar } from "../../components/RankAvatar";
 
-const CATS = ["Log Analysis", "Forensics", "Network", "Malware", "Web"];
+export const CATS = ["Log Analysis", "Forensics", "Network", "Malware", "Web"];
 
 export default function CTF() {
   const [board, setBoard] = useState([]);
@@ -26,7 +26,7 @@ export default function CTF() {
   const hint = async (i) => { await api.post(`/ctf/${open.id}/hint/${i}`); load(); };
   return (
     <div>
-      <PageHeader eyebrow="// jeopardy ctf" title="CTF Arena" sub="Flags use the format SOCF{...}. Hints cost points from that challenge's reward." />
+      <PageHeader eyebrow="// jeopardy ctf" title="CTF Arena" sub="Submit the plain answer (e.g. an IP, port or Event ID). Hints cost points from that challenge's reward." />
       <div className="grid xl:grid-cols-[1fr_320px] gap-4">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3" data-testid="ctf-board">
           {CATS.map((cat) => (
@@ -56,7 +56,7 @@ export default function CTF() {
             <div className="space-y-2">{open.hints.map((h) => h.text ? <div key={h.idx} className="text-xs font-mono text-yellow-300">hint: {h.text}</div>
               : <button key={h.idx} onClick={() => hint(h.idx)} className="ghost-btn !text-xs" data-testid={`ctf-hint-${h.idx}`}><Lightbulb className="h-3.5 w-3.5" />Unlock hint (-{h.cost} pts)</button>)}</div>
             {open.solved ? <div className="text-green-400 font-mono flex items-center gap-2" data-testid="ctf-solved"><CheckCircle2 className="h-5 w-5" />Solved</div> :
-              <div className="flex gap-2"><input className="field font-mono" value={flag} onChange={(e) => setFlag(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="SOCF{...}" data-testid="ctf-flag-input" />
+              <div className="flex gap-2"><input className="field font-mono" value={flag} onChange={(e) => setFlag(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Your answer" data-testid="ctf-flag-input" />
                 <button className="glow-btn" onClick={submit} data-testid="ctf-flag-submit">Submit</button></div>}</>}
         </DialogContent>
       </Dialog>

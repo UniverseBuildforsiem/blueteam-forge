@@ -5,6 +5,10 @@ import { toast } from "sonner";
 import { api, API, errMsg } from "../../lib/api";
 import { Glass, PageHeader } from "../../components/common";
 import { LessonQuiz } from "../../components/LessonQuiz";
+import { PathTabBar, PathSops } from "../../components/PathTabs";
+import { Quizzes } from "./Quizzes";
+import CTF from "./CTF";
+import ThreatIntel from "../ThreatIntel";
 
 export function Paths() {
   const [paths, setPaths] = useState([]);
@@ -61,6 +65,7 @@ export function PathDetail() {
   const { id } = useParams();
   const [p, setP] = useState(null);
   const [cur, setCur] = useState(null);
+  const [tab, setTab] = useState("lessons");
   const load = () => api.get(`/paths/${id}`).then((r) => { setP(r.data); setCur((c) => c || r.data.modules[0]?.lessons[0]); });
   useEffect(() => { load(); }, [id]); // eslint-disable-line
   if (!p) return null;
@@ -69,7 +74,13 @@ export function PathDetail() {
   };
   return (
     <div>
-      <PageHeader eyebrow={`// ${p.level} · ${p.percent}% complete`} title={p.title} sub={p.description} />
+      <PathTabBar p={p} tab={tab} setTab={setTab} />
+      {tab === "quizzes" && <Quizzes />}
+      {tab === "sops" && <PathSops p={p} />}
+      {tab === "ctf" && <CTF />}
+      {tab === "intel" && <ThreatIntel embedded />}
+      {tab === "lessons" && <>
+      <p className="text-sm text-slate-400 mb-6 max-w-3xl">{p.description}</p>
       <div className="grid lg:grid-cols-[320px_1fr] gap-4">
         <div className="space-y-4">
           {p.modules.map((m, mi) => (
@@ -95,7 +106,7 @@ export function PathDetail() {
         </div>
         {cur && <LessonView key={cur.id} lesson={cur} done={p.completed_lessons.includes(cur.id)} onComplete={complete}
           grade={async (answers) => { const { data } = await api.post(`/paths/${id}/lessons/${cur.id}/quiz`, { answers }); if (data.passed) load(); return data; }} />}
-      </div>
+      </div></>}
     </div>
   );
 }
