@@ -417,9 +417,19 @@ class CtfGenIn(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     content: str = Field(default="", max_length=20000)
     level: str = Field(default="Beginner", max_length=30)
+    ioc: str = Field(default="", max_length=2048)
 
 
-CTF_CATS = ["Log Analysis", "Forensics", "Network", "Malware", "Web"]
+CTF_CATS = ["Log Analysis", "Forensics", "Network", "Malware", "Web", "Threat Intel"]
+INTEL_PROMPT = """Design one jeopardy-style "Threat Intel" CTF challenge for SOC analysts ({level} level) that practises the lesson "{title}".
+The player must investigate the indicator {ioc} using the platform's Threat Intel lookup (geo, ASN/owner, open ports, blocklists, WHOIS, DNS, VirusTotal, AbuseIPDB).
+Below is the CURRENT lookup result. Ask exactly one question whose answer is clearly visible in this result and unlikely to change soon (prefer: country, ASN number, organisation/owner, an open port, registrar, file type, malware family name, true/false like "is it a Tor exit node"). Avoid scores, counts and dates that change daily.
+The description must name the indicator, give a short realistic SOC scenario, tell the player to investigate it in Threat Intel, and end with the question (state the expected answer style, e.g. "two-letter country code" or "AS number digits only").
+The answer (flag) is a short exact plain value. Never wrap it in a flag format like SOCF{{}} and never mention a flag format.
+Return ONLY JSON: {{"category": "Threat Intel", "title": "short catchy title", "points": 100 or 150 or 200, "flag": "...", "description": "...", "hints": [{{"text": "which source/field to look at", "cost": 20}}, {{"text": "...", "cost": 40}}]}}
+
+LOOKUP RESULT (JSON):
+{intel}"""
 CTF_PROMPT = """Design one jeopardy-style CTF challenge for SOC analysts ({level} level) that practises the lesson "{title}".
 The description must contain a realistic artifact the player analyses (log lines, a command, headers, a decoded payload, packet notes...) and end with one clear question.
 The answer (flag) is a short exact plain value such as an IP, port, Event ID, filename or one lowercase word. Never wrap it in a flag format like SOCF{{}} or FLAG{{}} and never mention a flag format.
@@ -445,8 +455,20 @@ async def run_ctf_job(job_id, body: CtfGenIn):
     chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"lctf-{job_id}",
                    system_message="You are a senior SOC analyst who designs accurate, solvable CTF challenges. You always reply with valid JSON only.").with_model("anthropic", "claude-sonnet-5-5")
     try:
-        text = await chat.send_message(UserMessage(text=CTF_PROMPT.format(title=body.title, level=body.level, cats=json.dumps(CTF_CATS), content=body.content[:8000])))
-        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "done", "ctf": parse_ctf(text), "done_at": now_iso()}})
+        if body.ioc.strip():
+            import intel_sources as IS
+            from routes_intel import run as intel_run
+            kind, value = IS.detect(body.ioc)
+            if not kind:
+                raise ValueError("enter a public IP, domain, URL or hash")
+            intel = await intel_run(kind, value, deep=True)
+            prompt = INTEL_PROMPT.format(title=body.title, level=body.level, ioc=value, intel=json.dumps(intel["sources"], default=str)[:9000])
+        else:
+            value, prompt = "", CTF_PROMPT.format(title=body.title, level=body.level, cats=json.dumps(CTF_CATS[:5]), content=body.content[:8000])
+        ctf = parse_ctf(await chat.send_message(UserMessage(text=prompt)))
+        if value:
+            ctf.update(category="Threat Intel", ioc=value)
+        await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "done", "ctf": ctf, "done_at": now_iso()}})
     except Exception as e:
         await db.lesson_jobs.update_one({"id": job_id}, {"$set": {"status": "error", "error": f"The CTF writer is unavailable right now: {str(e)[:120]}"}})
 
