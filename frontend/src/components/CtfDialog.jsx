@@ -13,7 +13,7 @@ function IntelInline({ ioc }) {
     <div className="border border-cyan-500/25 bg-cyan-500/[0.03] p-3" data-testid="ctf-intel-box">
       <div className="flex flex-wrap items-center gap-2 text-xs"><Radar className="h-4 w-4 text-cyan-400" /><span className="text-slate-400">Investigate</span><code className="font-mono text-cyan-300 break-all" data-testid="ctf-intel-ioc">{ioc}</code>
         <button className="ghost-btn !text-xs !py-1 ml-auto" onClick={run} disabled={busy} data-testid="ctf-intel-lookup">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radar className="h-3.5 w-3.5" />}{busy ? "Checking sources..." : r ? "Re-run lookup" : "Run Threat Intel lookup"}</button></div>
-      {r && <div className="mt-3 max-h-[45vh] overflow-y-auto" data-testid="ctf-intel-report"><IntelReport r={r} /></div>}
+      {r && <div className="mt-3" data-testid="ctf-intel-report"><IntelReport r={r} /></div>}
     </div>);
 }
 
@@ -31,7 +31,7 @@ export function CtfDialog({ c, onClose, onChange }) {
           <pre className="whitespace-pre-wrap text-sm text-slate-300 bg-black/40 p-4 border border-white/5 font-mono max-h-64 overflow-y-auto" data-testid="ctf-description">{c.description}</pre>
           {c.ioc && <IntelInline ioc={c.ioc} />}
           <div className="space-y-2">{c.hints.map((h) => h.text ? <div key={h.idx} className="text-xs font-mono text-yellow-300">hint: {h.text}</div>
-            : <button key={h.idx} onClick={() => hint(h.idx)} className="ghost-btn !text-xs" data-testid={`ctf-hint-${h.idx}`}><Lightbulb className="h-3.5 w-3.5" />Unlock hint (-{h.cost} pts)</button>)}</div>
+            : !c.solved && <button key={h.idx} onClick={() => hint(h.idx)} className="ghost-btn !text-xs" data-testid={`ctf-hint-${h.idx}`}><Lightbulb className="h-3.5 w-3.5" />Unlock hint (-{h.cost} pts)</button>)}</div>
           {c.solved ? <div className="text-green-400 font-mono flex items-center gap-2" data-testid="ctf-solved"><CheckCircle2 className="h-5 w-5" />Solved</div> :
             <div className="flex gap-2"><input className="field font-mono" value={flag} onChange={(e) => setFlag(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Your answer" data-testid="ctf-flag-input" />
               <button className="glow-btn" onClick={submit} data-testid="ctf-flag-submit">Submit</button></div>}</>}

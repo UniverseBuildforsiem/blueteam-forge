@@ -210,3 +210,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - SOCF{...} removed everywhere; CTF answers are plain values (case-insensitive). /manage/ctfs rejects SOCF{...} flags. Startup migration plain_ctf_flags() in server.py.
 - Account Settings: Linked sign-in methods card; Google-only users (password_set=false) can set a password in-app (POST /api/auth/set-password) or via emailed link.
 - Backlog: LinkedIn sign-in (skipped by user for now).
+
+## Jun 2026 — Intel-powered CTFs + lesson CTF popup
+- New CTF category "Threat Intel": CTF docs can carry an `ioc` (validated/normalised via intel_sources.detect). Fixed answer set by instructor.
+- Path Builder CTF creator: IOC field, "Look it up" inline intel report, "Draft Intel CTF with AI" (AI reads current lookup and picks a stable fact as answer).
+- Shared CtfDialog (components/CtfDialog.jsx) used by CTF Arena and lessons; Intel CTFs run the Threat Intel lookup inside the popup. Lesson CTF attachments open as popup on the lesson (no redirect).

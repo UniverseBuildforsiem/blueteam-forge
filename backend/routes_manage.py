@@ -66,6 +66,16 @@ def validate(col, doc):
             if re.match(r"^\s*SOCF\{", str(doc["flag"]), re.I):
                 raise HTTPException(422, "Enter the plain answer only, without SOCF{...}")
             doc["flag"] = str(doc["flag"]).strip()
+            if (doc.get("ioc") or "").strip():
+                import intel_sources as IS
+                kind, value = IS.detect(doc["ioc"])
+                if not kind:
+                    raise HTTPException(422, "The IOC must be a public IP, domain, URL or MD5/SHA-1/SHA-256 hash")
+                doc["ioc"] = value
+            else:
+                doc.pop("ioc", None)
+                if doc.get("category") == "Threat Intel":
+                    raise HTTPException(422, "Threat Intel CTFs need an IOC for students to investigate")
             for h in doc["hints"]:
                 assert "text" in h and int(h["cost"]) >= 0
     except (AssertionError, KeyError, TypeError, ValueError):

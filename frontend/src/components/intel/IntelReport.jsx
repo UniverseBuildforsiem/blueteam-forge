@@ -76,7 +76,7 @@ export default function IntelReport({ r }) {
       <Glass className={`p-5 border ${c.cls.split(" ").filter((x) => x.startsWith("border")).join(" ")}`}>
         <div className="flex flex-wrap items-center gap-4">
           <c.Icon className={`h-10 w-10 ${c.cls.split(" ")[0]}`} />
-          <div className="flex-1 min-w-0"><div className="text-[11px] font-mono uppercase text-slate-500">{r.type} indicator</div>
+          <div className="flex-1 min-w-[180px]"><div className="text-[11px] font-mono uppercase text-slate-500">{r.type} indicator</div>
             <div className="font-mono text-lg break-all" data-testid="intel-report-ioc">{r.ioc}</div></div>
           <div className="text-right"><VerdictChip v={r.verdict} testId="intel-report-verdict" />
             <div className="mt-2 w-40 h-1.5 bg-white/10 rounded-full overflow-hidden ml-auto"><div className={`h-full ${c.bar}`} style={{ width: `${Math.max(4, r.score)}%` }} /></div>

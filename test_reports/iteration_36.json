@@ -1,0 +1,36 @@
+{
+  "summary": "Tested Intel-powered CTFs and the lesson CTF popup. Backend: new pytest file with 5 tests, all 5 pass. They cover creating a CTF with an ioc via /manage/ctfs, ioc returned by /ctf with the flag hidden, hint unlock, wrong vs right answer (case-insensitive and trimmed, 150-20=130 pts), the 'already solved' path, non-intel CTF has no ioc, a student running /intel/lookup, AI intel draft for 185.220.101.1 (done in about 10s; category Threat Intel, ioc set, plain ASN answer 60729, no SOCF), and an invalid IOC giving an error job. Frontend (Playwright): (1) Admin > Path builder > TEST path > lesson > New CTF. 'Look it up' is disabled until an IOC is entered. With the IOC filled, the button reads 'Draft Intel CTF with AI'. The lookup shows ctf-new-intel-report and sets the category to Threat Intel. The AI draft filled title, description, answer 60729 and hints in about 9s. Save closed the creator and attached the CTF; saving the path gave a 'Saved' toast. The DB holds the attachment and a CTF doc with ioc and published:true. (2) Fresh student on /app/paths/<id>: the CTF attachment is a <button> and the quiz attachment is still an <a href=/app/quizzes/..>. Clicking opens ctf-dialog with the URL unchanged. ctf-intel-box shows the IOC. The lookup renders ctf-intel-report inside the dialog and the ASN 60729 is visible in it. Hint unlock gives 100 to 80 pts and the dialog stays open. A wrong answer gives 'Wrong flag'; the right one gives 'Flag captured! +80' and ctf-solved. Escape closes the dialog and the lesson stays; reopening shows Solved. (3) /app/ctf shows 6 columns including THREAT INTEL with the tile solved. The arena dialog has the intel box and the lookup works without leaving the page. Non-intel ctf-net-2 has no intel box: wrong answer gives 'Wrong flag', 3389 solves. (4) Regression: path-tab-quizzes/sops/ctf/intel/lessons all switch in place; no SOCF text on the arena.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/manage/ctfs", "issue": "The ioc field is not checked or normalised when saved by hand. Any string is accepted, for example 'not an ioc' or 'hxxp://x'. Category 'Threat Intel' with no ioc is also accepted. Students would then see a bad IOC and the lookup would return 400. Suggest running IS.detect(ioc) in validate() and storing the normalised value."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CtfDialog hints", "issue": "Once a CTF is solved, the remaining 'Unlock hint (-40 pts)' buttons still show and can be clicked. The cost is pointless and confusing after the solve. Hide them when c.solved is true.", "selector": "[data-testid^=ctf-hint-]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "CTF dialog with intel report on mobile (390px)", "issues": ["The IntelReport header breaks the IP into one or two characters per line ('18 / 5.2 / 20. / 10 / 1.1') because the indicator column is too narrow next to the risk bar.", "The scroll areas are nested (description max-h-64, report max-h-45vh, dialog max-h-90vh), which is awkward on mobile."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_intel_ctf_lesson_popup.py", "/app/backend/tests/ui_setup_iter36.py", "/app/test_reports/pytest/pytest_iter36.xml"],
+  "action_items": [
+    "Optional: validate and normalise ctf.ioc in routes_manage validate() using intel_sources.detect",
+    "Optional: hide the unlock-hint buttons in CtfDialog when the CTF is solved",
+    "Optional: fix the IntelReport header wrapping in narrow containers (mobile CTF dialog)"
+  ],
+  "critical_code_review_comments": [
+    "LessonCtfButton.load fetches the whole /ctf board on every open, hint and submit. ctf_board runs count_documents once per CTF (N+1), so it gets slower as the board grows. A GET /ctf/{id} endpoint would be cheaper. There is also no loading state, so a double click fires two requests.",
+    "CtfCreator AI draft does setF(r.ctf), which replaces any category or points the author already chose. If the draft is run without an IOC after an earlier lookup, the stale intel report stays on screen while the ioc is dropped.",
+    "Carried over: CtfCreator creates the CTF published:true before the path is saved, which can leave orphan CTFs in the Arena.",
+    "Each 'Re-run lookup' in the popup uses one of the student's daily intel lookups (limit 150 a day), and the result is not cached per dialog session beyond the component state."
+  ],
+  "updated_files": ["/app/backend/tests/test_intel_ctf_lesson_popup.py", "/app/backend/tests/ui_setup_iter36.py"],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% of requested flows"},
+  "seed_data_creation": "Created the TEST_Intel CTF Path (test-intel-620c17), a fresh test_ student (onboarded flag set in mongo to skip onboarding), the CTF 'Onion Exit Ramp' made through the builder UI, and the pytest TEST_ users and TEST_intel_ctf. All were deleted by id afterwards, along with their ctf_solves and ctf_hints. No seeded data was modified. A few real intel lookups were used (about 6).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use tests/ui_setup_iter36.py to create a TEST path and a student (state in /tmp/iter36.json); run it with the 'cleanup' arg to remove them. New students land on /onboarding, so set onboarded:true in mongo for TEST users. The admin builder is at /admin > admin-tab-builder > content-edit-<pathId> > builder-lesson-0-0 > builder-create-ctf. Lesson CTF attachment testid: lesson-attachment-ctf-<ctfId> (a button that opens CtfDialog)."
+}
