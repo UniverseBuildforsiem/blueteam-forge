@@ -75,7 +75,7 @@ export function PathDetail() {
   return (
     <div>
       <PathTabBar p={p} tab={tab} setTab={setTab} />
-      {tab === "quizzes" && <Quizzes />}
+      {tab === "quizzes" && <Quizzes inPath={new Set([p.final_quiz?.id, ...p.modules.flatMap((m) => m.lessons.flatMap((l) => (l.attachments || []).filter((a) => a.type === "quiz").map((a) => a.id)))].filter(Boolean))} />}
       {tab === "sops" && <PathSops p={p} />}
       {tab === "ctf" && <CTF />}
       {tab === "intel" && <ThreatIntel embedded />}

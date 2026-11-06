@@ -1,0 +1,35 @@
+{
+  "summary": "Tested everything in the iteration-35 request. Backend: added a new pytest file with 11 tests and all 11 pass. They cover plain-answer CTF submission (SOCF{3389} is wrong, 3389 is right), rejection of SOCF{...} flags in /manage/ctfs (422 with the correct message), the AI CTF draft job (done in about 15s, plain answer, no SOCF anywhere), staff-only guards, and the Google-only flow for /auth/set-password and /auth/change-password (400 in both wrong-mode cases, weak-password rejection, cookies re-issued, login with the new password) plus /auth/forgot-password. Frontend checked with Playwright, everything passed: (1) sticky path-tab-header shows the title and all 5 tabs and stays at y=0 after scrolling. Each tab renders inside the path: 12 quiz cards, SOP grid with working search, ctf-board, threat-intel-page with intel-input. Lesson completion works (0% to 25%). (2) In /app/ctf and the CTF tab there is no SOCF text, the placeholder reads 'Your answer', and the unlocked hint is clean. SOCF{3389} gives 'Wrong flag'; 3389 gives 'Flag captured! +80'. (3) Admin Path Builder: New CTF opens ctf-creator with all fields and the default flag is empty. SOCF{a} shows the error toast. AI draft filled the form with a plain IP answer. Saving shows a toast, the CTF lands in the db as published, and it appears as builder-attachment-0. Instructor flow: a hand-made CTF stayed attached in the saved path's lesson attachments. (4) Instructor content editor's new CTF has flag \"\". (5) Account: a normal user sees google 'not linked' / password 'linked' and change-password-card. A Google-only user sees google 'linked' / password 'not set' and set-password-card with no current-password field; the email-link button and setting the password both work, and the page switches to the change card and stays that way after reload. Google button is still present on the login page. No SOCF is left in the db ctfs (flags, descriptions or hints).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/forgot-password (used as the set-password link)", "issue": "A Google-only user who asks for a set-password link gets the generic 'Reset your SOCProfessionals Academy password' email ('We received a request to reset your password'). The wording does not fit someone who has never had a password."},
+      {"endpoint": "/api/ctf/{id}/submit", "issue": "Answers are compared case-insensitively, so they are not fully strict. This is fine for ports and IPs; SOCF{x} is correctly rejected."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Account > Set a password card", "issues": ["The form grid has 3 columns but only 2 inputs in set mode, so the Set password button wraps to the next row, out of line with the inputs. Minor."]},
+      {"screen": "Path tabs", "issues": ["The Quizzes and SOPs tabs list every quiz and SOP on the platform rather than only those in this path. SOPs in the path are tagged 'in this path' and sorted first; quizzes have no such filter. Acceptable, but consider marking quizzes that belong to the path."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_ctf_plain_setpassword.py", "/app/test_reports/pytest/pytest_iter35.xml"],
+  "action_items": [
+    "Optional: send a dedicated 'Set your password' email when a password_set:false user asks for the link",
+    "Optional: when a CTF is created from the Path Builder it is published to the Arena right away, even if the path is never saved. Consider warning the author or creating it unpublished until the path is saved",
+    "Optional: fix the set-password form layout (use 2 columns in set mode)"
+  ],
+  "critical_code_review_comments": [
+    "CtfCreator publishes the CTF straight away (published:true); if the author leaves the builder without saving, the CTF stays in the Arena with no path attached",
+    "routes_manage validation only blocks the 'SOCF{' prefix; other wrappers such as FLAG{x} typed by hand are still accepted (the AI parse_ctf removes any wrapper)",
+    "Leftover ctf_solves from earlier test users whose accounts were deleted still show on the live scoreboard as 'TEST User'"
+  ],
+  "updated_files": ["/app/backend/tests/test_ctf_plain_setpassword.py"],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100%"},
+  "seed_data_creation": "Temporary TEST users, 2 TEST CTFs and the 'TEST_CTF Path2' path were created and then deleted by id. A first admin builder attempt was never saved because the path had no description, so it left no path behind.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Path tabs live in PathTabs.jsx and Paths.jsx PathDetail. CtfCreator posts to /manage/ctfs; AI draft goes to /builder/ctf-draft and is polled at /builder/jobs/{id}. Google-only user = mongo password_set:false, google_linked:true. Instructor content editor is at /instructor > Content tab > content-kind-*; admin Path builder is at /admin > admin-tab-builder."
+}

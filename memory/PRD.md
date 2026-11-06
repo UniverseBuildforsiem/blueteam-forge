@@ -203,3 +203,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 
 ## Google Social Login (added Jun 2026)
 - Emergent-managed Google sign-in on /login and /register. POST /api/auth/google {session_id} links existing users by email (keeps XP/plan/role) or creates a new student. Issues same JWT cookies (token_version honoured). Google-only users get a random password; they can set one via Forgot password.
+
+## Jun 2026 — Path tabs, CTF creator, plain CTF answers, linked accounts
+- Learning path page: sticky header with tabs Lessons / Quizzes (path quizzes tagged + first) / SOPs (path SOPs tagged + first) / CTF Arena / Threat Intel, all rendered inside the path.
+- Path Builder: "New CTF" inline creator per lesson + "Draft with AI" (POST /api/builder/ctf-draft, Claude Sonnet 5.5 job). Saves to CTF Arena and attaches to lesson.
+- SOCF{...} removed everywhere; CTF answers are plain values (case-insensitive). /manage/ctfs rejects SOCF{...} flags. Startup migration plain_ctf_flags() in server.py.
+- Account Settings: Linked sign-in methods card; Google-only users (password_set=false) can set a password in-app (POST /api/auth/set-password) or via emailed link.
+- Backlog: LinkedIn sign-in (skipped by user for now).

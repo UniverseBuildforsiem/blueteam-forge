@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { api, API, errMsg } from "../../lib/api";
 import { Glass, PageHeader } from "../../components/common";
 
-export function Quizzes() {
+export function Quizzes({ inPath }) {
   const [qs, setQs] = useState([]);
-  useEffect(() => { api.get("/quizzes").then((r) => setQs(r.data)); }, []);
+  const key = inPath ? [...inPath].join() : "";
+  useEffect(() => { api.get("/quizzes").then((r) => setQs(inPath ? [...r.data].sort((a, b) => inPath.has(b.id) - inPath.has(a.id)) : r.data)); }, [key]); // eslint-disable-line
   return (
     <div>
       <PageHeader eyebrow="// knowledge checks" title="Quizzes & exams" sub="Instant feedback, explanations on every question and unlimited retries." />
@@ -15,7 +16,7 @@ export function Quizzes() {
         {qs.map((q) => (
           <Glass key={q.id} className="p-5 flex flex-col" data-testid={`quiz-card-${q.id}`}>
             <div className="flex justify-between text-xs font-mono"><span className={q.path_id ? "text-orange-300" : "text-cyan-400"}>{q.path_id ? "FINAL EXAM" : q.topic}</span>
-              <span className="text-slate-500">{q.question_count} Q{q.time_limit_sec ? ` · ${Math.round(q.time_limit_sec / 60)} min` : ""}</span></div>
+              <span className="text-slate-500">{inPath?.has(q.id) && <span className="text-green-400 border border-green-500/30 px-1.5 mr-2" data-testid={`quiz-inpath-${q.id}`}>in this path</span>}{q.question_count} Q{q.time_limit_sec ? ` · ${Math.round(q.time_limit_sec / 60)} min` : ""}</span></div>
             <div className="font-bold mt-2 flex-1">{q.title}</div>
             <div className="flex items-center justify-between mt-4">
               <span className="text-xs font-mono text-slate-400">best: {q.best_score ?? "—"}{q.best_score != null && "%"}</span>
