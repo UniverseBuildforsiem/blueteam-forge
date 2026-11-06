@@ -20,7 +20,10 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    if (window.location.hash?.includes("session_id=")) return;
+    refresh();
+  }, [refresh]);
 
   const logout = async () => {
     await api.post("/auth/logout").catch(() => {});

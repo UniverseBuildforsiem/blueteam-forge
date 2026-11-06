@@ -1,5 +1,5 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner";
 import { AuthProvider } from "./context/AuthContext";
 import AppShell, { ProtectedRoute } from "./components/AppShell";
@@ -10,7 +10,7 @@ import Book from "./pages/Book";
 import { BlogList, BlogPost } from "./pages/Blog";
 import { SeriesList, SeriesPost } from "./pages/Series";
 import { SopList, SopDetail } from "./pages/Sops";
-import { Login, Register, ForgotPassword, ResetPassword } from "./pages/AuthPages";
+import { Login, Register, ForgotPassword, ResetPassword, AuthCallback } from "./pages/AuthPages";
 import Onboarding from "./pages/Onboarding";
 import Verify from "./pages/Verify";
 import PublicProfile from "./pages/PublicProfile";
@@ -37,11 +37,10 @@ import ReviewPage from "./pages/ReviewPage";
 import Instructor from "./pages/Instructor";
 import Admin from "./pages/Admin";
 
-function App() {
+function AppRouter() {
+  const location = useLocation();
+  if (location.hash?.includes("session_id=")) return <AuthCallback />;
   return (
-    <div className="App">
-      <AuthProvider>
-        <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/catalog" element={<Catalog />} />
@@ -96,6 +95,15 @@ function App() {
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+  );
+}
+
+function App() {
+  return (
+    <div className="App">
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRouter />
         </BrowserRouter>
         <Toaster theme="dark" position="top-right" />
       </AuthProvider>

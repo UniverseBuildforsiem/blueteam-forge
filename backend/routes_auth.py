@@ -5,6 +5,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Request, Response, HTTPException, Depends
 from pydantic import BaseModel, Field
 import jwt
+import httpx
 from core import (db, now, now_iso, new_id, hash_password, verify_password, set_auth_cookies, get_current_user,
                   create_access_token, JWT_ALGORITHM, PUBLIC_USER_FIELDS, send_email, email_template, audit)
 
@@ -81,6 +82,43 @@ async def login(body: LoginIn, request: Request, response: Response):
     if user.get("status") == "suspended":
         raise HTTPException(403, "Account suspended. Contact support.")
     await db.login_attempts.delete_one({"identifier": ident})
+    set_auth_cookies(response, user)
+    return clean(user)
+
+
+class GoogleIn(BaseModel):
+    session_id: str = Field(min_length=1, max_length=512)
+
+
+@router.post("/google")
+async def google_login(body: GoogleIn, response: Response):
+    from routes_admin import unique_username
+    async with httpx.AsyncClient(timeout=15) as c:
+        r = await c.get("https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data", headers={"X-Session-ID": body.session_id})
+    if r.status_code != 200:
+        raise HTTPException(401, "Google sign-in failed — please try again")
+    g = r.json()
+    email = (g.get("email") or "").strip().lower()
+    if not EMAIL_RE.match(email):
+        raise HTTPException(400, "Google account has no valid email")
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if user:
+        if user.get("status") == "suspended":
+            raise HTTPException(403, "Account suspended. Contact support.")
+        upd = {"google_linked": True}
+        if g.get("picture") and not user.get("avatar"):
+            upd["avatar"] = g["picture"]
+        await db.users.update_one({"id": user["id"]}, {"$set": upd, "$unset": {"invite_pending": ""}})
+        user.update(upd)
+    else:
+        settings = await db.settings.find_one({"id": "platform"}, {"_id": 0, "allow_signups": 1}) or {}
+        if settings.get("allow_signups") is False:
+            raise HTTPException(403, "New signups are currently closed")
+        user = {"id": new_id(), "name": (g.get("name") or email.split("@")[0])[:60], "email": email, "username": await unique_username(email),
+                "password_hash": hash_password(secrets.token_urlsafe(24)), "google_linked": True, "avatar": g.get("picture"),
+                "role": "student", "status": "active", "plan": "free", "goal": None, "current_path": None, "onboarded": False,
+                "xp": 0, "streak": 0, "last_active": None, "created_at": now_iso()}
+        await db.users.insert_one(user)
     set_auth_cookies(response, user)
     return clean(user)
 

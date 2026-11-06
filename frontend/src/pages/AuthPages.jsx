@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api, errMsg } from "../lib/api";
@@ -39,6 +39,42 @@ export const takePendingCase = () => {
   return c?.id && Date.now() - c.at < 3600e3 ? `/app/challenges?case=${c.id}` : null;
 };
 
+const homeFor = (u) => u.role === "admin" ? "/admin" : u.role === "instructor" ? "/instructor" : !u.onboarded ? "/onboarding" : takePendingCase() || "/app";
+
+function GoogleButton({ label }) {
+  const go = () => {
+    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+    const redirectUrl = window.location.origin + "/app";
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
+  return (
+    <>
+      <button type="button" onClick={go} className="ghost-btn w-full justify-center gap-3" data-testid="google-login-button">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+        {label}
+      </button>
+      <div className="flex items-center gap-3 my-5 text-[11px] font-mono text-slate-500 uppercase"><span className="h-px flex-1 bg-white/10" />or with email<span className="h-px flex-1 bg-white/10" /></div>
+    </>
+  );
+}
+
+export function AuthCallback() {
+  const { setUser } = useAuth();
+  const nav = useNavigate();
+  const loc = useLocation();
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return;
+    done.current = true;
+    const sid = new URLSearchParams(loc.hash.slice(1)).get("session_id");
+    window.history.replaceState(null, "", window.location.pathname);
+    api.post("/auth/google", { session_id: sid })
+      .then(({ data }) => { setUser(data); nav(homeFor(data), { replace: true }); })
+      .catch((x) => { setUser(false); toast.error(errMsg(x)); nav("/login", { replace: true }); });
+  }, [loc.hash, nav, setUser]);
+  return <div data-testid="auth-callback" className="min-h-screen grid-bg" />;
+}
+
 export function Login() {
   const { setUser } = useAuth();
   const nav = useNavigate();
@@ -59,6 +95,7 @@ export function Login() {
   };
   return (
     <Shell title="Analyst login" sub="Welcome back to the queue.">
+      <GoogleButton label="Continue with Google" />
       <form onSubmit={submit}>
         <F label="Email" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} data-testid="login-email-input" required />
         <F label="Password" type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} data-testid="login-password-input" required />
@@ -93,6 +130,7 @@ export function Register() {
   };
   return (
     <Shell title="Create your analyst account" sub="Free forever for SOC Fundamentals.">
+      <GoogleButton label="Sign up with Google" />
       <form onSubmit={submit}>
         <F label="Full name" value={f.name} onChange={set("name")} data-testid="register-name-input" required />
         <F label="Email" type="email" value={f.email} onChange={set("email")} data-testid="register-email-input" required />
