@@ -64,7 +64,7 @@ function LessonView({ lesson, p, onComplete, grade, onWatched }) {
   const tracked = p.video_lessons?.includes(lesson.id) && !!src;
   const unavailable = p.unavailable_videos?.includes(lesson.id);
   const watched = p.watched_lessons?.includes(lesson.id);
-  const videoNode = tracked ? <TrackedVideo src={src} title={lesson.title} pid={p.id} lid={lesson.id} percent={p.video_percent?.[lesson.id] || 0} watched={watched} onWatched={onWatched} /> : null;
+  const videoNode = tracked ? <TrackedVideo src={src} title={lesson.title} pid={p.id} lid={lesson.id} percent={p.video_percent?.[lesson.id] || 0} watched={watched} resumeAt={p.video_resume?.[lesson.id] || 0} onWatched={onWatched} /> : null;
   return (
     <Glass className="p-6 sm:p-8" data-testid="lesson-view">
       <LessonBody lesson={lesson} grade={grade} completed={done} videoNode={videoNode} />
