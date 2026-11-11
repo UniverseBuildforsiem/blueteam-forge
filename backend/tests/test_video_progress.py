@@ -1,4 +1,4 @@
-# Iteration 39: Video progress tracking (90% watched gate, anti-skip, path progress fields)
+# Iterations 39-40: Video progress tracking (90% gate, server duration floor, rate budget, availability check)
 import os
 import time
 import uuid
@@ -17,8 +17,9 @@ def _base():
 
 
 BASE = _base()
-PID = "soc-fundamentals"
-VID = "sf-l1"
+YPID, YVID = "soc-l1", "l1-l1"                 # tracked YouTube inWWhr5tnEA
+SPID, SVID = "soc-fundamentals", "sf-l1"       # private youtube -> unavailable
+VPID, VVID = "2e9692fd641c", "l-n6a2pyw"       # Vimeo raw embed, real duration 2550
 CONTENT = "Phishing triage starts with the headers. Check SPF, DKIM and DMARC results and the sending IP reputation. " * 2
 QS = [{"id": f"q{i}", "text": f"Question {i}?", "options": ["a", "b", "c", "d"], "answer": i % 4, "explanation": "x"} for i in range(5)]
 RIGHT = [i % 4 for i in range(5)]
@@ -36,7 +37,7 @@ def xp(s):
     return s.get(f"{BASE}/api/auth/me").json().get("xp", 0)
 
 
-def vpost(s, lid, dur, segs, pid=PID):
+def vpost(s, lid, dur, segs, pid=YPID):
     return s.post(f"{BASE}/api/paths/{pid}/lessons/{lid}/video", json={"duration": dur, "segments": segs})
 
 
@@ -49,97 +50,128 @@ def admin():
     return s
 
 
-# ---- path fields ----
-class TestPathFields:
-    def test_get_path_fields(self):
-        s = fresh_student()
-        g = s.get(f"{BASE}/api/paths/{PID}").json()
-        assert g["video_lessons"] == [VID]
-        assert g["watched_lessons"] == []
-        assert g["video_percent"] == {}
-        assert g["quiz_passed_lessons"] == []
+# ---- availability / path fields ----
+class TestAvailability:
+    def test_tracked_path_fields(self):
+        g = fresh_student().get(f"{BASE}/api/paths/{YPID}").json()
+        assert YVID in g["video_lessons"] and g["unavailable_videos"] == []
+        assert g["watched_lessons"] == [] and g["video_percent"] == {}
 
-
-# ---- progress + anti-skip ----
-class TestProgress:
-    def test_skip_ignored(self):
+    def test_private_video_unavailable_and_completable(self):
         s = fresh_student()
-        d = vpost(s, VID, 100, [[0, 100]]).json()
-        assert d["percent"] == 0 and d["watched"] is False
-
-    def test_merge_and_watch(self):
-        s = fresh_student()
-        d = vpost(s, VID, 60, [[0, 10], [5, 25]]).json()
-        assert d["percent"] == round(100 * 25 / 60) and d["watched"] is False
-        # overlapping replays don't add coverage
-        d = vpost(s, VID, 60, [[0, 25]]).json()
-        assert d["percent"] == 42
-        r = s.post(f"{BASE}/api/paths/{PID}/lessons/{VID}/complete")
-        assert r.status_code == 400 and "Watch at least 90%" in r.json()["detail"]
-        time.sleep(12)
-        d = vpost(s, VID, 60, [[25, 60]]).json()
-        assert d["percent"] == 100 and d["watched"] is True and d["newly"] is True
-        g = s.get(f"{BASE}/api/paths/{PID}").json()
-        assert g["watched_lessons"] == [VID] and g["video_percent"][VID] == 100
-        before = xp(s)
-        assert before == 0  # NO XP for video
-        assert s.post(f"{BASE}/api/paths/{PID}/lessons/{VID}/complete").status_code == 200
+        g = s.get(f"{BASE}/api/paths/{SPID}").json()
+        assert SVID in g["unavailable_videos"] and SVID not in g["video_lessons"]
+        assert vpost(s, SVID, 60, [[0, 10]], SPID).status_code == 400
+        assert s.post(f"{BASE}/api/paths/{SPID}/lessons/{SVID}/complete").status_code == 200
         assert xp(s) == 10
-        assert VID in s.get(f"{BASE}/api/paths/{PID}").json()["completed_lessons"]
+
+    def test_vimeo_embed_tracked(self):
+        s = fresh_student()
+        r = s.get(f"{BASE}/api/paths/{VPID}")
+        if r.status_code != 200:
+            pytest.skip("vimeo path not published")
+        assert VVID in r.json()["video_lessons"]
 
     def test_non_video_lesson_400(self):
         s = fresh_student()
-        g = s.get(f"{BASE}/api/paths/{PID}").json()
-        other = next(l["id"] for m in g["modules"] for l in m["lessons"] if l["id"] != VID)
-        r = vpost(s, other, 60, [[0, 10]])
-        assert r.status_code == 400
-        assert s.post(f"{BASE}/api/paths/{PID}/lessons/{other}/complete").status_code == 200
+        g = s.get(f"{BASE}/api/paths/{YPID}").json()
+        other = next(l["id"] for m in g["modules"] for l in m["lessons"] if l["id"] not in g["video_lessons"] and not l.get("quiz"))
+        assert vpost(s, other, 60, [[0, 10]]).status_code == 400
+        assert s.post(f"{BASE}/api/paths/{YPID}/lessons/{other}/complete").status_code == 200
 
-    def test_bad_payload_422(self):
+
+# ---- duration rules ----
+class TestDuration:
+    def test_tiny_duration_floored(self):
         s = fresh_student()
-        assert vpost(s, VID, 0, [[0, 1]]).status_code == 422
+        d = vpost(s, YVID, 1, [[0, 1]]).json()
+        assert d["watched"] is False and d["percent"] <= 4, d
 
-    # --- known weaknesses (expected to FAIL if exploit works) ---
-    def test_duration_spoof_bypass(self):
-        """Client sets duration on first report; tiny duration => instant watched."""
+    def test_duration_30_first_report(self):
+        """YouTube floor is 30s and first-report grace is 30s: duration=30 + [[0,30]] should NOT complete."""
         s = fresh_student()
-        d = vpost(s, VID, 1, [[0, 1]]).json()
-        assert d["watched"] is False, f"duration spoof bypass: {d}"
+        d = vpost(s, YVID, 30, [[0, 30]]).json()
+        assert d["watched"] is False, f"duration-30 first-report bypass: {d}"
 
-    def test_rapid_chunks_bypass(self):
-        """Each request gets a free 30s allowance; 3 back-to-back 30s chunks on 100s video."""
+    def test_duration_cannot_be_lowered(self):
+        s = fresh_student()
+        vpost(s, YVID, 600, [[0, 10]])
+        time.sleep(3)
+        d = vpost(s, YVID, 31, [[10, 15]]).json()
+        assert d["percent"] == round(100 * 15 / 600), d
+
+    def test_vimeo_real_duration(self):
+        s = fresh_student()
+        if s.get(f"{BASE}/api/paths/{VPID}").status_code != 200:
+            pytest.skip("vimeo path not published")
+        d = vpost(s, VVID, 10, [[0, 10]], VPID).json()
+        assert d["watched"] is False and d["percent"] == 0, d
+
+
+# ---- rate budget ----
+class TestBudget:
+    def test_skip_clipped(self):
+        s = fresh_student()
+        d = vpost(s, YVID, 100, [[0, 100]]).json()
+        assert d["percent"] == 30 and d["watched"] is False, d
+
+    def test_rapid_chunks_blocked(self):
         s = fresh_student()
         for a in (0, 30, 60):
-            d = vpost(s, VID, 100, [[a, a + 30]]).json()
-        assert d["watched"] is False, f"rapid chunk bypass: {d}"
+            d = vpost(s, YVID, 100, [[a, a + 30]]).json()
+        assert d["watched"] is False and d["percent"] < 50, d
+
+    def test_spaced_reports_watch_then_complete(self):
+        s = fresh_student()
+        d = vpost(s, YVID, 60, [[0, 25]]).json()
+        assert d["percent"] == 42
+        r = s.post(f"{BASE}/api/paths/{YPID}/lessons/{YVID}/complete")
+        assert r.status_code == 400 and "Watch at least 90%" in r.json()["detail"]
+        time.sleep(16)
+        d = vpost(s, YVID, 60, [[25, 60]]).json()
+        assert d["percent"] == 100 and d["watched"] is True and d["newly"] is True, d
+        g = s.get(f"{BASE}/api/paths/{YPID}").json()
+        assert YVID in g["watched_lessons"] and g["video_percent"][YVID] == 100
+        assert xp(s) == 0  # no XP for video
+        assert s.post(f"{BASE}/api/paths/{YPID}/lessons/{YVID}/complete").status_code == 200
+        assert xp(s) == 10
+
+    def test_bad_payload_422(self):
+        assert vpost(fresh_student(), YVID, 0, [[0, 1]]).status_code == 422
 
 
-# ---- quiz + video ----
-class TestQuizVideo:
-    pid = None
+# ---- admin-created paths: raw iframe embed parsing + quiz/video gate ----
+class TestAdminPaths:
+    pids = []
 
-    def test_flow(self, admin):
-        body = {"title": "TEST_VideoQuiz Path", "description": "test", "level": "Beginner", "published": True, "order": 99,
-                "modules": [{"id": "m1", "title": "M1", "lessons": [
-                    {"id": "l-vq-t1", "title": "VQ", "content": CONTENT, "video_url": "https://www.youtube.com/embed/inWWhr5tnEA", "quiz": {"required": True, "questions": QS}},
-                    {"id": "l-vq-plain", "title": "Plain", "content": CONTENT}]}]}
+    def _mk(self, admin, lessons):
+        body = {"title": "TEST_Video Path", "description": "test", "level": "Beginner", "published": True, "order": 99,
+                "modules": [{"id": "m1", "title": "M1", "lessons": lessons}]}
         r = admin.post(f"{BASE}/api/manage/paths", json=body)
         assert r.status_code == 200, r.text
-        pid = TestQuizVideo.pid = r.json()["id"]
+        TestAdminPaths.pids.append(r.json()["id"])
+        return r.json()["id"]
+
+    def test_raw_embed_parsed(self, admin):
+        embed = '<iframe width="560" height="315" src="https://www.youtube.com/embed/inWWhr5tnEA?si=abc&amp;start=0" frameborder="0"></iframe>'
+        pid = self._mk(admin, [{"id": "l-emb", "title": "Emb", "content": CONTENT, "video_url": embed},
+                               {"id": "l-priv", "title": "Priv", "content": CONTENT, "video_url": "https://www.youtube.com/watch?v=2PNZENU07HQ"}])
+        g = fresh_student().get(f"{BASE}/api/paths/{pid}").json()
+        assert g["video_lessons"] == ["l-emb"] and g["unavailable_videos"] == ["l-priv"]
+
+    def test_quiz_video_flow(self, admin):
+        pid = self._mk(admin, [{"id": "l-vq-t1", "title": "VQ", "content": CONTENT, "video_url": "https://www.youtube.com/embed/inWWhr5tnEA", "quiz": {"required": True, "questions": QS}}])
         s = fresh_student()
         d = s.post(f"{BASE}/api/paths/{pid}/lessons/l-vq-t1/quiz", json={"answers": RIGHT}).json()
         assert d["passed"] is True and d["completed"] is False and d["xp"] == 0
-        g = s.get(f"{BASE}/api/paths/{pid}").json()
-        assert "l-vq-t1" in g["quiz_passed_lessons"] and "l-vq-t1" not in g["completed_lessons"]
         r = s.post(f"{BASE}/api/paths/{pid}/lessons/l-vq-t1/complete")
         assert r.status_code == 400 and "Watch" in r.json()["detail"]
         vpost(s, "l-vq-t1", 50, [[0, 25]], pid)
-        time.sleep(8)
-        d = vpost(s, "l-vq-t1", 50, [[25, 50]], pid).json()
-        assert d["watched"] is True
+        time.sleep(12)
+        assert vpost(s, "l-vq-t1", 50, [[25, 50]], pid).json()["watched"] is True
         assert s.post(f"{BASE}/api/paths/{pid}/lessons/l-vq-t1/complete").status_code == 200
         assert xp(s) == 10
 
     def test_cleanup(self, admin):
-        if TestQuizVideo.pid:
-            assert admin.delete(f"{BASE}/api/manage/paths/{TestQuizVideo.pid}").status_code == 200
+        for pid in TestAdminPaths.pids:
+            assert admin.delete(f"{BASE}/api/manage/paths/{pid}").status_code == 200

@@ -224,3 +224,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 ## Jun 2026 — Smart video links in Path Builder
 - lib/video.js toEmbed(): converts vimeo.com/ID, vimeo.com/ID/HASH, player.vimeo.com (keeps ?h=), youtube watch/youtu.be/shorts/embed (keeps t= as start=), and pasted <iframe> embed code (&amp; decoded, scripts ignored) to embed URLs. Rejects non-https/javascript.
 - VideoField: live preview + embeddability check via GET /api/builder/video-check (Vimeo/YouTube oEmbed). Lessons render via embedSrc() so old raw links also work.
+
+## Jun 2026 — Video progress tracking
+- Lesson videos (YouTube IFrame API / @vimeo/player) report played segments every 10s to POST /api/paths/{pid}/lessons/{lid}/video. Watched = 90% of real playback. Completing a lesson (button or quiz auto-complete) requires the video watched. No XP for videos.
+- video_meta.py: parses YT/Vimeo IDs (also raw embed code), checks availability via oEmbed (cached 12h in db.video_meta). Private/removed videos are listed in unavailable_videos and are NOT required. Vimeo duration from oEmbed; YouTube duration = max ever reported by any client (min 30s) since YouTube blocks server-side lookup.
+- Anti-skip: first report 12s grace, then 2.2x wall-clock budget + 5s per report; extra coverage clipped.
+- UI: eye icon + % on lesson list, "videos watched X/Y" in path header, progress bar under video, lock message until watched.
+- Known limit: YouTube duration could be made exact with a YouTube Data API key (backlog).

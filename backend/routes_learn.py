@@ -169,10 +169,14 @@ async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_cur
     if not mt:
         raise HTTPException(400, "This lesson has no trackable video")
     rec = await db.video_progress.find_one({"user_id": user["id"], "lesson_id": lid}, NO_ID) or {}
-    dur = float(mt["duration"] or max(rec.get("duration") or 0, body.duration, 30))
+    if mt["duration"]:
+        dur = float(mt["duration"])
+    else:
+        seen = await db.video_meta.find_one_and_update({"key": mt["key"]}, {"$max": {"client_max": round(body.duration, 1)}}, upsert=True, return_document=True)
+        dur = float(max(seen.get("client_max") or 0, rec.get("duration") or 0, 30))
     spans = rec.get("spans", [])
     last = rec.get("last_at")
-    budget = 2.2 * (now() - datetime.fromisoformat(last)).total_seconds() + 5 if last else 30
+    budget = 2.2 * (now() - datetime.fromisoformat(last)).total_seconds() + 5 if last else 12
     for a, b in sorted([max(0.0, min(s[0], dur)), max(0.0, min(s[1], dur))] for s in body.segments if len(s) >= 2 and s[1] > s[0]):
         if budget <= 0:
             break

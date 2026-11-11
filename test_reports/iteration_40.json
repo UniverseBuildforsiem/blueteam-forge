@@ -1,0 +1,41 @@
+{
+  "summary": "Retested the iteration_39 video-progress fixes. Backend: 14 of 15 pytest tests pass. UI: all regression flows pass with Playwright on fresh students. Fixed and verified: (1) a tiny fake duration is now floored, so duration 1 with [[0,1]] gives 3%, not watched; the stored duration cannot be lowered (600 then 31 stays at 600); the Vimeo real duration 2550s comes from oEmbed and is cached, so a client duration of 10 with [[0,10]] gives 0%. (2) Back-to-back [[0,30]], [[30,60]], [[60,90]] stays under 50% and is not watched; reports spaced at real time reach 100% and watched; a skip [[0,100]] is clipped to 30%. (3) Raw iframe embed code with &amp; is parsed. The private sf-l1 video is in unavailable_videos and not in video_lessons, the lesson can be completed for +10 XP, and the UI shows lesson-video-unavailable with Mark as complete. (4) The video-error code is in place but I could not trigger it in the test browser. One remaining bypass: on YouTube the server cannot get the duration (video_meta duration is None for inWWhr5tnEA), so the floor is 30s, and the first-report grace is also 30s. A first report of {duration:30, segments:[[0,30]]} gives 100% and watched instantly.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/paths/{pid}/lessons/{lid}/video", "issue": "Bypass for YouTube lessons, where the server has no duration. The floor is max(stored, client, 30), and the first-report budget is also 30. A fresh student posting {duration:30, segments:[[0,30]]} once gets percent 100, watched:true and newly:true. Reproduced on soc-l1/l1-l1. More generally, any YouTube video can be finished in about 30/2.2 seconds plus the client's duration, because the client still sets the denominator (anything 30s or more). Possible fixes: make the first-report grace much smaller than the floor (about 5s); raise the floor from the lesson's minutes (for example minutes*60*0.5); or get the real YouTube duration server-side. The lengthSeconds scrape of the watch page returns nothing from this server (likely a consent or bot page). The YouTube Data API v3 videos?part=contentDetails, or the 'ytInitialPlayerResponse' with a CONSENT cookie, are options.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "video_meta()", "issue": "If httpx fails and nothing is cached yet, the result {available:True,duration:None} is not saved. Every GET /paths/{id} and every video POST then tries the 7s YouTube/Vimeo fetch again, which can add up to about 7s of latency while YouTube or Vimeo is unreachable. Consider caching the failure for a short TTL (for example 10 minutes)."},
+      {"endpoint": "POST /api/paths/{pid}/lessons/{lid}/video", "issue": "last_at is updated on every request, including clipped ones, and the frontend has already spliced the pending segments, so the clipped part is lost for good. With 2.2x headroom honest clients are fine. An honest client that comes back after being offline (several batches arriving together) can lose coverage and has to rewatch."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Vimeo lesson (2e9692fd641c / l-n6a2pyw)", "issue": "In the headless test browser the Vimeo iframe showed 'We couldn't verify the security of your connection' (Vimeo blocks the sandbox network). video-error did NOT appear: Vimeo's own block page does not fire a player error, and pl.ready() may hang instead of rejecting. This is likely specific to the environment, but there is no timeout fallback, so a student whose network Vimeo blocks sees only the locked message.", "affected_selectors": ["[data-testid='video-error']", "[data-testid='lesson-video-locked']"]}
+    ],
+    "design_issues": [
+      {"screen": "SOC Fundamentals > SOC Workflow (unavailable video)", "issues": ["The private YouTube iframe is still embedded and shows 'This video is private'.", "The lesson-video-unavailable note is rendered after the lesson body and resources, far below the broken player. Consider hiding the iframe for unavailable videos, or placing the note right under the player."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_video_progress.py", "/app/test_reports/pytest/pytest_iter40.xml"],
+  "action_items": [
+    "Close the YouTube duration-30 first-report bypass: the first-report grace must be well below the duration floor, or raise the floor using lesson minutes or a real YouTube duration",
+    "Optional: cache video_meta fetch failures for a short TTL to avoid repeated 7s outbound calls",
+    "Optional: hide the iframe, or move the unavailable note under the player, for unavailable videos",
+    "Optional: add a ready timeout in TrackedVideo for Vimeo/YT so video-error shows when the player never loads"
+  ],
+  "critical_code_review_comments": [
+    "routes_learn.py:172: dur = mt.duration or max(stored, client, 30); routes_learn.py:175: first budget = 30. Since floor == grace, one request completes the video",
+    "video_meta.py fetch_meta YouTube: the lengthSeconds regex on the watch page returns None from the server (cached duration None for inWWhr5tnEA), so in practice YouTube always uses the client-controlled duration",
+    "TrackedVideo.jsx: YT.Player is still never destroy()ed on unmount; the Vimeo cleanup only removes timeupdate (seeked/pause/ended/error listeners and the player are not destroyed)",
+    "Paths.jsx:64: tracked requires embedSrc(lesson.video_url) to be truthy, while the server tracks any parsable ID. If they ever differ, the UI shows Mark as complete and the server returns 400. Raw Vimeo embed and raw YouTube embed parse fine today"
+  ],
+  "updated_files": ["/app/backend/tests/test_video_progress.py"],
+  "success_rate": {"backend": "93% (14/15; the failure is the duration-30 first-report bypass)", "frontend": "100% of requested UI checks (video-error not triggerable in the test environment)"},
+  "seed_data_creation": "Fresh TEST_ students registered (test_vid_*, test_vidui_*, test_vidvm_* @example.com). Temporary TEST_Video Path paths created by admin and deleted at the end of the tests.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && pytest tests/test_video_progress.py -n 0 (about 45s, uses sleeps). The tracked YouTube lesson is soc-l1/l1-l1; the unavailable one is soc-fundamentals/sf-l1; Vimeo is 2e9692fd641c/l-n6a2pyw (duration 2550 cached in db.video_meta). Fresh students must POST /api/auth/onboarding {goal:'SOC L1'} before /app pages render. test_duration_30_first_report is expected to fail until the bypass is fixed.",
+  "rca of the issue": "Repro: register a fresh student, then POST /api/paths/soc-l1/lessons/l1-l1/video {duration:30, segments:[[0,30]]} and you get {percent:100, watched:true}. Cause: the YouTube duration is unknown server-side, so dur = max(0, 30, 30) = 30, and first-report budget = 30 covers the whole video. Mitigation: first grace about 5s, or floor >= lesson minutes*60*k, or a real server-side duration."
+}

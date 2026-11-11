@@ -47,7 +47,12 @@ async def video_meta(raw):
     try:
         m = await fetch_meta(*v)
     except (httpx.HTTPError, ValueError):
-        return cached or {"key": key, "available": True, "duration": None}
+        if cached:
+            return cached
+        m = {"available": True, "duration": None}
+        m.update(key=key, checked_at=(now() - timedelta(hours=11, minutes=50)).isoformat())
+        await db.video_meta.update_one({"key": key}, {"$set": m}, upsert=True)
+        return m
     m.update(key=key, checked_at=now_iso())
     await db.video_meta.update_one({"key": key}, {"$set": m}, upsert=True)
     return m
