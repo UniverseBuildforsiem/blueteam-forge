@@ -1,0 +1,44 @@
+{
+  "summary": "Tested video progress tracking on the backend (new pytest file, 9 tests) and in the UI (Playwright, fresh students on soc-fundamentals and soc-l1). The core flow works: segments merge, percent is computed, the 90% gate blocks completion, a skip like [[0,100]] is ignored, no XP is given for watching, the quiz plus video gate works, non-video lessons return 400 and still complete normally, and GET /paths returns the 4 new fields. In the UI the header (0/1 then 1/1), the eye icon (slate, then cyan at 42%, then green), the progress bar, the locked message, the enabled button and the +10 XP toast all worked. Problems: (1) CRITICAL CONTENT: the seeded sf-l1 video (youtu.be/2PNZENU07HQ) shows 'This video is private' on YouTube, so no real student can ever complete SOC Workflow. (2) The anti-skip has 2 easy bypasses, both reproduced: a fake duration, and back-to-back 30s chunks.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/paths/{pid}/lessons/{lid}/video", "issue": "Fake duration bypass. The client sets the duration on its first report and the server stores it. Posting {duration:1, segments:[[0,1]]} returns percent 100 and watched:true right away. Fix: check the duration against a known value (store it on the lesson from oEmbed/admin, or require a minimum such as lesson.minutes*60*0.5), or refuse to lower the stored duration.", "priority": "HIGH"},
+      {"endpoint": "POST /api/paths/{pid}/lessons/{lid}/video", "issue": "Rapid chunk bypass. Every request gets a fresh 30s allowance (allowed = 30 + 2.2*elapsed). 3 back-to-back posts [[0,30]], [[30,60]], [[60,90]] on a 100s video gave watched:true within about 1s. Fix: give the 30s grace only once (or a small grace like 5s), and allow about 2.2*elapsed per request.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/paths/{pid}/lessons/{lid}/video", "issue": "A rejected over-allowance request still updates last_at, which resets the clock. The frontend has already spliced those pending segments, so a real batch that arrives late (for example after a network hiccup) is lost silently."},
+      {"endpoint": "tracked_video()", "issue": "The backend counts any youtube/vimeo URL as trackable, but the frontend only tracks youtube.com/embed or player.vimeo.com/video. If embedSrc gives anything else (or nothing), the UI shows 'Mark as complete' and the backend answers 400 'Watch at least 90%'. Use one rule in both places, for example compute 'trackable' on the server and send it to the frontend."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LessonView sf-l1 (SOC Fundamentals > SOC Workflow)", "issue": "The YouTube embed shows 'This video is private'. Because of the new watch gate, the lesson can never be completed by a real student and the path cannot reach 100%.", "selector": "[data-testid='lesson-video']", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Unavailable video", "issue": "There is no fallback when a video is private, deleted or has embedding disabled (YouTube onError 100/101/150). The student is stuck with the locked message. Consider handling YT onError by unlocking or flagging the video, or giving admins an override.", "affected_selectors": ["[data-testid='lesson-video-locked']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_video_progress.py", "/app/test_reports/pytest/pytest_iter39.xml"],
+  "action_items": [
+    "Replace the private sf-l1 video (https://youtu.be/2PNZENU07HQ) with a public one, or make it public",
+    "Fix the fake duration bypass in video_progress (do not trust the client's first duration)",
+    "Fix the rapid chunk bypass: give the 30s grace once, not on every request",
+    "Do not update last_at when a request is rejected",
+    "Use the same trackable rule in the backend tracked_video and the frontend 'tracked' check",
+    "Handle YouTube onError and Vimeo error events so unavailable videos do not lock lessons forever"
+  ],
+  "critical_code_review_comments": [
+    "routes_learn.py video_progress: dur = rec.get('duration') or body.duration, so the client controls the denominator on first contact",
+    "routes_learn.py video_progress: the 30s allowance applies on every call, so the anti-skip only limits the number of requests",
+    "TrackedVideo.jsx: the YT.Player is never destroy()ed on unmount (only the poll interval is cleared); small leak when switching lessons",
+    "TrackedVideo.jsx: when flush() returns early because busy, segments wait until the next 10s tick; on unmount with busy=true the last segments are lost"
+  ],
+  "updated_files": ["/app/backend/tests/test_video_progress.py"],
+  "success_rate": {"backend": "78% (7/9; the 2 failures are the anti-skip bypass checks, which are expected to fail while the bypasses exist)", "frontend": "95% (all requested UI checks passed; real headless playback could not be confirmed)"},
+  "seed_data_creation": "Registered several TEST_ students (test_vid_*@example.com, test_vidui_*@example.com, test_vidplay_*@example.com); they were not deleted because there is no user-delete API. A TEST_VideoQuiz path was created and then deleted. No seeded data was changed.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run tests/test_video_progress.py with -p no:xdist -o addopts=''. It takes about 26s because of sleeps. test_duration_spoof_bypass and test_rapid_chunks_bypass should PASS once the fixes are in. Fresh UI students need POST /api/auth/onboarding {goal:'SOC L1'}, otherwise they are sent to /onboarding. The soc-l1/l1-l1 video (inWWhr5tnEA, 7:07) is public. Headless Chromium stays buffering at 0:00, so the real playback percent increase is UNVERIFIED; no /video POSTs were sent while it buffered. Builder preview was checked in code only (PathBuilder uses LessonBody without videoNode, so it shows a plain VideoFrame); not checked in the UI.",
+  "rca of the issue": "sf-l1 is uncompletable: the seeded video_url points to a private YouTube video, and the new gate requires 90% coverage, which is impossible when the video cannot play. Repro: as a fresh student open /app/paths/soc-fundamentals, select SOC Workflow, see 'This video is private' and the lesson-video-locked message. Bypasses: repro is in test_video_progress.py::TestProgress::test_duration_spoof_bypass and ::test_rapid_chunks_bypass."
+}

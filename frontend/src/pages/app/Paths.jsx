@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CheckCircle2, Circle, PlayCircle, Download, Award, ChevronRight, FileText, Lock, Eye } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, Download, Award, ChevronRight, FileText, Lock, Eye, AlertTriangle } from "lucide-react";
 import { TrackedVideo } from "../../components/TrackedVideo";
 import { toast } from "sonner";
 import { api, API, errMsg } from "../../lib/api";
@@ -61,12 +61,14 @@ function LessonView({ lesson, p, onComplete, grade, onWatched }) {
   const done = p.completed_lessons.includes(lesson.id);
   const quizLock = lesson.quiz?.required && !p.quiz_passed_lessons?.includes(lesson.id);
   const src = embedSrc(lesson.video_url);
-  const tracked = p.video_lessons?.includes(lesson.id) && /^https:\/\/(www\.youtube\.com\/embed|player\.vimeo\.com\/video)\//.test(src);
+  const tracked = p.video_lessons?.includes(lesson.id) && !!src;
+  const unavailable = p.unavailable_videos?.includes(lesson.id);
   const watched = p.watched_lessons?.includes(lesson.id);
   const videoNode = tracked ? <TrackedVideo src={src} title={lesson.title} pid={p.id} lid={lesson.id} percent={p.video_percent?.[lesson.id] || 0} watched={watched} onWatched={onWatched} /> : null;
   return (
     <Glass className="p-6 sm:p-8" data-testid="lesson-view">
       <LessonBody lesson={lesson} grade={grade} completed={done} videoNode={videoNode} />
+      {unavailable && <div className="-mt-3 mb-2 text-[11px] font-mono text-orange-300 inline-flex items-center gap-1.5" data-testid="lesson-video-unavailable"><AlertTriangle className="h-3.5 w-3.5" />This video is private or removed, so watching it isn't required. Please let your instructor know.</div>}
       {done ? <button className="glow-btn mt-8" disabled data-testid="lesson-complete-button"><CheckCircle2 className="h-4 w-4" /> Completed</button>
         : quizLock ? <div className="mt-8 text-xs font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="lesson-complete-locked"><Lock className="h-3.5 w-3.5" />Pass the lesson quiz above to complete this lesson (+10 XP)</div>
         : tracked && !watched ? <div className="mt-8 text-xs font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="lesson-video-locked"><Lock className="h-3.5 w-3.5" />Watch at least 90% of the video to complete this lesson (+10 XP)</div>

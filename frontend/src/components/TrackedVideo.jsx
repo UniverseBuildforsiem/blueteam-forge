@@ -40,6 +40,7 @@ export function TrackedVideo({ src, title, pid, lid, percent: initial = 0, watch
   const ref = useRef(null);
   const [pct, setPct] = useState(initial);
   const [watched, setWatched] = useState(!!initWatched);
+  const [failed, setFailed] = useState(false);
   const youtube = src.includes("youtube.com/embed/");
   const tr = useTracker(pid, lid, (d) => { setPct(d.percent); setWatched(d.watched); if (d.newly) onWatched?.(); });
   useEffect(() => {
@@ -49,7 +50,7 @@ export function TrackedVideo({ src, title, pid, lid, percent: initial = 0, watch
     if (youtube) {
       loadYT().then((YT) => {
         if (!alive) return;
-        const pl = new YT.Player(ref.current, { events: { onStateChange: (e) => { if (e.data !== 1) { tr.tick(pl.getCurrentTime(), pl.getDuration()); tr.flush(); } } } });
+        const pl = new YT.Player(ref.current, { events: { onError: () => setFailed(true), onStateChange: (e) => { if (e.data !== 1) { tr.tick(pl.getCurrentTime(), pl.getDuration()); tr.flush(); } } } });
         const poll = setInterval(() => { if (pl.getPlayerState?.() === 1) tr.tick(pl.getCurrentTime(), pl.getDuration()); }, 1000);
         cleanup = () => { clearInterval(poll); };
       });
@@ -59,6 +60,8 @@ export function TrackedVideo({ src, title, pid, lid, percent: initial = 0, watch
       pl.on("seeked", (d) => tr.jump(d.seconds));
       pl.on("pause", tr.flush);
       pl.on("ended", tr.flush);
+      pl.on("error", () => setFailed(true));
+      pl.ready().catch(() => setFailed(true));
       cleanup = () => pl.off("timeupdate");
     }
     return () => { alive = false; clearInterval(every); cleanup(); tr.flush(); };
@@ -68,6 +71,7 @@ export function TrackedVideo({ src, title, pid, lid, percent: initial = 0, watch
       <iframe ref={ref} title={title || "Lesson video"} src={youtube ? withJsApi(src) : src} className="w-full h-full" allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
         allowFullScreen referrerPolicy="strict-origin-when-cross-origin" data-testid="lesson-video" />
     </div>
+    {failed && !watched && <div className="mt-2 text-[11px] font-mono text-orange-300" data-testid="video-error">This video won't play here. Please let your instructor know so they can fix the link.</div>}
     <div className="flex items-center gap-3 mt-2 text-[11px] font-mono" data-testid="video-progress">
       {watched ? <span className="text-green-400 inline-flex items-center gap-1.5" data-testid="video-watched"><CheckCircle2 className="h-3.5 w-3.5" />video watched</span>
         : <span className="text-slate-400 inline-flex items-center gap-1.5"><Eye className="h-3.5 w-3.5" />watched <span className="text-cyan-300" data-testid="video-percent">{pct}%</span> · 90% needed</span>}

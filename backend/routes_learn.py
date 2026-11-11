@@ -1,6 +1,6 @@
+import asyncio
 import io
 import os
-import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Optional
@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from core import db, now, now_iso, new_id, get_current_user, award, rank_for, send_email, email_template, frame_for, RANKS, FRAMES
+from video_meta import video_meta
 
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
@@ -121,7 +122,10 @@ async def get_path(pid: str, user=Depends(get_current_user)):
     final = await db.quizzes.find_one({"path_id": pid}, {"_id": 0, "id": 1, "title": 1, "pass_mark": 1})
     cert = await db.certificates.find_one({"user_id": user["id"], "path_id": pid}, NO_ID)
     ids = lesson_ids(p)
-    vids = [l["id"] for m in p["modules"] for l in m["lessons"] if tracked_video(l)]
+    lessons = [l for m in p["modules"] for l in m["lessons"]]
+    metas = await asyncio.gather(*[video_meta(l.get("video_url")) for l in lessons])
+    vids = [l["id"] for l, mt in zip(lessons, metas) if mt and mt["available"]]
+    unavailable = [l["id"] for l, mt in zip(lessons, metas) if mt and not mt["available"]]
     vp = {v["lesson_id"]: v for v in await db.video_progress.find({"user_id": user["id"], "path_id": pid}, NO_ID).to_list(1000)}
     passed = set(await db.lesson_quiz_attempts.distinct("lesson_id", {"user_id": user["id"], "path_id": pid, "passed": True}))
     for m in p["modules"]:
@@ -130,12 +134,13 @@ async def get_path(pid: str, user=Depends(get_current_user)):
                 l["quiz"] = {"required": True, "pass_count": pass_count(l["quiz"]), "questions": [{"id": q.get("id"), "text": q["text"], "options": q["options"]} for q in l["quiz"]["questions"]]}
     return {**p, "completed_lessons": [i for i in ids if i in done], "final_quiz": final, "certificate": cert,
             "percent": round(100 * len([i for i in ids if i in done]) / len(ids)) if ids else 0,
-            "video_lessons": vids, "watched_lessons": [i for i in vids if vp.get(i, {}).get("watched")],
+            "video_lessons": vids, "watched_lessons": [i for i in vids if vp.get(i, {}).get("watched")], "unavailable_videos": unavailable,
             "video_percent": {i: vp[i]["percent"] for i in vids if i in vp}, "quiz_passed_lessons": [i for i in ids if i in passed]}
 
 
-def tracked_video(l):
-    return bool(re.search(r"https?://[^\s\"'<>]*(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)/[^\s\"'<>]*", l.get("video_url") or "", re.I))
+async def tracked_meta(l):
+    mt = await video_meta(l.get("video_url"))
+    return mt if mt and mt["available"] else None
 
 
 def merge_spans(spans):
@@ -148,6 +153,10 @@ def merge_spans(spans):
     return out
 
 
+def covered(spans):
+    return sum(b - a for a, b in spans)
+
+
 class VideoIn(BaseModel):
     duration: float = Field(gt=0, le=86400)
     segments: list[list[float]] = Field(max_length=200)
@@ -156,20 +165,24 @@ class VideoIn(BaseModel):
 @router.post("/paths/{pid}/lessons/{lid}/video")
 async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_current_user)):
     p, l = await find_lesson(pid, lid)
-    if not tracked_video(l):
+    mt = await tracked_meta(l)
+    if not mt:
         raise HTTPException(400, "This lesson has no trackable video")
     rec = await db.video_progress.find_one({"user_id": user["id"], "lesson_id": lid}, NO_ID) or {}
-    dur = rec.get("duration") or round(body.duration, 1)
-    new = [[max(0.0, min(a, dur)), max(0.0, min(b, dur))] for a, b in (s[:2] for s in body.segments if len(s) >= 2) if b > a]
-    old = rec.get("spans", [])
-    spans = merge_spans(old + new)
-    added = sum(b - a for a, b in spans) - sum(b - a for a, b in old)
+    dur = float(mt["duration"] or max(rec.get("duration") or 0, body.duration, 30))
+    spans = rec.get("spans", [])
     last = rec.get("last_at")
-    allowed = 30 + (2.2 * (now() - datetime.fromisoformat(last)).total_seconds() if last else 0)
-    if added > allowed:
-        spans = old
-    covered = sum(b - a for a, b in spans)
-    percent = min(100, round(100 * covered / dur))
+    budget = 2.2 * (now() - datetime.fromisoformat(last)).total_seconds() + 5 if last else 30
+    for a, b in sorted([max(0.0, min(s[0], dur)), max(0.0, min(s[1], dur))] for s in body.segments if len(s) >= 2 and s[1] > s[0]):
+        if budget <= 0:
+            break
+        trial = merge_spans(spans + [[a, b]])
+        inc = covered(trial) - covered(spans)
+        if inc > budget:
+            trial = merge_spans(spans + [[a, a + budget]])
+        budget -= covered(trial) - covered(spans)
+        spans = trial
+    percent = min(100, round(100 * covered(spans) / dur))
     watched = rec.get("watched") or percent >= 90
     await db.video_progress.update_one({"user_id": user["id"], "lesson_id": lid}, {"$set": {
         "path_id": pid, "duration": dur, "spans": spans, "percent": percent, "watched": watched, "last_at": now_iso(),
@@ -178,7 +191,7 @@ async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_cur
 
 
 async def video_ok(uid, l):
-    return not tracked_video(l) or bool(await db.video_progress.find_one({"user_id": uid, "lesson_id": l["id"], "watched": True}))
+    return not await tracked_meta(l) or bool(await db.video_progress.find_one({"user_id": uid, "lesson_id": l["id"], "watched": True}))
 
 
 def pass_count(quiz):
