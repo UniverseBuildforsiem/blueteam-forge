@@ -518,6 +518,30 @@ async def ctf_bulk(body: CtfBulkIn, user=Depends(staff)):
 
 
 
+@router.get("/builder/video-check")
+async def video_check(url: str, user=Depends(staff)):
+    import httpx
+    from urllib.parse import urlparse
+    host = (urlparse(url).hostname or "").lower()
+    if host in ("vimeo.com", "www.vimeo.com"):
+        api, name = "https://vimeo.com/api/oembed.json", "Vimeo"
+    elif host in ("www.youtube.com", "youtube.com"):
+        api, name = "https://www.youtube.com/oembed", "YouTube"
+    else:
+        raise HTTPException(400, "Only Vimeo and YouTube links can be checked")
+    try:
+        async with httpx.AsyncClient(timeout=8, follow_redirects=True) as c:
+            r = await c.get(api, params={"url": url, "format": "json"})
+    except httpx.HTTPError:
+        return {"ok": None, "reason": f"Couldn't reach {name} to check this video — the preview below shows whether it plays."}
+    if r.status_code == 200:
+        return {"ok": True, "title": r.json().get("title", "")[:120]}
+    reasons = {401: f"The owner has turned off embedding for this {name} video, so it can't play inside lessons.",
+               403: f"This {name} video's privacy settings block embedding on other sites. In {name}, allow embedding on your domain (or 'Anywhere').",
+               404: f"{name} can't find this video. It may be private, deleted, or an unlisted Vimeo link missing its hash (vimeo.com/ID/HASH)."}
+    return {"ok": False, "reason": reasons.get(r.status_code, f"{name} rejected this link (HTTP {r.status_code}). Check it's a public or unlisted video.")}
+
+
 @router.get("/builder/write-lesson/{job_id}")
 @router.get("/builder/jobs/{job_id}")
 async def write_lesson_status(job_id: str, user=Depends(staff)):

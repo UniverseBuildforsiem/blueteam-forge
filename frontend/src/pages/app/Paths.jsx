@@ -6,6 +6,8 @@ import { api, API, errMsg } from "../../lib/api";
 import { Glass, PageHeader } from "../../components/common";
 import { LessonQuiz } from "../../components/LessonQuiz";
 import { LessonCtfButton } from "../../components/CtfDialog";
+import { VideoFrame } from "../../components/VideoField";
+import { embedSrc } from "../../lib/video";
 import { PathTabBar, PathSops } from "../../components/PathTabs";
 import { Quizzes } from "./Quizzes";
 import CTF from "./CTF";
@@ -36,10 +38,11 @@ const ATTACH = { quiz: ["Quiz", (a) => `/app/quizzes/${a.id}`], lab: ["Lab", (a)
   ctf: ["CTF", () => "/app/ctf"], course: ["Course", (a) => a.url], sop: ["SOP", (a) => `/sops/${a.id}`] };
 
 export function LessonBody({ lesson, grade, completed }) {
+  const video = embedSrc(lesson.video_url);
   return (<>
     <div className="eyebrow mb-2">// lesson · {lesson.minutes} min</div>
     <h2 className="text-2xl font-bold mb-6">{lesson.title || "Untitled lesson"}</h2>
-    {lesson.video_url && <div className="aspect-video mb-6 border border-cyan-500/20"><iframe title={lesson.title} src={lesson.video_url} className="w-full h-full" allowFullScreen data-testid="lesson-video" /></div>}
+    {video && <div className="aspect-video mb-6 border border-cyan-500/20"><VideoFrame src={video} title={lesson.title} testId="lesson-video" /></div>}
     <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[15px]">{lesson.content}</div>
     <LessonQuiz key={lesson.id} quiz={lesson.quiz} grade={grade} completed={completed} />
     {lesson.attachments?.length > 0 && <div className="mt-8" data-testid="lesson-practice"><div className="eyebrow mb-3">practice this lesson</div>

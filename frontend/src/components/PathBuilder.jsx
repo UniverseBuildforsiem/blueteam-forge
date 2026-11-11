@@ -7,6 +7,7 @@ import { LessonBody } from "../pages/app/Paths";
 import { LessonQuizBuilder } from "./LessonQuizBuilder";
 import { BulkQuiz } from "./BulkQuiz";
 import { CtfCreator } from "./CtfCreator";
+import { VideoField } from "./VideoField";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const Lbl = ({ l, children }) => <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
@@ -93,7 +94,7 @@ function LessonEditor({ l, upL, assets, onAsset, ctx }) {
           <Lbl l="Lesson title"><input className="field" value={l.title} onChange={(e) => upL({ ...l, title: e.target.value })} data-testid="builder-lesson-title" /></Lbl>
           <Lbl l="Minutes"><input type="number" min={1} className="field" value={l.minutes} onChange={(e) => upL({ ...l, minutes: +e.target.value })} data-testid="builder-lesson-minutes" /></Lbl>
         </div>
-        <Lbl l="Video embed URL"><input className="field text-xs" placeholder="https://www.youtube.com/embed/..." value={l.video_url} onChange={(e) => upL({ ...l, video_url: e.target.value })} data-testid="builder-lesson-video" /></Lbl>
+        <Lbl l="Video (Vimeo or YouTube)"><VideoField key={l.id} l={l} upL={upL} /></Lbl>
         <div><div className="flex items-center justify-between"><span className="text-[11px] font-mono uppercase text-slate-500">Content</span><WriteButton l={l} upL={upL} ctx={ctx} /></div>
           <textarea className="field h-44 text-sm mt-1" placeholder="Lesson content (line breaks and '- ' bullets)" value={l.content} onChange={(e) => upL({ ...l, content: e.target.value })} data-testid="builder-lesson-content" />
           <LessonQuizBuilder l={l} upL={upL} level={ctx.level} /></div>
