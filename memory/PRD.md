@@ -231,3 +231,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Anti-skip: first report 12s grace, then 2.2x wall-clock budget + 5s per report; extra coverage clipped.
 - UI: eye icon + % on lesson list, "videos watched X/Y" in path header, progress bar under video, lock message until watched.
 - Known limit: YouTube duration could be made exact with a YouTube Data API key (backlog).
+
+## Jun 2026 — Resume where left off
+- Video progress POST accepts `position`; GET /api/paths/{id} returns video_resume (only for unwatched videos, >=3s and not in last 5s). YouTube resumes via start= param, Vimeo via setCurrentTime. "Start over" link. Watched videos start at 0.
+- Position flushed every 10s, on pause/end, lesson switch and tab hide; PathDetail updates resume/percent locally so in-session switching is accurate.
+- YouTube unknown duration now = max(lower median of per-user reported durations, own report, 30s) stored in video_meta.reports.<uid>.

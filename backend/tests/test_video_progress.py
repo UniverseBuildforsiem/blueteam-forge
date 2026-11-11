@@ -1,4 +1,4 @@
-# Iterations 39-40: Video progress tracking (90% gate, server duration floor, rate budget, availability check)
+# Iterations 39-42: Video progress tracking (90% gate, median-of-reports duration, rate budget, availability check)
 import os
 import time
 import uuid
@@ -112,8 +112,8 @@ class TestDuration:
 class TestBudget:
     def test_skip_clipped(self):
         s = fresh_student()
-        d = vpost(s, YVID, 100, [[0, 100]]).json()
-        assert d["percent"] == 30 and d["watched"] is False, d
+        d = vpost(s, YVID, 600, [[0, 600]]).json()  # first report budget 12s; denominator = median of per-user reports
+        assert d["percent"] <= 40 and d["watched"] is False, d
 
     def test_rapid_chunks_blocked(self):
         s = fresh_student()
@@ -123,18 +123,14 @@ class TestBudget:
 
     def test_spaced_reports_watch_then_complete(self):
         s = fresh_student()
-        d = vpost(s, YVID, 60, [[0, 25]]).json()
-        assert d["percent"] == 42
+        # full watch->complete with a known denominator lives in test_video_median.py (needs isolated video_meta.reports)
+        d = vpost(s, YVID, 600, [[0, 25]]).json()
+        assert 0 < d["percent"] < 90 and d["watched"] is False
         r = s.post(f"{BASE}/api/paths/{YPID}/lessons/{YVID}/complete")
         assert r.status_code == 400 and "Watch at least 90%" in r.json()["detail"]
-        time.sleep(16)
-        d = vpost(s, YVID, 60, [[25, 60]]).json()
-        assert d["percent"] == 100 and d["watched"] is True and d["newly"] is True, d
         g = s.get(f"{BASE}/api/paths/{YPID}").json()
-        assert YVID in g["watched_lessons"] and g["video_percent"][YVID] == 100
-        assert xp(s) == 0  # no XP for video
-        assert s.post(f"{BASE}/api/paths/{YPID}/lessons/{YVID}/complete").status_code == 200
-        assert xp(s) == 10
+        assert g["video_percent"][YVID] == d["percent"] and YVID not in g["watched_lessons"]
+        assert xp(s) == 0
 
     def test_bad_payload_422(self):
         assert vpost(fresh_student(), YVID, 0, [[0, 1]]).status_code == 422
@@ -166,11 +162,9 @@ class TestAdminPaths:
         assert d["passed"] is True and d["completed"] is False and d["xp"] == 0
         r = s.post(f"{BASE}/api/paths/{pid}/lessons/l-vq-t1/complete")
         assert r.status_code == 400 and "Watch" in r.json()["detail"]
-        vpost(s, "l-vq-t1", 50, [[0, 25]], pid)
-        time.sleep(12)
-        assert vpost(s, "l-vq-t1", 50, [[25, 50]], pid).json()["watched"] is True
-        assert s.post(f"{BASE}/api/paths/{pid}/lessons/l-vq-t1/complete").status_code == 200
-        assert xp(s) == 10
+        assert vpost(s, "l-vq-t1", 600, [[0, 25]], pid).json()["watched"] is False
+        assert s.post(f"{BASE}/api/paths/{pid}/lessons/l-vq-t1/complete").status_code == 400
+        assert xp(s) == 0  # full quiz+video completion covered in test_video_median.py
 
     def test_cleanup(self, admin):
         for pid in TestAdminPaths.pids:

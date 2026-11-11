@@ -58,7 +58,7 @@ class TestResume:
     def test_near_end_absent(self):
         s = fresh_student()
         vpos(s, 600, [], 10)
-        # server duration is max(client_max, ...) -> position clipped to dur; huge position => near end
+        # server duration = median of per-user reports (30s floor) -> position clipped to dur; huge position => near end
         vpos(s, 600, [], 86400)
         assert YVID not in resume(s)
 

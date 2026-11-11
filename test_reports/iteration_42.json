@@ -1,0 +1,42 @@
+{
+  "summary": "Retested both iteration_41 issues. Fix 1 (frontend stale resume) is verified. After Start over and a lesson switch (unmount flush), or after waiting for the 10s interval flush and then switching, the lesson reopens with no start param and no resumed text, and the server video_resume is {}. Posting position=150 via the API and reloading shows start=150 and 'resumed from 2:30'. Fix 2 (backend median of per-user reports) works: reports are stored per user, a user cannot lower their own value, the 30s floor applies, and 2 honest reporters outvote an 86400 attacker. Edge case: with exactly 2 reporters, the upper median (vals[len//2]) picks the attacker's 86400. Regression checks pass: resume start param, Start over, watched => no start param plus the 'video watched' row, the lock until watched, the Complete button, and the header 'videos watched 1/1'. Backend: test_video_progress.py + test_video_resume.py 26/26 pass after updating them. The new isolated test_video_median.py passes 7/8; the one failure is the 2-reporter edge case.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/paths/{pid}/lessons/{lid}/video (YouTube, unknown duration)", "issue": "The median is vals[len(vals)//2], which is the UPPER median. With exactly 2 reporters (an attacker at 86400 and an honest user at 60), the denominator is 86400, so the honest user is still blocked until a 3rd reporter arrives. Reproduced in test_video_median.py::test_attacker_with_one_honest_reporter. Switching to the lower median (vals[(len-1)//2]) moves the risk the other way: a fake low value would let a student cheat once the 30s floor applies. A possible mitigation is to use max(own_report, lower median), or to cap reports with lesson minutes*60*k. This is a design tradeoff and low impact in practice."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_video_median.py",
+    "/app/backend/tests/test_video_progress.py",
+    "/app/backend/tests/test_video_resume.py",
+    "/app/backend/tests/ui_setup_iter42.py",
+    "/app/test_reports/pytest/iter42.xml",
+    "/app/test_reports/pytest/iter42_median.xml"
+  ],
+  "action_items": [
+    "Optional: decide how to handle the 2-reporter case of the median (upper median lets 1 attacker block 1 honest user)",
+    "Still open from iter41 (minor): TrackedVideo.restart() returns early if the YT player is not ready yet, so Start over silently does nothing in that window"
+  ],
+  "critical_code_review_comments": [
+    "Paths.jsx onProgress computes video_resume locally using d.dur (the client duration), while the server's resume_at uses the server/median duration. Near the end of a video the client and server can disagree by a few seconds about whether to resume. This is harmless.",
+    "Every POST recomputes the denominator from the current median, so a user's percent can change between reports as other users report. This is expected but worth knowing.",
+    "LessonView key={cur.id} remounts TrackedVideo on lesson switch, so useState(start) picks up the locally updated p.video_resume. That is correct."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_video_progress.py (skip_clipped, spaced_reports and quiz_video_flow made independent of the denominator; the full-watch flows moved to test_video_median.py)",
+    "/app/backend/tests/test_video_resume.py (comment only)",
+    "/app/backend/tests/test_video_median.py (new; changes video_meta.reports for inWWhr5tnEA, so run it alone with -n 0)",
+    "/app/backend/tests/ui_setup_iter42.py (new)"
+  ],
+  "success_rate": {"backend": "26/26 regression + 7/8 median (the 1 failure is the documented 2-reporter edge case)", "frontend": "100% of the requested flows"},
+  "seed_data_creation": "Registered fresh TEST_ students (test_vid_*, test_res42_* @example.com). Set watched:true in mongo for test_res42_1848abdb. A TEST_Video Median Path was created and then deleted. After the tests, video_meta.reports was unset for all docs, as requested. No seed data was changed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The YouTube iframe can't be played in headless, so verify flushes via the API or Start over (Start over plus the 10s interval flush works in headless because onStateChange sets the duration). Run test_video_median.py ALONE with `pytest tests/test_video_median.py -n 0`, because it resets video_meta.reports for yt:inWWhr5tnEA. Afterwards run db.video_meta.updateMany({}, {$unset:{reports:''}})."
+}

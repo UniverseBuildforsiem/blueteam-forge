@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="8" time="69.547" timestamp="2026-11-11T15:56:49.611394+00:00" hostname="agent-env-df36c26a-12a0-4d8f-9d10-8db8a18a612d"><testcase classname="tests.test_video_median.TestMedian" name="test_meta_has_no_server_duration" time="0.003" /><testcase classname="tests.test_video_median.TestMedian" name="test_floor_30" time="0.762" /><testcase classname="tests.test_video_median.TestMedian" name="test_own_report_cannot_be_lowered" time="2.618" /><testcase classname="tests.test_video_median.TestMedian" name="test_reports_are_per_user" time="1.082" /><testcase classname="tests.test_video_median.TestMedian" name="test_single_reporter_watch_then_complete" time="20.723" /><testcase classname="tests.test_video_median.TestMedian" name="test_attacker_outvoted_by_two_honest" time="21.627" /><testcase classname="tests.test_video_median.TestMedian" name="test_attacker_with_one_honest_reporter" time="1.295"><failure message="AssertionError: honest user denominator=86400.0 with 2 reporters (upper median)&#10;assert 86400.0 &lt;= 600&#10; +  where 86400.0 = stored_dur('f4621fbe1ae3')&#10; +    where 'f4621fbe1ae3' = uid(&lt;requests.sessions.Session object at 0xfe115b3139d0&gt;)">self = &lt;test_video_median.TestMedian object at 0xfe115b3109d0&gt;
+
+    def test_attacker_with_one_honest_reporter(self):
+        """2 reporters: [60, 86400] -&gt; upper median picks 86400 (honest user still blocked)."""
+        atk, h = fresh_student(), fresh_student()
+        vpost(atk, YVID, 86400, [])
+        vpost(h, YVID, 60, [[0, 12]])
+        print("2-reporter stored dur for honest user:", stored_dur(uid(h)))
+&gt;       assert stored_dur(uid(h)) &lt;= 600, f"honest user denominator={stored_dur(uid(h))} with 2 reporters (upper median)"
+E       AssertionError: honest user denominator=86400.0 with 2 reporters (upper median)
+E       assert 86400.0 &lt;= 600
+E        +  where 86400.0 = stored_dur('f4621fbe1ae3')
+E        +    where 'f4621fbe1ae3' = uid(&lt;requests.sessions.Session object at 0xfe115b3139d0&gt;)
+
+tests/test_video_median.py:90: AssertionError</failure></testcase><testcase classname="tests.test_video_median.TestMedian" name="test_quiz_video_flow_admin_path" time="21.282" /></testsuite></testsuites>
