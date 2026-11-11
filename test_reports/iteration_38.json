@@ -1,0 +1,17 @@
+{
+  "summary": "Tested Path Builder video field (toEmbed conversion, live preview, embeddability check, warnings, saving) and GET /api/builder/video-check. All requested cases pass. Backend 12/12 pytest. UI: all 6 conversion cases produce the correct builder-video-embed-url and builder-video-preview-frame src (Vimeo ?h= hash kept, &badge dropped, &amp; decoded, youtu.be ?t=42 -> ?start=42). Pasting full embed code with <script> adds NO script element to the DOM (0 player.vimeo.com/api scripts, only the single preview iframe). builder-video-ok shows 'embeddable · <title>' for valid Vimeo/YouTube. vimeo.com/1 shows red 'Vimeo can't find this video...' warning. <script>alert(1)</script>, javascript:alert(1), youtube watch?v=bad show red warning with no preview, and saving stores video_url=''. example.com/video.mp4 shows a yellow warning and still previews (sandboxed iframe). Saving the embed code stores https://player.vimeo.com/video/76979871?h=8272103f6e; reopening shows it in the field; Student preview tab, admin /app/paths/<id> and student /app/paths/<id> render lesson-video iframe with that src.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_video_embed_check.py", "/app/backend/tests/ui_setup_iter38.py", "/app/test_reports/pytest/pytest_iter38.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Optional hardening: backend /manage/paths does not validate/normalize lesson video_url, so a direct API call can store e.g. 'javascript:...'. Rendering is safe because LessonBody uses embedSrc(), but server-side validation would be stronger defense-in-depth.",
+    "Optional: video_url with a red embeddability warning from the live check (e.g. vimeo.com/1) is still saved, since only parse errors block saving. That matches the spec (warning only)."
+  ],
+  "updated_files": ["/app/backend/tests/test_video_embed_check.py", "/app/backend/tests/ui_setup_iter38.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created a temporary path TEST_video_ui_it38 (unpublished, then published briefly for the student check) and deleted it afterwards (outline returns 404). No seeded paths were modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use ui_setup_iter38.py create|publish|show|delete to make and remove a TEST path. Log in through page.request.post /api/auth/login (cookies). Path builder: /instructor > content-kind-paths > content-edit-<id> > builder-lesson-0-0 > builder-lesson-video. pytest needs REACT_APP_BACKEND_URL exported."
+}

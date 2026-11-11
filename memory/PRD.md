@@ -220,3 +220,7 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Instructor/Admin CTF manager: Bulk Intel CTFs panel (paste up to 10 public IOCs -> POST /api/builder/ctf-bulk, 3 parallel AI jobs) with review cards, save one / save all / discard.
 - CTF editor uses a proper form (CtfFields) instead of JSON. Blank hints stripped on save. IOC must be public (routes_intel.public_ioc).
 - CTF `writeup` field: AI drafts it, instructor edits; hidden from /api/ctf until solved; shown in CtfDialog after solve. 8 seeded CTFs backfilled with writeups.
+
+## Jun 2026 — Smart video links in Path Builder
+- lib/video.js toEmbed(): converts vimeo.com/ID, vimeo.com/ID/HASH, player.vimeo.com (keeps ?h=), youtube watch/youtu.be/shorts/embed (keeps t= as start=), and pasted <iframe> embed code (&amp; decoded, scripts ignored) to embed URLs. Rejects non-https/javascript.
+- VideoField: live preview + embeddability check via GET /api/builder/video-check (Vimeo/YouTube oEmbed). Lessons render via embedSrc() so old raw links also work.
