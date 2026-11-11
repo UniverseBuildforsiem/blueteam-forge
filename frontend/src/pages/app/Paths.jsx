@@ -57,14 +57,14 @@ export function LessonBody({ lesson, grade, completed, videoNode }) {
   </>);
 }
 
-function LessonView({ lesson, p, onComplete, grade, onWatched }) {
+function LessonView({ lesson, p, onComplete, grade, onWatched, onProgress }) {
   const done = p.completed_lessons.includes(lesson.id);
   const quizLock = lesson.quiz?.required && !p.quiz_passed_lessons?.includes(lesson.id);
   const src = embedSrc(lesson.video_url);
   const tracked = p.video_lessons?.includes(lesson.id) && !!src;
   const unavailable = p.unavailable_videos?.includes(lesson.id);
   const watched = p.watched_lessons?.includes(lesson.id);
-  const videoNode = tracked ? <TrackedVideo src={src} title={lesson.title} pid={p.id} lid={lesson.id} percent={p.video_percent?.[lesson.id] || 0} watched={watched} resumeAt={p.video_resume?.[lesson.id] || 0} onWatched={onWatched} /> : null;
+  const videoNode = tracked ? <TrackedVideo src={src} title={lesson.title} pid={p.id} lid={lesson.id} percent={p.video_percent?.[lesson.id] || 0} watched={watched} resumeAt={p.video_resume?.[lesson.id] || 0} onWatched={onWatched} onProgress={onProgress} /> : null;
   return (
     <Glass className="p-6 sm:p-8" data-testid="lesson-view">
       <LessonBody lesson={lesson} grade={grade} completed={done} videoNode={videoNode} />
@@ -126,6 +126,8 @@ export function PathDetail() {
           </Glass>
         </div>
         {cur && <LessonView key={cur.id} lesson={cur} p={p} onComplete={complete} onWatched={() => { toast.success("Video watched — you can complete this lesson"); load(); }}
+          onProgress={(d) => { const lid = cur.id; const pos = d.position ?? 0; setP((x) => ({ ...x, video_percent: { ...x.video_percent, [lid]: d.percent },
+            video_resume: { ...x.video_resume, [lid]: !d.watched && pos >= 3 && pos < d.dur - 5 ? pos : 0 } })); }}
           grade={async (answers) => { const { data } = await api.post(`/paths/${id}/lessons/${cur.id}/quiz`, { answers }); if (data.passed) load(); return data; }} />}
       </div></>}
     </div>

@@ -1,0 +1,32 @@
+{
+  "summary": "Tested the 'Resume where left off' feature. Backend: 11/11 new pytest tests pass (test_video_resume.py). UI: the resume start param, the resumed text, Start over, and the watched case all work, with header and lock regressions OK. Found one frontend bug: path data is not reloaded when switching lessons, so reopening a lesson in the same page session uses the old video_resume value. Real playback could not be tested because the YouTube iframe can't be clicked in headless. Regression run of test_video_progress.py: 3 of 15 fail. These failures are pre-existing and come from the shared global video_meta.client_max being 600 for inWWhr5tnEA.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/paths/{pid}/lessons/{lid}/video (pre-existing, from iter40 fix)", "issue": "For YouTube videos with no server duration, the denominator is db.video_meta.client_max. This is a $max shared across ALL users, so one student posting duration=86400 makes the video impossible to watch to 90% for every student. inWWhr5tnEA currently has client_max=600 (written by the test suite). Because of this, test_skip_clipped, test_spaced_reports_watch_then_complete and test_quiz_video_flow now fail. Store the client duration per user (or cap it by lesson minutes), not globally."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Switch lesson and reopen in the same session (no page reload)", "issue": "PathDetail loads the path once and only calls load() again after a complete, a quiz pass, or a newly watched video. TrackedVideo flushes the position on unmount, but p.video_resume is stale, so when the student reopens the lesson it resumes from the position at page load, not where they stopped. Reproduced: at page load the position was 222. I clicked Start over (server video_resume became {}), switched lesson and came back: the iframe still had start=222 and showed 'resumed from 3:42'. I also posted position 150, switched away and back: start was still 222. Only a page reload showed start=150. Fix: call load() when the lesson changes, or keep a local resume map that the tracker's flush/unmount updates (the same staleness applies to video_percent and the lesson list %).", "affected_selectors": ["[data-testid=lesson-video]", "[data-testid=video-resumed]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_video_resume.py", "/app/backend/tests/ui_setup_iter41.py", "/app/test_reports/pytest/iter41.xml"],
+  "action_items": [
+    "Fix stale video_resume when switching lessons: reload the path on lesson change or update the resume value locally when the tracker flushes",
+    "Minor (YouTube): restart() returns early if the YT player has not loaded yet, so Start over silently does nothing in that window. Also, tr.jump(start) is not called for YouTube (only Vimeo), which is harmless now but inconsistent",
+    "Pre-existing: make client_max per user, or bounded, so one user can't inflate a YouTube video's duration for everyone"
+  ],
+  "critical_code_review_comments": [
+    "resume_at rules are correct: watched -> absent, pos<3 -> absent, pos>=dur-5 -> absent, position is clipped to dur. A POST without position keeps the old position, and position=0 clears it (Start over)",
+    "Position flush on visibilitychange (hidden) and unmount is present. The 10s interval flush also sends the position when only the position changed"
+  ],
+  "updated_files": ["/app/backend/tests/test_video_resume.py", "/app/backend/tests/ui_setup_iter41.py"],
+  "success_rate": {"backend": "100% (11/11 new); regression 12/15 (3 fail from global client_max=600)", "frontend": "~85% (resume/start over/watched OK; same-session reopen stale)"},
+  "seed_data_creation": "Registered fresh TEST_ students (test_vid_*, test_res_*, test_resw_*, test_play_* @example.com). Set video_progress watched:true in mongo for test_resw_29ff689c and for one pytest user. No seed data was changed.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "YouTube playback can't be clicked in the headless iframe (ytp-large-play-button times out), so verify position saving via API. video_meta yt:inWWhr5tnEA client_max=600 globally, which breaks the quick-watch tests in test_video_progress.py. Use mongo to set watched:true instead."
+}

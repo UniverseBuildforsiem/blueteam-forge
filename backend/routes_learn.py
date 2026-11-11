@@ -179,8 +179,9 @@ async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_cur
     if mt["duration"]:
         dur = float(mt["duration"])
     else:
-        seen = await db.video_meta.find_one_and_update({"key": mt["key"]}, {"$max": {"client_max": round(body.duration, 1)}}, upsert=True, return_document=True)
-        dur = float(max(seen.get("client_max") or 0, rec.get("duration") or 0, 30))
+        reps = (await db.video_meta.find_one_and_update({"key": mt["key"]}, {"$max": {f"reports.{user['id']}": round(body.duration, 1)}}, upsert=True, return_document=True)).get("reports", {})
+        vals = sorted(reps.values())
+        dur = float(max(vals[len(vals) // 2], 30))
     spans = rec.get("spans", [])
     last = rec.get("last_at")
     budget = 2.2 * (now() - datetime.fromisoformat(last)).total_seconds() + 5 if last else 12

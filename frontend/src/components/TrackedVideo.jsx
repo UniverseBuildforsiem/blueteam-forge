@@ -23,7 +23,7 @@ function useTracker(pid, lid, onUpdate) {
     const segments = t.pending.splice(0);
     const position = t.pos;
     t.busy = true;
-    try { const { data } = await api.post(`/paths/${pid}/lessons/${lid}/video`, { duration: t.dur, segments, ...(position !== null ? { position } : {}) }); t.sentPos = position; onUpdate(data); } catch { /* retry on next flush */ }
+    try { const { data } = await api.post(`/paths/${pid}/lessons/${lid}/video`, { duration: t.dur, segments, ...(position !== null ? { position } : {}) }); t.sentPos = position; onUpdate({ ...data, position, dur: t.dur }); } catch { /* retry on next flush */ }
     t.busy = false;
   };
   const tick = (time, dur) => {
@@ -51,7 +51,7 @@ function ProgressRow({ watched, pct, resumed, restart }) {
     </div>);
 }
 
-export function TrackedVideo({ src, title, pid, lid, percent: initial = 0, watched: initWatched, resumeAt = 0, onWatched }) {
+export function TrackedVideo({ src, title, pid, lid, percent: initial = 0, watched: initWatched, resumeAt = 0, onWatched, onProgress }) {
   const ref = useRef(null);
   const player = useRef(null);
   const [start] = useState(initWatched ? 0 : resumeAt);
@@ -60,7 +60,12 @@ export function TrackedVideo({ src, title, pid, lid, percent: initial = 0, watch
   const [watched, setWatched] = useState(!!initWatched);
   const [failed, setFailed] = useState(false);
   const youtube = src.includes("youtube.com/embed/");
-  const tr = useTracker(pid, lid, (d) => { setPct(d.percent); setWatched(d.watched); if (d.newly) onWatched?.(); });
+  const tr = useTracker(pid, lid, (d) => {
+    if (!alive.current) { onProgress?.(d); if (d.newly) onWatched?.(); return; }
+    setPct(d.percent); setWatched(d.watched); onProgress?.(d); if (d.newly) onWatched?.();
+  });
+  const alive = useRef(true);
+  useEffect(() => () => { alive.current = false; }, []);
   const restart = () => { const pl = player.current; if (!pl) return; tr.jump(0); if (youtube) pl.seekTo(0, true); else pl.setCurrentTime(0); setResumed(0); };
   useEffect(() => {
     let alive = true;
