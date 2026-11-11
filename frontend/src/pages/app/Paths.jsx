@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CheckCircle2, Circle, PlayCircle, Download, Award, ChevronRight, FileText, Lock } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, Download, Award, ChevronRight, FileText, Lock, Eye } from "lucide-react";
+import { TrackedVideo } from "../../components/TrackedVideo";
 import { toast } from "sonner";
 import { api, API, errMsg } from "../../lib/api";
 import { Glass, PageHeader } from "../../components/common";
@@ -37,12 +38,12 @@ export function Paths() {
 const ATTACH = { quiz: ["Quiz", (a) => `/app/quizzes/${a.id}`], lab: ["Lab", (a) => `/app/labs/${a.id}`], challenge: ["SOC challenge", (a) => `/app/challenges?case=${a.id}`],
   ctf: ["CTF", () => "/app/ctf"], course: ["Course", (a) => a.url], sop: ["SOP", (a) => `/sops/${a.id}`] };
 
-export function LessonBody({ lesson, grade, completed }) {
+export function LessonBody({ lesson, grade, completed, videoNode }) {
   const video = embedSrc(lesson.video_url);
   return (<>
     <div className="eyebrow mb-2">// lesson · {lesson.minutes} min</div>
     <h2 className="text-2xl font-bold mb-6">{lesson.title || "Untitled lesson"}</h2>
-    {video && <div className="aspect-video mb-6 border border-cyan-500/20"><VideoFrame src={video} title={lesson.title} testId="lesson-video" /></div>}
+    {video && (videoNode || <div className="aspect-video mb-6 border border-cyan-500/20"><VideoFrame src={video} title={lesson.title} testId="lesson-video" /></div>)}
     <div className="text-slate-300 whitespace-pre-line leading-relaxed text-[15px]">{lesson.content}</div>
     <LessonQuiz key={lesson.id} quiz={lesson.quiz} grade={grade} completed={completed} />
     {lesson.attachments?.length > 0 && <div className="mt-8" data-testid="lesson-practice"><div className="eyebrow mb-3">practice this lesson</div>
@@ -56,13 +57,20 @@ export function LessonBody({ lesson, grade, completed }) {
   </>);
 }
 
-function LessonView({ lesson, done, onComplete, grade }) {
-  const req = lesson.quiz?.required;
+function LessonView({ lesson, p, onComplete, grade, onWatched }) {
+  const done = p.completed_lessons.includes(lesson.id);
+  const quizLock = lesson.quiz?.required && !p.quiz_passed_lessons?.includes(lesson.id);
+  const src = embedSrc(lesson.video_url);
+  const tracked = p.video_lessons?.includes(lesson.id) && /^https:\/\/(www\.youtube\.com\/embed|player\.vimeo\.com\/video)\//.test(src);
+  const watched = p.watched_lessons?.includes(lesson.id);
+  const videoNode = tracked ? <TrackedVideo src={src} title={lesson.title} pid={p.id} lid={lesson.id} percent={p.video_percent?.[lesson.id] || 0} watched={watched} onWatched={onWatched} /> : null;
   return (
     <Glass className="p-6 sm:p-8" data-testid="lesson-view">
-      <LessonBody lesson={lesson} grade={grade} completed={done} />
-      {req && !done ? <div className="mt-8 text-xs font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="lesson-complete-locked"><Lock className="h-3.5 w-3.5" />Pass the lesson quiz above to complete this lesson (+10 XP)</div>
-        : <button className="glow-btn mt-8" disabled={done} onClick={onComplete} data-testid="lesson-complete-button">{done ? <><CheckCircle2 className="h-4 w-4" /> Completed</> : "Mark as complete (+10 XP)"}</button>}
+      <LessonBody lesson={lesson} grade={grade} completed={done} videoNode={videoNode} />
+      {done ? <button className="glow-btn mt-8" disabled data-testid="lesson-complete-button"><CheckCircle2 className="h-4 w-4" /> Completed</button>
+        : quizLock ? <div className="mt-8 text-xs font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="lesson-complete-locked"><Lock className="h-3.5 w-3.5" />Pass the lesson quiz above to complete this lesson (+10 XP)</div>
+        : tracked && !watched ? <div className="mt-8 text-xs font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="lesson-video-locked"><Lock className="h-3.5 w-3.5" />Watch at least 90% of the video to complete this lesson (+10 XP)</div>
+        : <button className="glow-btn mt-8" onClick={onComplete} data-testid="lesson-complete-button">Mark as complete (+10 XP)</button>}
     </Glass>
   );
 }
@@ -95,11 +103,16 @@ export function PathDetail() {
               <div className="font-bold mb-3">{m.title}</div>
               {m.lessons.map((l) => {
                 const d = p.completed_lessons.includes(l.id);
+                const vid = p.video_lessons?.includes(l.id);
+                const seen = p.watched_lessons?.includes(l.id);
+                const vp = p.video_percent?.[l.id];
                 return (
                   <button key={l.id} onClick={() => setCur(l)} data-testid={`lesson-item-${l.id}`}
                     className={`w-full flex items-center gap-2 text-left text-sm px-2 py-2 rounded-sm transition-colors ${cur?.id === l.id ? "bg-cyan-500/10 text-cyan-200" : "text-slate-300 hover:bg-white/5"}`}>
                     {d ? <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" /> : l.video_url ? <PlayCircle className="h-4 w-4 text-slate-500 shrink-0" /> : <Circle className="h-4 w-4 text-slate-600 shrink-0" />}
-                    <span className="truncate">{l.title}</span>
+                    <span className="truncate flex-1">{l.title}</span>
+                    {vid && <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-mono ${seen ? "text-green-400" : vp ? "text-cyan-400" : "text-slate-600"}`} title={seen ? "Video watched" : "Video not watched yet"} data-testid={`lesson-video-status-${l.id}`}>
+                      <Eye className="h-3.5 w-3.5" />{!seen && vp ? `${vp}%` : ""}</span>}
                   </button>);
               })}
             </Glass>
@@ -110,7 +123,7 @@ export function PathDetail() {
             {p.certificate && <a href={`${API}/public/certificates/${p.certificate.id}/pdf`} target="_blank" rel="noreferrer" className="glow-btn w-full justify-center mt-3" data-testid="path-certificate-button"><Award className="h-4 w-4" />Certificate</a>}
           </Glass>
         </div>
-        {cur && <LessonView key={cur.id} lesson={cur} done={p.completed_lessons.includes(cur.id)} onComplete={complete}
+        {cur && <LessonView key={cur.id} lesson={cur} p={p} onComplete={complete} onWatched={() => { toast.success("Video watched — you can complete this lesson"); load(); }}
           grade={async (answers) => { const { data } = await api.post(`/paths/${id}/lessons/${cur.id}/quiz`, { answers }); if (data.passed) load(); return data; }} />}
       </div></>}
     </div>

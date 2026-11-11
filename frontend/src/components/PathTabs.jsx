@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, ListChecks, FileText, Flag, Radar, Search, Lock } from "lucide-react";
+import { BookOpen, ListChecks, FileText, Flag, Radar, Search, Lock, Eye } from "lucide-react";
 import { api } from "../lib/api";
 import { Glass, SeverityBadge } from "./common";
 
@@ -12,6 +12,7 @@ export function PathTabBar({ p, tab, setTab }) {
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <h1 className="text-xl sm:text-2xl font-bold truncate" data-testid="path-title">{p.title}</h1>
         <span className="text-xs font-mono text-green-400">{p.level} · {p.percent}% complete</span>
+        {p.video_lessons?.length > 0 && <span className="text-xs font-mono text-cyan-300 inline-flex items-center gap-1" data-testid="path-videos-watched"><Eye className="h-3.5 w-3.5" />videos watched {p.watched_lessons.length}/{p.video_lessons.length}</span>}
       </div>
       <div className="flex gap-1 mt-3 overflow-x-auto" data-testid="path-tabs">
         {PATH_TABS.map(([id, l, I]) => <button key={id} onClick={() => { setTab(id); window.scrollTo({ top: 0 }); }} data-testid={`path-tab-${id}`}

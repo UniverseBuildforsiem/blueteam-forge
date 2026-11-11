@@ -1,11 +1,12 @@
 import io
 import os
+import re
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from core import db, now, now_iso, new_id, get_current_user, award, rank_for, send_email, email_template, frame_for, RANKS, FRAMES
 
 router = APIRouter(prefix="/api")
@@ -120,12 +121,64 @@ async def get_path(pid: str, user=Depends(get_current_user)):
     final = await db.quizzes.find_one({"path_id": pid}, {"_id": 0, "id": 1, "title": 1, "pass_mark": 1})
     cert = await db.certificates.find_one({"user_id": user["id"], "path_id": pid}, NO_ID)
     ids = lesson_ids(p)
+    vids = [l["id"] for m in p["modules"] for l in m["lessons"] if tracked_video(l)]
+    vp = {v["lesson_id"]: v for v in await db.video_progress.find({"user_id": user["id"], "path_id": pid}, NO_ID).to_list(1000)}
+    passed = set(await db.lesson_quiz_attempts.distinct("lesson_id", {"user_id": user["id"], "path_id": pid, "passed": True}))
     for m in p["modules"]:
         for l in m["lessons"]:
             if (l.get("quiz") or {}).get("required"):
                 l["quiz"] = {"required": True, "pass_count": pass_count(l["quiz"]), "questions": [{"id": q.get("id"), "text": q["text"], "options": q["options"]} for q in l["quiz"]["questions"]]}
     return {**p, "completed_lessons": [i for i in ids if i in done], "final_quiz": final, "certificate": cert,
-            "percent": round(100 * len([i for i in ids if i in done]) / len(ids)) if ids else 0}
+            "percent": round(100 * len([i for i in ids if i in done]) / len(ids)) if ids else 0,
+            "video_lessons": vids, "watched_lessons": [i for i in vids if vp.get(i, {}).get("watched")],
+            "video_percent": {i: vp[i]["percent"] for i in vids if i in vp}, "quiz_passed_lessons": [i for i in ids if i in passed]}
+
+
+def tracked_video(l):
+    return bool(re.search(r"https?://[^\s\"'<>]*(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com)/[^\s\"'<>]*", l.get("video_url") or "", re.I))
+
+
+def merge_spans(spans):
+    out = []
+    for a, b in sorted(spans):
+        if out and a <= out[-1][1] + 1:
+            out[-1][1] = max(out[-1][1], b)
+        else:
+            out.append([a, b])
+    return out
+
+
+class VideoIn(BaseModel):
+    duration: float = Field(gt=0, le=86400)
+    segments: list[list[float]] = Field(max_length=200)
+
+
+@router.post("/paths/{pid}/lessons/{lid}/video")
+async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_current_user)):
+    p, l = await find_lesson(pid, lid)
+    if not tracked_video(l):
+        raise HTTPException(400, "This lesson has no trackable video")
+    rec = await db.video_progress.find_one({"user_id": user["id"], "lesson_id": lid}, NO_ID) or {}
+    dur = rec.get("duration") or round(body.duration, 1)
+    new = [[max(0.0, min(a, dur)), max(0.0, min(b, dur))] for a, b in (s[:2] for s in body.segments if len(s) >= 2) if b > a]
+    old = rec.get("spans", [])
+    spans = merge_spans(old + new)
+    added = sum(b - a for a, b in spans) - sum(b - a for a, b in old)
+    last = rec.get("last_at")
+    allowed = 30 + (2.2 * (now() - datetime.fromisoformat(last)).total_seconds() if last else 0)
+    if added > allowed:
+        spans = old
+    covered = sum(b - a for a, b in spans)
+    percent = min(100, round(100 * covered / dur))
+    watched = rec.get("watched") or percent >= 90
+    await db.video_progress.update_one({"user_id": user["id"], "lesson_id": lid}, {"$set": {
+        "path_id": pid, "duration": dur, "spans": spans, "percent": percent, "watched": watched, "last_at": now_iso(),
+        **({"watched_at": now_iso()} if watched and not rec.get("watched") else {})}}, upsert=True)
+    return {"percent": percent, "watched": watched, "newly": watched and not rec.get("watched")}
+
+
+async def video_ok(uid, l):
+    return not tracked_video(l) or bool(await db.video_progress.find_one({"user_id": uid, "lesson_id": l["id"], "watched": True}))
 
 
 def pass_count(quiz):
@@ -151,8 +204,11 @@ async def mark_complete(uid, pid, l):
 @router.post("/paths/{pid}/lessons/{lid}/complete")
 async def complete_lesson(pid: str, lid: str, user=Depends(get_current_user)):
     p, l = await find_lesson(pid, lid)
-    if (l.get("quiz") or {}).get("required") and not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}):
+    if (l.get("quiz") or {}).get("required") and not await db.lesson_quiz_attempts.find_one({"user_id": user["id"], "lesson_id": lid, "passed": True}) \
+            and not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}):
         raise HTTPException(400, "Pass this lesson's quiz to complete it")
+    if not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}) and not await video_ok(user["id"], l):
+        raise HTTPException(400, "Watch at least 90% of the lesson video to complete it")
     await mark_complete(user["id"], pid, l)
     return {"ok": True}
 
@@ -174,8 +230,8 @@ async def lesson_quiz_submit(pid: str, lid: str, body: LessonQuizIn, user=Depend
     score, need = sum(marks), pass_count(q)
     passed = score >= need
     await db.lesson_quiz_attempts.insert_one({"id": new_id(), "user_id": user["id"], "path_id": pid, "lesson_id": lid, "score": score, "total": len(qs), "passed": passed, "created_at": now_iso()})
-    newly = passed and await mark_complete(user["id"], pid, l)
-    return {"score": score, "total": len(qs), "pass_count": need, "passed": passed, "completed": newly, "xp": 10 if newly else 0,
+    newly = passed and await video_ok(user["id"], l) and await mark_complete(user["id"], pid, l)
+    return {"score": score, "total": len(qs), "pass_count": need, "passed": passed, "completed": bool(newly), "xp": 10 if newly else 0,
             "results": [{"correct": ok, **({"answer": int(x["answer"]), "explanation": x.get("explanation", "")} if passed or ok else {})} for ok, x in zip(marks, qs)]}
 
 
