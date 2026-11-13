@@ -31,7 +31,7 @@ export function PlaybookPanel({ c, open, setOpen, onRecorded }) {
   const [list, setList] = useState(null);
   const [failed, setFailed] = useState(false);
   const [pb, setPb] = useState(null);
-  useEffect(() => { if (open && !list) api.get(`/challenges/${c.id}/playbooks`).then((r) => { setList(r.data); if (r.data.length === 1) setPb(r.data[0]); }).catch(() => setFailed(true)); }, [open]); // eslint-disable-line
+  useEffect(() => { if (open && !list) { setFailed(false); api.get(`/challenges/${c.id}/playbooks`).then((r) => { setList(r.data); if (r.data.length === 1) setPb(r.data[0]); }).catch(() => setFailed(true)); } }, [open]); // eslint-disable-line
   const finish = async (path) => {
     try {
       const { data } = await api.post(`/playbooks/${pb.id}/run`, { path, challenge_id: c.id });

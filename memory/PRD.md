@@ -236,3 +236,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Video progress POST accepts `position`; GET /api/paths/{id} returns video_resume (only for unwatched videos, >=3s and not in last 5s). YouTube resumes via start= param, Vimeo via setCurrentTime. "Start over" link. Watched videos start at 0.
 - Position flushed every 10s, on pause/end, lesson switch and tab hide; PathDetail updates resume/percent locally so in-session switching is accurate.
 - YouTube unknown duration now = max(lower median of per-user reported durations, own report, 30s) stored in video_meta.reports.<uid>.
+
+## Jun 2026 — Playbooks & Runbooks
+- db.playbooks: one per SIEM alert rule (pb-al-*) and per SOP (pb-<sopId>), AI-written in background at startup (playbook_writer.py, Claude Sonnet 5.5, 4 parallel, repair turn on validation failure). Fields: title, severity, summary, mitre, triggers, categories (challenge categories), labs, start, nodes [question/action/escalate/close], report sections.
+- reach() validates trees (no loops, every path ends in escalate/close, both endings present). Instructor edits via Content > Playbooks (PlaybookForm); saves set status ready so AI never overwrites.
+- Public /playbooks + /playbooks/:id (same access as SOPs: 5 free = pb-<FREE SOP ids>, rest via SOP Library/Pro; locked shows first question only). Linked labs + source SOP/SIEM.
+- SOC Challenges: "Open playbook" left panel (GET /api/challenges/{cid}/playbooks, category match + relevance sort). Runs POST /api/playbooks/{id}/run; correct = escalate for TP, close for FP; wrong_step = first question whose branch cannot reach correct ending. Revealed only after submit; first run kept, later = practice. No score change. Instructor tab "Playbook runs".
+- Note: panel gives full trees to all logged-in students (practice context).

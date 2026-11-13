@@ -1,0 +1,36 @@
+{
+  "summary": "Retested all 9 iteration_43 playbook fixes plus a regression pass. Backend: 22/22 pytest pass (test_playbooks.py updated for the new post-submit behaviour, plus new test_playbooks_iter44.py). Confirmed: a custom playbook gets order 9999 and shows up in the challenge panel with no 500 (then deleted); a re-run after submit returns recorded:false with the stored result and a separate practice result, and the instructor table keeps the first run; if there was no run before submit, the first post-submit run is stored with after_submit:true and later runs are practice only; a category mismatch returns 400; pending counts only planned/generating (51 = 47+4); tree errors name the problem step ('(empty)', a missing id, a loop, no escalate/close ending). Writer code review: the repair turn and the status=='generating' guard are both in place. UI (fresh student plus instructor): pb-panel-error shows when the request is forced to 500; panel run then Submit auto-scrolls challenge-result into view with pb-result and pb-wrong-step; a practice re-run toasts 'Practice run — your first playbook run for this alert is kept' and pb-result keeps the original verdict; /playbooks list ('24 playbooks · 51 more being written') and the detail runner reach the outcome and report; the instructor Playbook runs table renders and keeps the original row. Two minor issues: the panel error state never clears on reopen, and the word-overlap ordering counts generic words.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/challenges/{cid}/playbooks", "issue": "Word-overlap ordering has no stopword filter, so generic words (with, against, detected, sign, success, followed) count. ch-02-3 'Password Spray Against Cloud Sign-ins' ranks 'Entra ID Excessive Account Lockouts' (6 shared words) above 'Password Spray against Entra ID' (5). ch-02-1 'SSH Brute Force' scores a 3-way tie (Windows 4625 / Okta Impossible Travel / Entra lockouts), and Okta Impossible Travel appears 2nd in the UI panel. Suggest a stopword list (with/against/detected/from/after/followed/success/sign/playbook) and weighting title matches above trigger matches."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PlaybookPanel", "issue": "The error state is sticky. 'failed' is never reset, so after a failed load, closing and reopening the panel re-fetches successfully (verified: second request returned 200) but still shows pb-panel-error ('Please try again'). The user must reload the page. Fix: setFailed(false) before the fetch in the useEffect (or add a Retry button).", "selector": "[data-testid='pb-panel-error']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Instructor > Playbook runs", "issues": ["Runs recorded after submission (after_submit:true) look the same as pre-submit runs. A small 'after submit' tag would stop instructors reading them as blind triage."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_playbooks.py", "/app/backend/tests/test_playbooks_iter44.py", "/app/test_reports/pytest/pytest_playbooks_iter44.xml"],
+  "action_items": [
+    "PlaybookPanel: reset failed=false when re-fetching (or add Retry) so the error state can recover",
+    "Optional: add stopwords and title weighting to challenge_playbooks ordering",
+    "Optional: show an after_submit marker in the instructor Playbook runs table"
+  ],
+  "critical_code_review_comments": [
+    "routes_playbooks.record_run: the submitted+prev guard is correct. Pre-submit re-runs still replace the earlier pre-submit run (latest pre-submit run counts), which is reasonable.",
+    "playbook_writer: the repair turn catches AssertionError/KeyError/ValueError/TypeError, and the final and failed writes are guarded by status 'generating'. Manage validate() sets status 'ready', so instructor edits are not overwritten. Every hot reload restarts ensure_playbooks and resets generating/failed to planned, so failed items are retried on each reload (fine).",
+    "routes_manage.validate: doc.setdefault('order', 9999) also runs on PUT and keeps an existing order, as long as the client sends it back. If the edit form drops 'order', a seeded playbook's order would become 9999 (not verified via UI)."
+  ],
+  "updated_files": ["/app/backend/tests/test_playbooks.py", "/app/backend/tests/test_playbooks_iter44.py"],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "~95% (all requested flows pass; 1 minor sticky-error bug)"},
+  "test_credentials": "/app/memory/test_credentials.md instructor + admin; fresh students test_pb44_<tag>@example.com and test_pbui_c7f0056c@example.com / TestPass@123",
+  "seed_data_creation": "Fresh TEST_ students with playbook runs + submissions on ch-bf-01, ch-02-1, ch-02-3. Custom TEST playbooks created and deleted by id. No seeded data modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest tests/test_playbooks.py tests/test_playbooks_iter44.py -n 0 -p no:randomly` (order-dependent). pb-al-1 close path: answer [0]; escalate path: [1,1,0,action,0,action,0]. At test time 24 ready / 47 planned / 4 generating. UI challenges route is /app/challenges; the instructor tab testid is instructor-tab-playbook-runs."
+}

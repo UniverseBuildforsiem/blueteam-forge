@@ -144,7 +144,9 @@ def test_run_correct_after_submit_reveals(student, admin):
     path = find_path(pb, "escalate")
     r = student.post(f"{BASE}/api/playbooks/pb-al-1/run", json={"path": path, "challenge_id": "ch-bf-01"})
     d = r.json()
-    assert d["result"]["correct"] is True and d["result"]["wrong_step"] is None
+    # iter44: post-submit re-run is practice only; stored (first) run kept
+    assert d["recorded"] is False and d["result"]["correct"] is False
+    assert d["practice"]["correct"] is True and d["practice"]["wrong_step"] is None
 
 
 def test_fp_challenge_close_correct(student, admin):

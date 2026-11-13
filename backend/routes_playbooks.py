@@ -12,6 +12,13 @@ FREE_PB = {f"pb-{s}" for s in FREE_IDS}
 LIVE = {"status": "ready", "published": {"$ne": False}}
 
 
+STOP = {"with", "against", "detected", "from", "after", "followed", "success", "sign", "signin", "signins", "playbook", "multiple", "into", "user", "users", "event", "alert", "suspicious", "unusual", "activity", "account", "accounts", "leading", "minutes", "count", "single"}
+
+
+def toks(text):
+    return set(re.findall(r"[a-z0-9]{3,}", text.lower())) - STOP
+
+
 def card(p, owned):
     return {k: p.get(k) for k in ("id", "title", "severity", "summary", "mitre", "categories", "labs", "source", "updated")} | {
         "free": p["id"] in FREE_PB, "locked": p["id"] not in FREE_PB and not owned, "node_count": len(p.get("nodes", [])),
@@ -48,9 +55,9 @@ async def challenge_playbooks(cid: str, user=Depends(get_current_user)):
     c = await db.challenges.find_one({"id": cid}, {"_id": 0, "category": 1, "title": 1, "alert": 1})
     if not c:
         raise HTTPException(404, "Challenge not found")
-    words = set(re.findall(r"[a-z0-9]{4,}", f"{c['title']} {(c.get('alert') or {}).get('rule', '')}".lower()))
+    words = toks(f"{c['title']} {(c.get('alert') or {}).get('rule', '')}")
     pbs = await db.playbooks.find({**LIVE, "categories": c["category"]}, NO_ID).to_list(50)
-    pbs.sort(key=lambda p: (-len(words & set(re.findall(r"[a-z0-9]{4,}", f"{p['title']} {' '.join(p.get('triggers', []))}".lower()))), p["source"]["type"] != "siem", p.get("order", 9999)))
+    pbs.sort(key=lambda p: (-(3 * len(words & toks(p["title"])) + len(words & toks(" ".join(p.get("triggers", []))))), p["source"]["type"] != "siem", p.get("order", 9999)))
     return [{**card(p, True), "triggers": p.get("triggers", []), "start": p["start"], "nodes": p["nodes"], "report": p.get("report", []), "lab_info": await lab_info(p.get("labs"))} for p in pbs[:8]]
 
 
