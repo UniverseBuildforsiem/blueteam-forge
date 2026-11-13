@@ -24,6 +24,7 @@ import Sessions from "./pages/app/Sessions";
 import { Quizzes, QuizPlayer } from "./pages/app/Quizzes";
 import Progress from "./pages/app/Progress";
 import Challenges from "./pages/app/Challenges";
+import Shift from "./pages/app/Shift";
 import Drill from "./pages/app/Drill";
 import MyCourses from "./pages/app/MyCourses";
 import Badges from "./pages/app/Badges";
@@ -80,6 +81,7 @@ function AppRouter() {
               <Route path="badges" element={<Badges />} />
               <Route path="interview" element={<MockInterview />} />
               <Route path="challenges" element={<Challenges />} />
+              <Route path="shift" element={<Shift />} />
               <Route path="ctf" element={<CTF />} />
               <Route path="labs" element={<Labs />} />
               <Route path="labs/:id" element={<LabRunner />} />

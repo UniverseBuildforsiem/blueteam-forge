@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Workflow, ArrowLeft, CheckCircle2, XCircle, FlaskConical } from "lucide-react";
+import { Workflow, ArrowLeft, CheckCircle2, XCircle, FlaskConical, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 import { api, errMsg } from "../../lib/api";
@@ -18,23 +18,36 @@ export function PlaybookResult({ run }) {
     </div>);
 }
 
+function Locked({ p, back }) {
+  return (
+    <div className="mt-4 border border-cyan-500/30 bg-cyan-500/5 p-4" data-testid="pb-panel-locked">
+      <div className="flex items-center gap-2 text-sm font-bold"><Lock className="h-4 w-4 text-cyan-300" />{p.title.replace(/^Playbook:\s*/, "")}</div>
+      <p className="text-xs text-slate-400 mt-2">{p.summary}</p>
+      <p className="text-xs text-slate-300 mt-3">This playbook ({p.question_count} decisions + incident report template) is part of the SOP Library.</p>
+      <div className="flex gap-2 mt-4"><Link to="/sops" className="glow-btn !text-xs" data-testid="pb-panel-unlock">Unlock all playbooks</Link>
+        <button onClick={back} className="ghost-btn !text-xs" data-testid="pb-panel-locked-back">Back</button></div>
+    </div>);
+}
+
 function Picker({ list, pick }) {
   if (!list) return <div className="text-sm text-slate-500 mt-6">Loading playbooks...</div>;
   if (!list.length) return <div className="text-sm text-slate-500 mt-6" data-testid="pb-panel-empty">No playbook covers this alert type yet.</div>;
   return (
     <div className="space-y-2 mt-5">{list.map((p) => <button key={p.id} onClick={() => pick(p)} className="w-full text-left border border-white/10 hover:border-cyan-400 p-3 transition-colors" data-testid={`pb-panel-item-${p.id}`}>
-      <div className="flex items-center gap-2 text-[11px] font-mono"><SeverityBadge level={p.severity} /><span className={p.source.type === "siem" ? "text-yellow-300" : "text-cyan-400"}>{p.source.type === "siem" ? "SIEM alert" : "SOP"}</span></div>
+      <div className="flex items-center gap-2 text-[11px] font-mono"><SeverityBadge level={p.severity} /><span className={p.source.type === "siem" ? "text-yellow-300" : "text-cyan-400"}>{p.source.type === "siem" ? "SIEM alert" : "SOP"}</span>
+        <span className="ml-auto">{p.locked ? <span className="text-slate-500 inline-flex items-center gap-1" data-testid={`pb-panel-lock-${p.id}`}><Lock className="h-3 w-3" />unlock</span> : p.free ? <span className="text-green-400">free</span> : null}</span></div>
       <div className="text-sm font-bold mt-2">{p.title.replace(/^Playbook:\s*/, "")}</div><div className="text-xs text-slate-400 mt-1 line-clamp-2">{p.summary}</div></button>)}</div>);
 }
 
-export function PlaybookPanel({ c, open, setOpen, onRecorded }) {
+export function PlaybookPanel({ c, open, setOpen, onRecorded, shiftId }) {
   const [list, setList] = useState(null);
   const [failed, setFailed] = useState(false);
   const [pb, setPb] = useState(null);
-  useEffect(() => { if (open && !list) { setFailed(false); api.get(`/challenges/${c.id}/playbooks`).then((r) => { setList(r.data); if (r.data.length === 1) setPb(r.data[0]); }).catch(() => setFailed(true)); } }, [open]); // eslint-disable-line
+  useEffect(() => { if (open && !list) { setFailed(false); api.get(`/challenges/${c.id}/playbooks`).then((r) => { setList(r.data); if (r.data.length === 1 && !r.data[0].locked) setPb(r.data[0]); }).catch(() => setFailed(true)); } }, [open]); // eslint-disable-line
   const finish = async (path) => {
     try {
-      const { data } = await api.post(`/playbooks/${pb.id}/run`, { path, challenge_id: c.id });
+      const { data } = await api.post(`/playbooks/${pb.id}/run`, { path, challenge_id: c.id, ...(shiftId ? { shift_id: shiftId } : {}) });
+      if (data.shift) { toast.success(data.recorded ? "Playbook path saved for this shift" : "Practice run — your first run on this alert is kept"); onRecorded?.(null); return; }
       toast.success(!data.recorded ? "Practice run — your first playbook run for this alert is kept" : data.result ? "Playbook path recorded" : "Playbook path recorded — you'll see if it was right after you submit");
       onRecorded?.(data.result);
     } catch (e) { toast.error(errMsg(e)); }
@@ -44,8 +57,8 @@ export function PlaybookPanel({ c, open, setOpen, onRecorded }) {
       <SheetContent side="left" className="bg-[#0B0F1A] border-cyan-500/20 w-full sm:max-w-lg overflow-y-auto" data-testid="pb-panel">
         <SheetHeader><SheetTitle className="font-mono flex items-center gap-2"><Workflow className="h-5 w-5 text-cyan-400" />Playbook</SheetTitle>
           <div className="text-xs text-slate-400">{c.category} · {c.title}</div></SheetHeader>
-        {failed ? <div className="text-sm text-red-300 mt-6" data-testid="pb-panel-error">Couldn't load playbooks for this alert. Please try again.</div> : !pb ? <Picker list={list} pick={setPb} /> : <div className="mt-4">
-          {list?.length > 1 && <button onClick={() => setPb(null)} className="text-xs font-mono text-slate-400 hover:text-cyan-300 inline-flex items-center gap-1 mb-3" data-testid="pb-panel-back"><ArrowLeft className="h-3.5 w-3.5" />Other playbooks</button>}
+        {failed ? <div className="text-sm text-red-300 mt-6" data-testid="pb-panel-error">Couldn't load playbooks for this alert. Please try again.</div> : !pb ? <Picker list={list} pick={setPb} /> : pb.locked ? <Locked p={pb} back={() => setPb(null)} /> : <div className="mt-4">
+          {(list?.length > 1 || pb.locked) && <button onClick={() => setPb(null)} className="text-xs font-mono text-slate-400 hover:text-cyan-300 inline-flex items-center gap-1 mb-3" data-testid="pb-panel-back"><ArrowLeft className="h-3.5 w-3.5" />Other playbooks</button>}
           <div className="font-bold" data-testid="pb-panel-title">{pb.title}</div>
           <div className="mt-2 mb-4"><MitreTags tags={pb.mitre} /></div>
           <PlaybookRunner key={pb.id} pb={pb} onFinish={finish} />

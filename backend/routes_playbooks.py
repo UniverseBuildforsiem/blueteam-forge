@@ -58,7 +58,13 @@ async def challenge_playbooks(cid: str, user=Depends(get_current_user)):
     words = toks(f"{c['title']} {(c.get('alert') or {}).get('rule', '')}")
     pbs = await db.playbooks.find({**LIVE, "categories": c["category"]}, NO_ID).to_list(50)
     pbs.sort(key=lambda p: (-(3 * len(words & toks(p["title"])) + len(words & toks(" ".join(p.get("triggers", []))))), p["source"]["type"] != "siem", p.get("order", 9999)))
-    return [{**card(p, True), "triggers": p.get("triggers", []), "start": p["start"], "nodes": p["nodes"], "report": p.get("report", []), "lab_info": await lab_info(p.get("labs"))} for p in pbs[:8]]
+    owned = await owns_sops(user)
+    out = []
+    for p in pbs[:8]:
+        cd = {**card(p, owned), "lab_info": await lab_info(p.get("labs"))}
+        out.append(cd if cd["locked"] else {**cd, "triggers": p.get("triggers", []), "start": p["start"], "nodes": p["nodes"], "report": p.get("report", [])})
+    out.sort(key=lambda x: x["locked"])
+    return out
 
 
 class Step(BaseModel):
@@ -69,6 +75,7 @@ class Step(BaseModel):
 class RunIn(BaseModel):
     path: list[Step] = Field(min_length=1, max_length=60)
     challenge_id: Optional[str] = Field(default=None, max_length=80)
+    shift_id: Optional[str] = Field(default=None, max_length=80)
 
 
 def walk(p, path):
@@ -111,6 +118,8 @@ async def record_run(pid: str, body: RunIn, user=Depends(get_current_user)):
     p = await db.playbooks.find_one({"id": pid, **LIVE}, NO_ID)
     if not p:
         raise HTTPException(404, "Playbook not found")
+    if pid not in FREE_PB and not await owns_sops(user):
+        raise HTTPException(403, "Unlock the SOP Library to use this playbook")
     end = walk(p, body.path)
     run = {"id": new_id(), "user_id": user["id"], "user_name": user["name"], "playbook_id": pid, "playbook_title": p["title"], "outcome": end["type"],
            "outcome_title": end["title"], "steps": len(body.path), "created_at": now_iso()}
@@ -120,6 +129,12 @@ async def record_run(pid: str, body: RunIn, user=Depends(get_current_user)):
             raise HTTPException(404, "Challenge not found")
         if c["category"] not in p.get("categories", []):
             raise HTTPException(400, "This playbook doesn't cover this alert type")
+        if body.shift_id:
+            from routes_shift import record_shift_playbook
+            target = "escalate" if c["verdict"] == "TP" else "close"
+            run.update(expected_outcome=target, correct=end["type"] == target, wrong_step=None if end["type"] == target else first_wrong(p, body.path, target))
+            saved = await record_shift_playbook(body.shift_id, body.challenge_id, user, run)
+            return {"recorded": saved, "shift": True, "outcome": end["type"]}
         target = "escalate" if c["verdict"] == "TP" else "close"
         run.update(challenge_id=body.challenge_id, challenge_title=c["title"], expected_outcome=target, correct=end["type"] == target,
                    wrong_step=None if end["type"] == target else first_wrong(p, body.path, target))
