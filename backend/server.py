@@ -29,11 +29,12 @@ from routes_promo import router as promo_router, ensure_promos
 from routes_consult import router as consult_router
 from routes_playbooks import router as playbooks_router
 from routes_shift import router as shift_router
+from routes_academy import router as academy_router
 from playbook_writer import ensure_playbooks
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCProfessionals Academy API")
-for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router, series_share_router, intel_router, intel_guest_router, sop_lab_router, playbooks_router, shift_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router, series_share_router, intel_router, intel_guest_router, sop_lab_router, playbooks_router, shift_router, academy_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])

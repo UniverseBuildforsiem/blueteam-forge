@@ -277,7 +277,12 @@ PRODUCTS = {"soc-interview-ebook": {"name": "SOC Interview Preparation - Ebook",
             "soc-consultation": {"name": "Cyber & SOC Expert Consultation (30 min)", "amount": 99, "return": "/consultation"}}
 
 
-def item_for(key):
+async def item_for(key):
+    if key.startswith("course:"):
+        c = await db.academy_courses.find_one({"id": key[7:], "status": "published"}, {"_id": 0, "id": 1, "title": 1, "price": 1})
+        if not c or not c.get("price"):
+            raise HTTPException(400, "This course isn't for sale")
+        return {"name": f"Course: {c['title']}"[:100], "amount": int(c["price"]), "return": f"/app/courses/{c['id']}"}
     item = PLANS.get(key) or PRODUCTS.get(key)
     if not item:
         raise HTTPException(400, "Invalid plan")
@@ -318,7 +323,10 @@ async def activate(user_id, pid):
         from routes_consult import confirm_consultation
         await confirm_consultation(p.get("ref"), pid)
     elif p:
-        if p["plan"] in PRODUCTS:
+        if p["plan"].startswith("course:"):
+            await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
+                                          {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
+        elif p["plan"] in PRODUCTS:
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
             from routes_book import send_book_receipt
@@ -332,7 +340,7 @@ async def activate(user_id, pid):
 
 @router.post("/payments/razorpay/order")
 async def rzp_order(body: PlanIn, user=Depends(get_current_user)):
-    plan = item_for(body.plan)
+    plan = await item_for(body.plan)
     await prepare(body, user)
     o = rzp().order.create({"amount": plan["amount"] * 100, "currency": "INR", "receipt": f"rcpt_{new_id()}", "payment_capture": 1})
     await db.payments.insert_one({"id": o["id"], "provider": "razorpay", "user_id": user["id"], "plan": body.plan, "plan_name": plan["name"], "ref": body.ref,
@@ -375,7 +383,7 @@ def cf_base():
 
 @router.post("/payments/cashfree/order")
 async def cf_order(body: PlanIn, user=Depends(get_current_user)):
-    plan = item_for(body.plan)
+    plan = await item_for(body.plan)
     await prepare(body, user)
     base = cf_base()
     oid = f"order_{uuid.uuid4().hex[:20]}"

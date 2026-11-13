@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { api, errMsg, fmtDate } from "../lib/api";
 import { Glass, PageHeader, Empty } from "../components/common";
 import ContentEditor from "../components/ContentEditor";
+import { CourseBuilder } from "../components/academy/CourseBuilder";
 import { CatalogCourses, StudentsPanel, GradingPanel } from "../components/InstructorExtras";
 
 const KINDS = [["paths", "Courses & Lessons"], ["quizzes", "Quizzes"], ["ctfs", "CTF"], ["challenges", "SOC Challenges"], ["playbooks", "Playbooks"], ["labs", "Labs"], ["sessions", "Live Sessions"]];
@@ -63,7 +64,7 @@ function Attendance() {
   );
 }
 
-const TABS = [["content", "Content", Content], ["catalog", "Catalog courses", CatalogCourses], ["students", "Students", StudentsPanel], ["analytics", "Quiz analytics", Analytics], ["grading", "Grading", GradingPanel], ["playbook-runs", "Playbook runs", PlaybookRuns], ["attendance", "Attendance", Attendance]];
+const TABS = [["content", "Content", Content], ["catalog", "Catalog courses", CatalogCourses], ["students", "Students", StudentsPanel], ["analytics", "Quiz analytics", Analytics], ["grading", "Grading", GradingPanel], ["academy", "Courses", CourseBuilder], ["playbook-runs", "Playbook runs", PlaybookRuns], ["attendance", "Attendance", Attendance]];
 
 export default function Instructor() {
   return (
