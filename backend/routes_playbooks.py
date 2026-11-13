@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -25,7 +26,7 @@ async def lab_info(ids):
 async def list_playbooks(user=Depends(optional_user)):
     owned = await owns_sops(user)
     pbs = await db.playbooks.find(LIVE, NO_ID).sort("order", 1).to_list(500)
-    pending = await db.playbooks.count_documents({"status": {"$ne": "ready"}})
+    pending = await db.playbooks.count_documents({"status": {"$in": ["planned", "generating"]}})
     return {"owned": owned, "logged_in": bool(user), "pending": pending, "playbooks": [card(p, owned) for p in pbs]}
 
 
@@ -44,11 +45,12 @@ async def get_playbook(pid: str, user=Depends(optional_user)):
 
 @router.get("/challenges/{cid}/playbooks")
 async def challenge_playbooks(cid: str, user=Depends(get_current_user)):
-    c = await db.challenges.find_one({"id": cid}, {"_id": 0, "category": 1})
+    c = await db.challenges.find_one({"id": cid}, {"_id": 0, "category": 1, "title": 1, "alert": 1})
     if not c:
         raise HTTPException(404, "Challenge not found")
-    pbs = await db.playbooks.find({**LIVE, "categories": c["category"]}, NO_ID).sort("order", 1).to_list(50)
-    pbs.sort(key=lambda p: (p["source"]["type"] != "siem", p["order"]))
+    words = set(re.findall(r"[a-z0-9]{4,}", f"{c['title']} {(c.get('alert') or {}).get('rule', '')}".lower()))
+    pbs = await db.playbooks.find({**LIVE, "categories": c["category"]}, NO_ID).to_list(50)
+    pbs.sort(key=lambda p: (-len(words & set(re.findall(r"[a-z0-9]{4,}", f"{p['title']} {' '.join(p.get('triggers', []))}".lower()))), p["source"]["type"] != "siem", p.get("order", 9999)))
     return [{**card(p, True), "triggers": p.get("triggers", []), "start": p["start"], "nodes": p["nodes"], "report": p.get("report", []), "lab_info": await lab_info(p.get("labs"))} for p in pbs[:8]]
 
 
@@ -106,14 +108,19 @@ async def record_run(pid: str, body: RunIn, user=Depends(get_current_user)):
     run = {"id": new_id(), "user_id": user["id"], "user_name": user["name"], "playbook_id": pid, "playbook_title": p["title"], "outcome": end["type"],
            "outcome_title": end["title"], "steps": len(body.path), "created_at": now_iso()}
     if body.challenge_id:
-        c = await db.challenges.find_one({"id": body.challenge_id}, {"_id": 0, "verdict": 1, "title": 1})
+        c = await db.challenges.find_one({"id": body.challenge_id}, {"_id": 0, "verdict": 1, "title": 1, "category": 1})
         if not c:
             raise HTTPException(404, "Challenge not found")
+        if c["category"] not in p.get("categories", []):
+            raise HTTPException(400, "This playbook doesn't cover this alert type")
         target = "escalate" if c["verdict"] == "TP" else "close"
         run.update(challenge_id=body.challenge_id, challenge_title=c["title"], expected_outcome=target, correct=end["type"] == target,
                    wrong_step=None if end["type"] == target else first_wrong(p, body.path, target))
-        await db.playbook_runs.replace_one({"user_id": user["id"], "challenge_id": body.challenge_id}, run, upsert=True)
         submitted = await db.challenge_submissions.find_one({"user_id": user["id"], "challenge_id": body.challenge_id}, {"_id": 1})
+        prev = await db.playbook_runs.find_one({"user_id": user["id"], "challenge_id": body.challenge_id}, NO_ID)
+        if submitted and prev:
+            return {"recorded": False, "outcome": end["type"], "result": reveal(prev), "practice": reveal(run)}
+        await db.playbook_runs.replace_one({"user_id": user["id"], "challenge_id": body.challenge_id}, {**run, "after_submit": bool(submitted)}, upsert=True)
         return {"recorded": True, "outcome": end["type"], **({"result": reveal(run)} if submitted else {})}
     await db.playbook_runs.insert_one(run)
     return {"recorded": True, "outcome": end["type"]}

@@ -29,12 +29,13 @@ function Picker({ list, pick }) {
 
 export function PlaybookPanel({ c, open, setOpen, onRecorded }) {
   const [list, setList] = useState(null);
+  const [failed, setFailed] = useState(false);
   const [pb, setPb] = useState(null);
-  useEffect(() => { if (open && !list) api.get(`/challenges/${c.id}/playbooks`).then((r) => { setList(r.data); if (r.data.length === 1) setPb(r.data[0]); }).catch(() => setList([])); }, [open]); // eslint-disable-line
+  useEffect(() => { if (open && !list) api.get(`/challenges/${c.id}/playbooks`).then((r) => { setList(r.data); if (r.data.length === 1) setPb(r.data[0]); }).catch(() => setFailed(true)); }, [open]); // eslint-disable-line
   const finish = async (path) => {
     try {
       const { data } = await api.post(`/playbooks/${pb.id}/run`, { path, challenge_id: c.id });
-      toast.success(data.result ? "Playbook path recorded" : "Playbook path recorded — you'll see if it was right after you submit");
+      toast.success(!data.recorded ? "Practice run — your first playbook run for this alert is kept" : data.result ? "Playbook path recorded" : "Playbook path recorded — you'll see if it was right after you submit");
       onRecorded?.(data.result);
     } catch (e) { toast.error(errMsg(e)); }
   };
@@ -43,7 +44,7 @@ export function PlaybookPanel({ c, open, setOpen, onRecorded }) {
       <SheetContent side="left" className="bg-[#0B0F1A] border-cyan-500/20 w-full sm:max-w-lg overflow-y-auto" data-testid="pb-panel">
         <SheetHeader><SheetTitle className="font-mono flex items-center gap-2"><Workflow className="h-5 w-5 text-cyan-400" />Playbook</SheetTitle>
           <div className="text-xs text-slate-400">{c.category} · {c.title}</div></SheetHeader>
-        {!pb ? <Picker list={list} pick={setPb} /> : <div className="mt-4">
+        {failed ? <div className="text-sm text-red-300 mt-6" data-testid="pb-panel-error">Couldn't load playbooks for this alert. Please try again.</div> : !pb ? <Picker list={list} pick={setPb} /> : <div className="mt-4">
           {list?.length > 1 && <button onClick={() => setPb(null)} className="text-xs font-mono text-slate-400 hover:text-cyan-300 inline-flex items-center gap-1 mb-3" data-testid="pb-panel-back"><ArrowLeft className="h-3.5 w-3.5" />Other playbooks</button>}
           <div className="font-bold" data-testid="pb-panel-title">{pb.title}</div>
           <div className="mt-2 mb-4"><MitreTags tags={pb.mitre} /></div>

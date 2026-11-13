@@ -1,0 +1,46 @@
+{
+  "summary": "Tested Playbooks & Runbooks end-to-end (backend pytest 15 tests + Playwright UI as anon, fresh student, instructor). Public list/filters/search/count, detail (locked/free/admin), runner (answers, actions, undo, outcome, report template, restart), SOP link, SOC Challenges side panel + recording + verdict reveal after submit (correct + wrong with wrong_step) + reopen + no-run state, instructor Playbook runs table, Content > Playbooks edit (422 Decision tree problem) and create custom all work. One real backend bug: GET /api/challenges/{cid}/playbooks returns 500 (KeyError 'order') whenever a custom/instructor-created playbook (no 'order' field) matches the challenge category - reproduced via API and via the UI 'New' form.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/challenges/{cid}/playbooks", "issue": "500 KeyError 'order' in routes_playbooks.py line 51 `pbs.sort(key=lambda p: (..., p['order']))`. Playbooks created via /api/manage/playbooks (playbookTemplate / New button) have no 'order', so once an instructor creates a custom playbook for a category, the Open playbook panel for every challenge in that category breaks (frontend shows 'No playbook covers this alert type yet' because catch sets list=[]). Fix: p.get('order', 9999) and/or set order on create in routes_manage.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/playbooks/{id}/run", "issue": "After a challenge is submitted (verdict revealed), the student can re-run the playbook and replace_one overwrites the stored run, flipping correct from false to true; the instructor table then shows the corrected run. Consider keeping the first pre-submission run (don't overwrite once submitted, or store first_run)."},
+      {"endpoint": "POST /api/playbooks/{id}/run", "issue": "No check that the playbook belongs to the challenge's category; any ready playbook can be recorded against any challenge."},
+      {"endpoint": "GET /api/challenges/{cid}/playbooks", "issue": "Returns full nodes/report for locked (paid) playbooks to any logged-in free student (card(p, True)); since it accepts any cid, a free student can fetch the full trees of all paid playbooks across categories. Paywall bypass if that's not intended."},
+      {"endpoint": "playbook_writer / GET /api/public/playbooks", "issue": "pb-sop-impossible-travel (one of the 5 FREE playbooks) is status 'failed' after 3 attempts ('bad or looping node c1'); only retried on server restart. 'pending' counts failed items, so UI says '56 more being written' even for failed ones. Consider auto-retry or excluding failed from pending."},
+      {"endpoint": "PUT /api/manage/playbooks/{id}", "issue": "Error message for an empty answer target is 'Decision tree problem: bad or looping node ' (blank id) - doesn't tell instructor which step/answer is wrong. Planned (not yet generated) playbooks are also editable and a concurrent AI write could overwrite instructor edits."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Challenge > Open playbook", "issue": "When the backend 500s (custom playbook in category), PlaybookPanel silently shows 'No playbook covers this alert type yet' instead of an error.", "affected_selectors": ["pb-panel-empty"]}
+    ],
+    "design_issues": [
+      {"screen": "SOC Challenges sheet", "issues": ["After Submit, challenge-result (with pb-result) renders below the fold; no auto-scroll so user may miss the playbook verdict.", "Panel for Linux SSH brute force challenge (ch-02-1) lists the Windows 4625 SIEM playbook first - category match only, content mismatch (minor)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_playbooks.py", "/app/backend/tests/ui_setup_iter43.py", "/app/test_reports/pytest/pytest_playbooks.xml"],
+  "action_items": [
+    "Fix KeyError 'order' in challenge_playbooks sort (use p.get('order', 9999)) and set an order on playbooks created via manage API",
+    "Decide whether re-running a playbook after submission should overwrite the recorded run (currently lets students flip correct=false to true)",
+    "Decide whether /api/challenges/{cid}/playbooks should expose full locked playbooks to free students (paywall bypass)",
+    "Retry failed generations (pb-sop-impossible-travel, a free one) and exclude failed from 'pending' count",
+    "Improve tree validation message to name the offending node/answer"
+  ],
+  "critical_code_review_comments": [
+    "routes_playbooks.challenge_playbooks: p['order'] KeyError for custom playbooks (confirmed 500)",
+    "record_run replace_one upsert overwrites the run post-submission (grading integrity)",
+    "first_wrong logic verified correct (identified 'Authorized scanner or test?' as the off-track step)",
+    "walk() accepts a path that stops right before a terminal (implicit terminal) - fine, but documented here"
+  ],
+  "updated_files": ["/app/backend/tests/test_playbooks.py", "/app/backend/tests/ui_setup_iter43.py"],
+  "success_rate": {"backend": "93% (14/15; 1 real bug)", "frontend": "100% of tested flows (panel breaks only under the backend bug)"},
+  "test_credentials": "Used /app/memory/test_credentials.md admin + instructor; fresh students test_pb_<tag>@example.com and test_pbui_19244816@example.com / TestPass@123",
+  "seed_data_creation": "Fresh TEST_ students with playbook runs + challenge submissions (ch-bf-01, ch-mal-01, ch-02-1, ch-02-3, ch-02-5). Custom TEST playbooks created and deleted. pb-al-1 untouched (invalid edit was rejected, not saved).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest tests/test_playbooks.py -n 0 -p no:randomly` (tests are order-dependent within module). test_manage_custom_crud fails until the 'order' KeyError is fixed. pb-al-1 escalate path answers: [1,1,0,action,0,action,0]; close path: [0]. Instructor lands on /instructor after login. Generation still running (~19 ready of 75 at test time).",
+  "rca of the issue": "challenge_playbooks sorts with p['order']; ensure_playbooks sets order for AI playbooks, but m_create (routes_manage) and playbookTemplate never set it, so any custom playbook whose categories include the challenge category raises KeyError -> 500. Repro: POST /api/manage/playbooks with categories ['Brute Force'] then GET /api/challenges/ch-bf-01/playbooks."
+}

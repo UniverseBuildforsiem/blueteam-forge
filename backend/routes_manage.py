@@ -53,6 +53,7 @@ def validate(col, doc):
             except AssertionError as e:
                 raise HTTPException(422, f"Decision tree problem: {e}")
             doc.update(status="ready", updated=now_iso()[:10])
+            doc.setdefault("order", 9999)
             doc.setdefault("report", []); doc.setdefault("mitre", []); doc.setdefault("triggers", []); doc.setdefault("categories", []); doc.setdefault("labs", [])
         if col == "paths":
             for m in doc["modules"]:

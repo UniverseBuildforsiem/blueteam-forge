@@ -42,7 +42,8 @@ def reach(pb):
         if nid in memo:
             return memo[nid]
         n = nodes.get(nid)
-        assert n and nid not in stack, f"bad or looping node {nid}"
+        assert n, f"step '{nid or '(empty)'}' doesn't exist — every answer and action must point to an existing step"
+        assert nid not in stack, f"step '{nid}' loops back on itself — paths must always move forward"
         stack.add(nid)
         if n["type"] in TERMINALS:
             out = {n["type"]}
@@ -105,15 +106,20 @@ async def write_playbook(pid):
                 chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"pb-{pid}-{new_id()[:6]}",
                                system_message="You are a principal SOC incident responder who designs precise, production-grade triage playbooks as decision trees. You reply with valid JSON only.").with_model("anthropic", "claude-sonnet-5-5").with_params(max_tokens=8000)
                 text = PROMPT.format(source=source_text(p, sop), labs="\n".join(f"{x['id']}: {x['title']} [{x.get('category', '')}]" for x in labs), cats=CATEGORIES)
-                pb = clean(parse(await chat.send_message(UserMessage(text=text))), {"severity": p["severity"], "category": (sop or {}).get("category")})
+                src = {"severity": p["severity"], "category": (sop or {}).get("category")}
+                reply = await chat.send_message(UserMessage(text=text))
+                try:
+                    pb = clean(parse(reply), src)
+                except (AssertionError, KeyError, ValueError, TypeError) as e:
+                    pb = clean(parse(await chat.send_message(UserMessage(text=f"That JSON failed validation: {e}. Fix the tree and reply with the full corrected JSON only."))), src)
                 pb["labs"] = [x for x in pb["labs"] if x in lab_ids]
-                await db.playbooks.update_one({"id": pid}, {"$set": {**pb, "status": "ready", "error": None, "updated": now_iso()[:10]}})
+                await db.playbooks.update_one({"id": pid, "status": "generating"}, {"$set": {**pb, "status": "ready", "error": None, "updated": now_iso()[:10]}})
                 logger.info(f"Playbook written: {pb['title']}")
                 return
             except Exception as e:
                 logger.warning(f"Playbook write failed ({attempt}) {pid}: {e}")
                 if attempt == 3:
-                    await db.playbooks.update_one({"id": pid}, {"$set": {"status": "failed", "error": str(e)[:200]}})
+                    await db.playbooks.update_one({"id": pid, "status": "generating"}, {"$set": {"status": "failed", "error": str(e)[:200]}})
 
 
 def queue(pid):

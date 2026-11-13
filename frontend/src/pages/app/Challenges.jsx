@@ -17,7 +17,7 @@ export function Investigate({ c, onDone, submitUrl }) {
   const [pbOpen, setPbOpen] = useState(false);
   const [pbRun, setPbRun] = useState(undefined);
   const submit = async () => {
-    try { const { data } = await api.post(submitUrl || `/challenges/${c.id}/submit`, { verdict, report }); setRes(data); onDone(); } catch (e) { toast.error(errMsg(e)); }
+    try { const { data } = await api.post(submitUrl || `/challenges/${c.id}/submit`, { verdict, report }); setRes(data); onDone(); setTimeout(() => document.querySelector('[data-testid="challenge-result"]')?.scrollIntoView({ behavior: "smooth", block: "center" }), 150); } catch (e) { toast.error(errMsg(e)); }
   };
   const shownRun = pbRun !== undefined && pbRun !== null ? pbRun : res ? res.playbook_run : c.playbook_run;
   return (
