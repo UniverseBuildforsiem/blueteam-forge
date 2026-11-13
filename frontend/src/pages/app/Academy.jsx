@@ -66,10 +66,10 @@ function ItemView({ c, it, done, onDone }) {
       {it.note && <p className="text-sm text-slate-300 mt-2 whitespace-pre-line">{it.note}</p>}
       {it.type === "video" && (src ? <div className="aspect-video mt-4 border border-cyan-500/20"><VideoFrame src={src} title={it.title} testId="academy-video" /></div>
         : <a href={it.url} target="_blank" rel="noreferrer" className="ghost-btn !text-xs mt-4" data-testid="academy-video-link"><ExternalLink className="h-3.5 w-3.5" />Open video</a>)}
-      {LINK[it.type] && <Link to={LINK[it.type](it)} className="ghost-btn !text-xs mt-4" data-testid="academy-item-open"><ExternalLink className="h-3.5 w-3.5" />Open {T.toLowerCase()}</Link>}
+      {LINK[it.type] && <Link to={LINK[it.type](it)} className="ghost-btn !text-xs mt-4" data-testid="academy-item-open"><ExternalLink className="h-3.5 w-3.5" />Open {T}</Link>}
       <div className="mt-6">{done ? <span className="text-green-400 font-mono text-sm inline-flex items-center gap-2" data-testid="academy-item-done"><CheckCircle2 className="h-4 w-4" />Done</span>
         : <button className="glow-btn" disabled={busy} onClick={mark} data-testid="academy-mark-done">Mark as done</button>}</div>
-      {["quiz", "lab", "scenario"].includes(it.type) && !done && <p className="text-[11px] font-mono text-slate-500 mt-2">Complete it first — we check your {T.toLowerCase()} result before marking it done.</p>}
+      {["quiz", "lab", "scenario"].includes(it.type) && !done && <p className="text-[11px] font-mono text-slate-500 mt-2">Complete it first — we check your {T} result before marking it done.</p>}
     </Glass>);
 }
 
@@ -94,6 +94,7 @@ export function AcademyDetail() {
     <div data-testid="academy-detail">
       <Link to="/app/courses" className="text-xs font-mono text-slate-400 hover:text-cyan-300 inline-flex items-center gap-1 mb-3"><ArrowLeft className="h-3.5 w-3.5" />All courses</Link>
       <PageHeader eyebrow={`// ${c.level} · ${c.modules_count} modules · ${c.owned ? `${c.percent}% complete` : price(c)}`} title={c.title} sub={c.subtitle} />
+      {c.status !== "published" && <div className="mb-4 text-xs font-mono text-yellow-300 border border-yellow-500/30 p-2" data-testid="academy-preview-banner">Preview — this course is {c.status} and not visible to students yet.</div>}
       {c.certificate && <CertCard cert={c.certificate} />}
       <div className="grid lg:grid-cols-[320px_1fr] gap-4">
         <Glass className="p-3 h-fit" data-testid="academy-modules">{c.modules.map((m, mi) => <div key={m.id} className="mb-3">
@@ -104,7 +105,7 @@ export function AcademyDetail() {
               {!c.owned ? <Lock className="h-4 w-4 text-slate-600 shrink-0" /> : d ? <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" /> : <Circle className="h-4 w-4 text-slate-600 shrink-0" />}
               <span className="flex-1 truncate">{x.title}</span><I className="h-3.5 w-3.5 text-slate-500 shrink-0" /></button>; })}</div>)}</Glass>
         <div className="space-y-4">
-          {!c.owned ? <div className="grid md:grid-cols-[1fr_300px] gap-4"><Glass className="p-6"><div className="eyebrow mb-2">about this course</div><p className="text-sm text-slate-300 whitespace-pre-line">{c.description}</p></Glass><Buy c={c} onPaid={() => { toast.success("Payment confirmed — course unlocked"); load(); }} /></div>
+          {!c.owned ? <div className="grid md:grid-cols-[1fr_300px] gap-4"><Glass className="p-6"><div className="eyebrow mb-2">about this course</div><p className="text-sm text-slate-300 whitespace-pre-line">{c.description || c.subtitle || `${c.modules_count} modules · ${c.items_count} items · about ${Math.round(c.minutes / 60) || 1} h of hands-on SOC training.`}</p></Glass><Buy c={c} onPaid={() => { toast.success("Payment confirmed — course unlocked"); load(); }} /></div>
             : it ? <ItemView key={it.id} c={c} it={it} done={c.done.includes(it.id)} onDone={onDone} /> : <Empty text="This course has no items yet" />}
         </div>
       </div>
@@ -125,6 +126,7 @@ export function AcademyCert() {
         <div className="text-2xl font-bold neon-text mt-2" data-testid="academy-cert-course">{c.course_title}</div>
         <div className="text-xs font-mono text-slate-500 mt-8">{c.instructor_name ? `Instructor: ${c.instructor_name} · ` : ""}Issued {fmtDate(c.issued_at)} · ID {c.id}</div>
       </div>
-      <button className="glow-btn mt-4 print:hidden" onClick={() => window.print()} data-testid="academy-cert-print"><Printer className="h-4 w-4" />Print / save as PDF</button>
+      <div className="flex gap-2 mt-4 print:hidden"><button className="glow-btn" onClick={() => window.print()} data-testid="academy-cert-print"><Printer className="h-4 w-4" />Print / save as PDF</button>
+        <Link to={`/app/courses/${c.course_id}`} className="ghost-btn" data-testid="academy-cert-back">Back to course</Link></div>
     </div>);
 }

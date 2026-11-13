@@ -7,7 +7,7 @@ import { Logo } from "./common";
 
 const STUDENT = [
   ["Dashboard", "/app", LayoutDashboard], ["Learning Paths", "/app/paths", RouteIcon], ["Live Sessions", "/app/sessions", CalendarClock],
-  ["Quizzes", "/app/quizzes", ListChecks], ["Progress", "/app/progress", Activity], ["Daily Drill", "/app/drill", Zap], ["My Courses", "/app/courses", GraduationCap], ["Badges", "/app/badges", Medal], ["Mock Interview", "/app/interview", Mic], ["SOC Challenges", "/app/challenges", Siren], ["Shift Simulator", "/app/shift", Timer],
+  ["Quizzes", "/app/quizzes", ListChecks], ["Progress", "/app/progress", Activity], ["Daily Drill", "/app/drill", Zap], ["Courses", "/app/courses", GraduationCap], ["Badges", "/app/badges", Medal], ["Mock Interview", "/app/interview", Mic], ["SOC Challenges", "/app/challenges", Siren], ["Shift Simulator", "/app/shift", Timer],
   ["CTF Arena", "/app/ctf", Flag], ["Scenario Labs", "/app/labs", FlaskConical], ["Kali Terminal", "/app/kali", Terminal],
   ["SIEM", "/app/siem", Search], ["Investigation Tools", "/app/tools", Wrench], ["Threat Intel", "/app/threat-intel", Radar], ["SOP Library", "/sops", BookMarked], ["Playbooks", "/playbooks", Workflow], ["Blogs", "/blog", Newspaper], ["Certificates", "/app/certificates", Award], ["Billing", "/app/billing", CreditCard], ["Account Settings", "/app/account", KeyRound],
 ];

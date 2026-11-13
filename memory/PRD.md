@@ -248,3 +248,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Challenge/shift playbook panel: free students get full trees only for free playbooks (pb-<5 free SOP ids>); others are locked cards with Unlock -> /sops. Locked runs 403.
 - Shift Simulator /app/shift (routes_shift.py, db.shifts): 15/30/60 min -> 5/8/14 mixed alerts (>=1 FP). One active shift per user (partial unique index). Triage once per alert; ends at timer (+5s grace) or manual End; auto-finish when all triaged or on expiry.
 - Score /100: accuracy 55 + report keywords 20 + playbook path 15 + speed 10 (only if all triaged), severity-weighted (Critical 2, High 1.5). Playbook part counts only alerts that had an unlocked playbook for that student (else mirrors accuracy). No XP, no challenge_submissions change. History of last 20 shifts.
+
+## Jun 2026 — Academy Courses (replaces Courses tab)
+- /app/courses = academy catalog (routes_academy.py, db.academy_courses, academy_progress, academy_certs). Module-wise items: video (url), quiz, lab (Kali), scenario (SOC challenge), sop, siem, shift. Quiz/lab/scenario completion verified server-side.
+- Pricing per course in INR (0 = free); everyone pays (incl. Pro). Purchase via payments product key course:<id> (item_for async). Owners: purchasers, course instructor, admin, or anyone with existing progress.
+- Workflow: instructor draft -> submit (pending) -> admin approve/reject(note)/unpublish. Instructor edits to a published course are stored as pending_changes until admin approves. Staff can preview unpublished.
+- Certificate SOCP-C-XXXX on 100% (/app/courses/certificate/:id, printable). Builder in Instructor + Admin "Courses" tab.

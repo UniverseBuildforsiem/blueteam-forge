@@ -59,13 +59,16 @@ def items(c):
 
 
 async def owns(user, c):
-    if not c.get("price") or user["role"] in ("admin", "instructor"):
+    if not c.get("price") or user["role"] == "admin" or c.get("instructor_id") == user["id"]:
         return True
-    return bool(await db.purchases.find_one({"user_id": user["id"], "product_id": f"course:{c['id']}"}))
+    if await db.purchases.find_one({"user_id": user["id"], "product_id": f"course:{c['id']}"}):
+        return True
+    return bool(await db.academy_progress.find_one({"user_id": user["id"], "course_id": c["id"]}))
 
 
-async def done_set(uid, cid):
-    return set(await db.academy_progress.distinct("item_id", {"user_id": uid, "course_id": cid}))
+async def done_set(uid, cid, c=None):
+    got = set(await db.academy_progress.distinct("item_id", {"user_id": uid, "course_id": cid}))
+    return got & {i["id"] for i in items(c)} if c else got
 
 
 def card(c, owned, done):
@@ -79,20 +82,20 @@ def card(c, owned, done):
 async def list_courses(user=Depends(get_current_user)):
     out = []
     for c in await db.academy_courses.find({"status": "published"}, NO_ID).sort("published_at", -1).to_list(200):
-        out.append(card(c, await owns(user, c), await done_set(user["id"], c["id"])))
+        out.append(card(c, await owns(user, c), await done_set(user["id"], c["id"], c)))
     return out
 
 
 @router.get("/academy/courses/{cid}")
 async def get_course(cid: str, user=Depends(get_current_user)):
-    c = await db.academy_courses.find_one({"id": cid, "status": "published"}, NO_ID)
-    if not c:
+    c = await db.academy_courses.find_one({"id": cid}, NO_ID)
+    if not c or (c["status"] != "published" and user["role"] != "admin" and c.get("instructor_id") != user["id"]):
         raise HTTPException(404, "Course not found")
     owned = await owns(user, c)
-    done = await done_set(user["id"], cid)
+    done = await done_set(user["id"], cid, c)
     mods = [{"id": m["id"], "title": m["title"], "items": [it if owned else {k: it[k] for k in ("id", "type", "title", "minutes")} for it in m["items"]]} for m in c["modules"]]
     cert = await db.academy_certs.find_one({"user_id": user["id"], "course_id": cid}, NO_ID)
-    return {**card(c, owned, done), "description": c.get("description", ""), "modules": mods, "done": sorted(done), "certificate": cert}
+    return {**card(c, owned, done), "status": c["status"], "description": c.get("description", ""), "modules": mods, "done": sorted(done), "certificate": cert}
 
 
 async def verify(uid, it):
@@ -120,7 +123,7 @@ async def mark_done(cid: str, iid: str, user=Depends(get_current_user)):
         raise HTTPException(404, "Item not found")
     await verify(user["id"], it)
     await db.academy_progress.update_one({"user_id": user["id"], "course_id": cid, "item_id": iid}, {"$setOnInsert": {"at": now_iso()}}, upsert=True)
-    done = await done_set(user["id"], cid)
+    done = await done_set(user["id"], cid, c)
     cert = None
     if all(i["id"] in done for i in items(c)):
         cert = await db.academy_certs.find_one({"user_id": user["id"], "course_id": cid}, NO_ID)
@@ -175,13 +178,21 @@ async def create(body: CourseIn, user=Depends(staff)):
 async def update(cid: str, body: CourseIn, user=Depends(staff)):
     c = await editable(cid, user)
     check(body)
-    await db.academy_courses.update_one({"id": cid}, {"$set": {**body.model_dump(), "updated_at": now_iso()}})
+    if c["status"] == "published" and user["role"] != "admin":
+        await db.academy_courses.update_one({"id": cid}, {"$set": {"pending_changes": body.model_dump(), "changes_at": now_iso(), "updated_at": now_iso()}})
+    else:
+        await db.academy_courses.update_one({"id": cid}, {"$set": {**body.model_dump(), "updated_at": now_iso()}, "$unset": {"pending_changes": ""}})
     return await db.academy_courses.find_one({"id": cid}, NO_ID)
 
 
 @router.post("/academy/manage/{cid}/submit")
 async def submit(cid: str, user=Depends(staff)):
     c = await editable(cid, user)
+    if c["status"] == "published":
+        if not c.get("pending_changes"):
+            raise HTTPException(400, "No changes to submit")
+        await db.academy_courses.update_one({"id": cid}, {"$set": {"changes_submitted": True, "review_note": ""}})
+        return {"status": "published", "changes": "pending"}
     if not items(c):
         raise HTTPException(400, "Add at least one module item before submitting")
     await db.academy_courses.update_one({"id": cid}, {"$set": {"status": "pending", "review_note": "", "submitted_at": now_iso()}})
@@ -198,6 +209,11 @@ async def review(cid: str, body: ReviewIn, user=Depends(staff)):
     if user["role"] != "admin":
         raise HTTPException(403, "Only admins can review courses")
     c = await editable(cid, user)
+    if c["status"] == "published" and c.get("pending_changes") and body.action in ("approve", "reject"):
+        upd = {**c["pending_changes"]} if body.action == "approve" else {}
+        await db.academy_courses.update_one({"id": cid}, {"$set": {**upd, "review_note": body.note or "", "updated_at": now_iso()}, "$unset": {"pending_changes": "", "changes_submitted": ""}})
+        await audit(user, f"academy course changes {body.action}", c["title"])
+        return {"status": "published", "changes": body.action}
     if body.action == "approve" and not items(c):
         raise HTTPException(400, "This course has no content yet")
     status = {"approve": "published", "reject": "rejected", "unpublish": "draft"}[body.action]

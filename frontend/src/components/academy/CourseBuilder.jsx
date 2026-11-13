@@ -31,7 +31,7 @@ function ItemRow({ it, opts, up, del, mv, tid }) {
 
 function Editor({ c, back }) {
   const { user } = useAuth();
-  const [d, setD] = useState(c.id ? c : blank());
+  const [d, setD] = useState(c.id ? (c.pending_changes ? { ...c, ...c.pending_changes } : c) : blank());
   const [opts, setOpts] = useState(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { api.get("/academy/manage/options").then((r) => setOpts(r.data)); }, []);
@@ -49,7 +49,8 @@ function Editor({ c, back }) {
         {d.status && <Badge s={d.status} />}{d.review_note && <span className="text-xs text-red-300" data-testid="course-review-note">Admin note: {d.review_note}</span>}
         <span className="flex-1" />
         <button className="ghost-btn !text-xs" disabled={busy} onClick={save} data-testid="course-save"><Save className="h-3.5 w-3.5" />Save</button>
-        {user.role !== "admin" && d.status !== "published" && <button className="glow-btn !text-xs" disabled={busy} onClick={() => act("submit", {}, "Submitted for admin review")} data-testid="course-submit"><Send className="h-3.5 w-3.5" />Submit for review</button>}
+        {d.pending_changes && <span className="text-[11px] font-mono text-yellow-300" data-testid="course-changes-pending">changes {d.changes_submitted ? "awaiting review" : "saved, not submitted"} — students still see the live version</span>}
+        {user.role !== "admin" && <button className="glow-btn !text-xs" disabled={busy} onClick={() => act("submit", {}, d.status === "published" ? "Changes sent for admin review" : "Submitted for admin review")} data-testid="course-submit"><Send className="h-3.5 w-3.5" />Submit for review</button>}
         {user.role === "admin" && d.status !== "published" && <button className="glow-btn !text-xs" disabled={busy} onClick={() => act("review", { action: "approve" }, "Course published")} data-testid="course-publish"><Check className="h-3.5 w-3.5" />Publish</button>}
       </div>
       <Glass className="p-5 grid sm:grid-cols-2 gap-3">
@@ -84,7 +85,7 @@ export function CourseBuilder() {
     try { await api.post(`/academy/manage/${c.id}/review`, { action, note }); toast.success(`Course ${action === "approve" ? "published" : action === "reject" ? "sent back" : "unpublished"}`); load(); } catch (e) { toast.error(errMsg(e)); }
   };
   const del = async (c) => { if (!window.confirm(`Delete "${c.title}"?`)) return; try { await api.delete(`/academy/manage/${c.id}`); load(); } catch (e) { toast.error(errMsg(e)); } };
-  if (edit) return <Editor c={edit} back={() => { setEdit(null); load(); }} />;
+  if (edit) return <Editor c={edit} back={() => { setEdit(null); setList(null); load(); }} />;
   return (
     <div data-testid="course-builder">
       <div className="flex items-center mb-4"><span className="text-sm text-slate-400 flex-1">{user.role === "admin" ? "All academy courses. Review pending courses before they go live." : "Build module-wise courses; an admin reviews them before publishing."}</span>
@@ -92,10 +93,10 @@ export function CourseBuilder() {
       {list && !list.length && <Empty text="No courses yet" />}
       <div className="space-y-2">{(list || []).map((c) => <Glass key={c.id} className="p-4 flex flex-wrap items-center gap-3" data-testid={`course-row-${c.id}`}>
         <div className="flex-1 min-w-[200px]"><div className="font-bold text-sm">{c.title}</div><div className="text-[11px] font-mono text-slate-500">{c.instructor_name} · {c.modules.length} modules · {c.price ? `₹${c.price}` : "Free"} · updated {fmtDate(c.updated_at)}</div></div>
-        <Badge s={c.status} />
+        <Badge s={c.status} />{c.changes_submitted && <span className="text-[10px] font-mono text-yellow-300 border border-yellow-500/40 px-1.5 py-0.5" data-testid={`course-changes-${c.id}`}>changes to review</span>}
         <button className="ghost-btn !text-xs" onClick={() => setEdit(c)} data-testid={`course-edit-${c.id}`}>Edit</button>
-        {c.status === "published" && <a href={`/app/courses/${c.id}`} className="ghost-btn !text-xs" data-testid={`course-view-${c.id}`}><Eye className="h-3.5 w-3.5" />View</a>}
-        {user.role === "admin" && c.status === "pending" && <><button className="glow-btn !text-xs" onClick={() => review(c, "approve")} data-testid={`course-approve-${c.id}`}><Check className="h-3.5 w-3.5" />Approve</button>
+        {<a href={`/app/courses/${c.id}`} className="ghost-btn !text-xs" data-testid={`course-view-${c.id}`}><Eye className="h-3.5 w-3.5" />View</a>}
+        {user.role === "admin" && (c.status === "pending" || c.changes_submitted) && <><button className="glow-btn !text-xs" onClick={() => review(c, "approve")} data-testid={`course-approve-${c.id}`}><Check className="h-3.5 w-3.5" />Approve</button>
           <button className="ghost-btn !text-xs" onClick={() => review(c, "reject")} data-testid={`course-reject-${c.id}`}><X className="h-3.5 w-3.5" />Reject</button></>}
         {user.role === "admin" && c.status === "published" && <button className="ghost-btn !text-xs" onClick={() => review(c, "unpublish")} data-testid={`course-unpublish-${c.id}`}>Unpublish</button>}
         <button className="text-slate-500 hover:text-red-400" onClick={() => del(c)} data-testid={`course-delete-${c.id}`}><Trash2 className="h-4 w-4" /></button>
