@@ -11,6 +11,7 @@ import { BlogList, BlogPost } from "./pages/Blog";
 import { SeriesList, SeriesPost } from "./pages/Series";
 import { SopList, SopDetail } from "./pages/Sops";
 import { Login, Register, ForgotPassword, ResetPassword, AuthCallback } from "./pages/AuthPages";
+import { PlaybookList, PlaybookDetail } from "./pages/Playbooks";
 import Onboarding from "./pages/Onboarding";
 import Verify from "./pages/Verify";
 import PublicProfile from "./pages/PublicProfile";
@@ -54,6 +55,8 @@ function AppRouter() {
             <Route path="/soc-series/:slug" element={<SeriesPost />} />
             <Route path="/sops" element={<SopList />} />
             <Route path="/sops/:id" element={<SopDetail />} />
+            <Route path="/playbooks" element={<PlaybookList />} />
+            <Route path="/playbooks/:id" element={<PlaybookDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

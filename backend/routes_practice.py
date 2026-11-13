@@ -5,6 +5,7 @@ from collections import Counter
 from email.parser import Parser
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
+from routes_playbooks import run_for
 from core import db, now_iso, new_id, get_current_user, award, rank_for, frame_for
 from seed_data import gen_logs, INTEL, SANDBOX, THREAT_FEED
 from toolkit import intel_report, alert_iocs, sandbox_report
@@ -24,6 +25,8 @@ async def list_challenges(user=Depends(get_current_user)):
     full = {c["id"]: c for c in await db.challenges.find({}, {"_id": 0, "id": 1, "evidence": 1, "keywords": 1}).to_list(500)}
     for c in cs:
         c["submission"] = subs.get(c["id"])
+        if c["submission"]:
+            c["playbook_run"] = await run_for(user["id"], c["id"])
         texts = challenge_hint_texts(full[c["id"]])
         c["hints"] = [{"idx": i, "cost": HINT_COST, "text": t if (c["id"], i) in unlocked else None} for i, t in enumerate(texts)]
     return cs
@@ -83,7 +86,7 @@ async def submit_challenge(cid: str, body: TriageIn, user=Depends(get_current_us
     await db.challenge_submissions.replace_one({"user_id": user["id"], "challenge_id": cid}, dict(sub), upsert=True)
     if not prev:
         await award(user["id"], round(c["points"] * score / 100), f"Triaged alert '{c['title']}' ({score}/100)")
-    return {**sub, "expected_verdict": c["verdict"], "missed_keywords": [k for k in c["keywords"] if k not in hits]}
+    return {**sub, "expected_verdict": c["verdict"], "missed_keywords": [k for k in c["keywords"] if k not in hits], "playbook_run": await run_for(user["id"], cid)}
 
 
 # ---------- CTF ----------

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Siren, CheckCircle2, XCircle, Crosshair, ArrowRight, Lightbulb, Lock } from "lucide-react";
+import { Siren, CheckCircle2, XCircle, Crosshair, ArrowRight, Lightbulb, Lock, Workflow } from "lucide-react";
+import { PlaybookPanel, PlaybookResult } from "../../components/playbook/PlaybookPanel";
 import { useAuth } from "../../context/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { toast } from "sonner";
@@ -13,11 +14,16 @@ export function Investigate({ c, onDone, submitUrl }) {
   const [verdict, setVerdict] = useState(c.submission?.verdict || "");
   const [report, setReport] = useState(c.submission?.report || "");
   const [res, setRes] = useState(null);
+  const [pbOpen, setPbOpen] = useState(false);
+  const [pbRun, setPbRun] = useState(undefined);
   const submit = async () => {
     try { const { data } = await api.post(submitUrl || `/challenges/${c.id}/submit`, { verdict, report }); setRes(data); onDone(); } catch (e) { toast.error(errMsg(e)); }
   };
+  const shownRun = pbRun !== undefined && pbRun !== null ? pbRun : res ? res.playbook_run : c.playbook_run;
   return (
     <div className="space-y-5 mt-4">
+      {!submitUrl && <><button className="ghost-btn !text-xs w-full justify-center" onClick={() => setPbOpen(true)} data-testid="challenge-open-playbook"><Workflow className="h-4 w-4" />Open playbook</button>
+        <PlaybookPanel c={c} open={pbOpen} setOpen={setPbOpen} onRecorded={(r) => r && setPbRun(r)} /></>}
       <div className="text-sm text-slate-300">{c.description}</div>
       <div className="bg-black/40 border border-cyan-500/20 p-4 font-mono text-xs space-y-1" data-testid="challenge-alert-details">
         {Object.entries(c.alert).map(([k, v]) => <div key={k}><span className="text-cyan-400">{k}:</span> <span className="text-slate-200 break-all">{v}</span></div>)}
@@ -39,7 +45,9 @@ export function Investigate({ c, onDone, submitUrl }) {
         <div className="text-xs text-slate-400 mt-2">Expected verdict: <span className="text-slate-200">{res.expected_verdict}</span></div>
         <div className="text-xs text-slate-400 mt-1">Covered: <span className="text-green-300">{res.keywords_hit.join(", ") || "—"}</span></div>
         <div className="text-xs text-slate-400 mt-1">Missed: <span className="text-orange-300">{res.missed_keywords.join(", ") || "—"}</span></div>
+        {!submitUrl && <PlaybookResult run={shownRun} />}
       </Glass>}
+      {!res && c.submission && !submitUrl && <PlaybookResult run={shownRun} />}
       {c.submission?.status === "reviewed" && <div className="text-sm text-cyan-300 font-mono">Instructor grade: {c.submission.instructor_grade}/100 — {c.submission.feedback}</div>}
     </div>
   );

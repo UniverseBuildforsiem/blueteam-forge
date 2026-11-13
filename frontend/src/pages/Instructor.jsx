@@ -7,7 +7,22 @@ import { Glass, PageHeader, Empty } from "../components/common";
 import ContentEditor from "../components/ContentEditor";
 import { CatalogCourses, StudentsPanel, GradingPanel } from "../components/InstructorExtras";
 
-const KINDS = [["paths", "Courses & Lessons"], ["quizzes", "Quizzes"], ["ctfs", "CTF"], ["challenges", "SOC Challenges"], ["labs", "Labs"], ["sessions", "Live Sessions"]];
+const KINDS = [["paths", "Courses & Lessons"], ["quizzes", "Quizzes"], ["ctfs", "CTF"], ["challenges", "SOC Challenges"], ["playbooks", "Playbooks"], ["labs", "Labs"], ["sessions", "Live Sessions"]];
+
+function PlaybookRuns() {
+  const [r, setR] = useState(null);
+  useEffect(() => { api.get("/instructor/playbook-runs").then((x) => setR(x.data)); }, []);
+  if (!r) return null;
+  if (!r.length) return <Empty text="No students have used a playbook on a challenge yet" />;
+  return (
+    <Glass className="overflow-x-auto"><table className="w-full text-sm" data-testid="playbook-runs-table">
+      <thead><tr className="text-left text-xs font-mono text-slate-500 border-b border-white/10">{["Student", "Challenge", "Playbook", "Outcome", "Correct path", "Went wrong at", "When"].map((h) => <th key={h} className="px-3 py-2 font-normal">{h}</th>)}</tr></thead>
+      <tbody>{r.map((x) => <tr key={x.id} className="border-b border-white/5" data-testid={`playbook-run-${x.id}`}>
+        <td className="px-3 py-2">{x.user_name}</td><td className="px-3 py-2 text-xs">{x.challenge_title}</td><td className="px-3 py-2 text-xs text-slate-400">{x.playbook_title.replace(/^Playbook:\s*/, "")}</td>
+        <td className="px-3 py-2 font-mono text-xs">{x.outcome}</td><td className={`px-3 py-2 font-mono text-xs ${x.correct ? "text-green-400" : "text-orange-300"}`}>{x.correct ? "yes" : "no"}</td>
+        <td className="px-3 py-2 text-xs text-slate-400">{x.wrong_step?.title || "—"}</td><td className="px-3 py-2 text-xs text-slate-500">{fmtDate(x.created_at)}</td></tr>)}</tbody>
+    </table></Glass>);
+}
 
 function Content() {
   const [k, setK] = useState("paths");
@@ -48,7 +63,7 @@ function Attendance() {
   );
 }
 
-const TABS = [["content", "Content", Content], ["catalog", "Catalog courses", CatalogCourses], ["students", "Students", StudentsPanel], ["analytics", "Quiz analytics", Analytics], ["grading", "Grading", GradingPanel], ["attendance", "Attendance", Attendance]];
+const TABS = [["content", "Content", Content], ["catalog", "Catalog courses", CatalogCourses], ["students", "Students", StudentsPanel], ["analytics", "Quiz analytics", Analytics], ["grading", "Grading", GradingPanel], ["playbook-runs", "Playbook runs", PlaybookRuns], ["attendance", "Attendance", Attendance]];
 
 export default function Instructor() {
   return (

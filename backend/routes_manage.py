@@ -16,7 +16,7 @@ NO_ID = {"_id": 0}
 BG_TASKS = set()
 
 KINDS = {"paths": ("paths", staff), "quizzes": ("quizzes", staff), "ctfs": ("ctfs", staff), "labs": ("labs", staff),
-         "sessions": ("sessions", staff), "challenges": ("challenges", staff),
+         "sessions": ("sessions", staff), "challenges": ("challenges", staff), "playbooks": ("playbooks", staff),
          "categories": ("categories", admin_only), "announcements": ("announcements", admin_only)}
 
 
@@ -37,7 +37,8 @@ async def guard(kind: str, user=Depends(get_current_user)):
 # ---------- Generic content CRUD (instructor/admin) ----------
 REQUIRED = {"paths": ["title", "description", "level", "modules"], "quizzes": ["title", "questions"], "ctfs": ["title", "category", "points", "flag", "description", "hints"],
             "labs": ["title", "description", "difficulty", "tasks", "kali"], "sessions": ["title", "start", "join_link", "capacity", "instructor"],
-            "challenges": ["title", "category", "severity", "points", "verdict", "alert", "evidence", "keywords"], "categories": ["name"], "announcements": ["title"]}
+            "challenges": ["title", "category", "severity", "points", "verdict", "alert", "evidence", "keywords"], "categories": ["name"], "announcements": ["title"],
+            "playbooks": ["title", "severity", "start", "nodes", "source"]}
 
 
 def validate(col, doc):
@@ -45,6 +46,14 @@ def validate(col, doc):
     if missing:
         raise HTTPException(422, f"Missing required fields: {', '.join(missing)}")
     try:
+        if col == "playbooks":
+            from playbook_writer import reach
+            try:
+                reach(doc)
+            except AssertionError as e:
+                raise HTTPException(422, f"Decision tree problem: {e}")
+            doc.update(status="ready", updated=now_iso()[:10])
+            doc.setdefault("report", []); doc.setdefault("mitre", []); doc.setdefault("triggers", []); doc.setdefault("categories", []); doc.setdefault("labs", [])
         if col == "paths":
             for m in doc["modules"]:
                 m.setdefault("id", new_id())

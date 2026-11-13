@@ -17,6 +17,7 @@ export default function PublicNav() {
           <Link to="/book" data-testid="nav-ebook" className="hover:text-cyan-300 transition-colors">Ebook</Link>
           <Link to="/blog" data-testid="nav-blog" className="hover:text-cyan-300 transition-colors">Blog</Link>
           <Link to="/sops" data-testid="nav-sops" className="hover:text-cyan-300 transition-colors">SOPs</Link>
+          <Link to="/playbooks" data-testid="nav-playbooks" className="hover:text-cyan-300 transition-colors">Playbooks</Link>
           <Link to="/catalog" data-testid="nav-catalog" className="hover:text-cyan-300 transition-colors">Catalog</Link>
           <Link to="/talent" data-testid="nav-talent" className="hover:text-cyan-300 transition-colors">Hire talent</Link>
           <a href="/#pricing" className="hover:text-cyan-300 transition-colors">Pricing</a>

@@ -8,6 +8,7 @@ import { Glass, Empty } from "./common";
 import PathBuilder from "./PathBuilder";
 import { CtfFields } from "./CtfCreator";
 import { BulkIntelCtfs } from "./BulkIntelCtfs";
+import { PlaybookForm, playbookTemplate } from "./playbook/PlaybookForm";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const Lbl = ({ l, children }) => <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
@@ -18,6 +19,7 @@ const TEMPLATES = {
   sessions: () => ({ title: "", description: "", instructor: "", start: new Date(Date.now() + 864e5).toISOString(), duration_min: 60, join_link: "", capacity: 50, recording_url: "" }),
   ctfs: () => ({ category: "Log Analysis", title: "", points: 100, flag: "", description: "", hints: [{ text: "", cost: 20 }], writeup: "", published: false }),
   challenges: () => ({ title: "", category: "Phishing", severity: "Medium", points: 100, verdict: "TP", description: "", alert: { rule: "", host: "", user: "" }, evidence: [], keywords: [], published: false }),
+  playbooks: playbookTemplate,
   labs: () => ({ title: "", description: "", difficulty: "Beginner", duration: "30 min", published: false, tasks: [{ id: "t1", title: "", question: "", answer: "", hint: "" }], kali: { fs: { "/home/analyst/README.txt": "" }, net: { whois: {}, dns: {}, nmap: {}, curl: {} }, pcap: "", cracked: {} } }),
 };
 
@@ -63,7 +65,7 @@ function JsonForm({ d, set }) {
     {err && <div className="text-xs text-red-400 font-mono mt-1">{err}</div>}<div className="text-xs text-slate-500 mt-1 font-mono">Labs ship as JSON seed data: tasks, Kali filesystem, network fixtures, pcap summary and cracked hashes.</div></div>;
 }
 
-const FORMS = { paths: PathBuilder, quizzes: QuizBuilder, sessions: SessionForm, ctfs: ({ d, set }) => <CtfFields f={d} setF={set} tid="ctf-edit" />, challenges: JsonForm, labs: JsonForm };
+const FORMS = { paths: PathBuilder, quizzes: QuizBuilder, sessions: SessionForm, ctfs: ({ d, set }) => <CtfFields f={d} setF={set} tid="ctf-edit" />, challenges: JsonForm, labs: JsonForm, playbooks: PlaybookForm };
 
 export default function ContentEditor({ kind }) {
   const [items, setItems] = useState([]);

@@ -146,6 +146,8 @@ export function SopDetail() {
             {s.locked ? <span className="text-xs font-mono text-slate-500" data-testid="sop-lab-locked">unlock the SOP to practise</span>
               : <Link to={`/app/sop-lab/${s.id}`} className="glow-btn !text-xs" data-testid="sop-lab-start">Start practice lab <ArrowRight className="h-3.5 w-3.5" /></Link>}
           </Glass>}
+          <Link to={`/playbooks/pb-${s.id}`} className="mt-4 flex items-center gap-3 border border-cyan-500/30 bg-cyan-500/5 p-4 hover:bg-cyan-500/10 transition-colors" data-testid="sop-playbook-link">
+            <ArrowRight className="h-4 w-4 text-cyan-300" /><span className="text-sm"><span className="font-bold">Interactive playbook</span><span className="text-slate-400"> · walk this SOP as a decision tree and finish with an incident report</span></span></Link>
           <Glass className="p-5 mt-6"><div className="eyebrow mb-2">objective</div><p className="text-sm text-slate-300">{s.objective}</p></Glass>
           <div className="mt-4"><List icon={AlertTriangle} title="triggers" items={s.triggers} testId="sop-triggers" /></div>
           {s.locked ? <Locked s={s} onPaid={() => { toast.success("All SOPs unlocked!"); load(); }} /> : <>
