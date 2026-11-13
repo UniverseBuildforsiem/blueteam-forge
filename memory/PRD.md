@@ -243,3 +243,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Public /playbooks + /playbooks/:id (same access as SOPs: 5 free = pb-<FREE SOP ids>, rest via SOP Library/Pro; locked shows first question only). Linked labs + source SOP/SIEM.
 - SOC Challenges: "Open playbook" left panel (GET /api/challenges/{cid}/playbooks, category match + relevance sort). Runs POST /api/playbooks/{id}/run; correct = escalate for TP, close for FP; wrong_step = first question whose branch cannot reach correct ending. Revealed only after submit; first run kept, later = practice. No score change. Instructor tab "Playbook runs".
 - Note: panel gives full trees to all logged-in students (practice context).
+
+## Jun 2026 — Locked paid playbooks + Shift Simulator
+- Challenge/shift playbook panel: free students get full trees only for free playbooks (pb-<5 free SOP ids>); others are locked cards with Unlock -> /sops. Locked runs 403.
+- Shift Simulator /app/shift (routes_shift.py, db.shifts): 15/30/60 min -> 5/8/14 mixed alerts (>=1 FP). One active shift per user (partial unique index). Triage once per alert; ends at timer (+5s grace) or manual End; auto-finish when all triaged or on expiry.
+- Score /100: accuracy 55 + report keywords 20 + playbook path 15 + speed 10 (only if all triaged), severity-weighted (Critical 2, High 1.5). Playbook part counts only alerts that had an unlocked playbook for that student (else mirrors accuracy). No XP, no challenge_submissions change. History of last 20 shifts.

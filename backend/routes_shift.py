@@ -2,6 +2,7 @@ import random
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from pymongo.errors import DuplicateKeyError
 from core import db, get_current_user, now, now_iso, new_id
 
 router = APIRouter(prefix="/api")
@@ -43,23 +44,25 @@ async def pick(n):
 
 async def score(s):
     cs = {c["id"]: c for c in await db.challenges.find({"id": {"$in": s["alerts"]}}, NO_ID).to_list(50)}
-    rows, tot_w, acc, rep, pbk = [], 0, 0, 0, 0
-    for cid in s["alerts"]:
+    avail = set(s.get("pb_available", s["alerts"]))
+    rows, tot_w, acc, rep, pbk, pb_w = [], 0, 0, 0, 0, 0
+    for cid in [a for a in s["alerts"] if a in cs]:
         c, r = cs[cid], s["results"].get(cid) or {}
         w = WEIGHT.get(c["severity"], 1)
         tot_w += w
+        pb_w += w if cid in avail else 0
         vc = bool(r.get("verdict_correct"))
         kw = r.get("kw_ratio", 0)
         pb = (r.get("playbook") or {}).get("correct")
         acc += w * vc
         rep += w * kw
-        pbk += w * bool(pb)
+        pbk += w * bool(pb) if cid in avail else 0
         rows.append({"id": cid, "title": c["title"], "severity": c["severity"], "category": c["category"], "expected": c["verdict"], "verdict": r.get("verdict"),
                      "verdict_correct": vc, "report_pct": round(100 * kw), "playbook": r.get("playbook"), "missed_keywords": [k for k in c["keywords"] if k not in r.get("hits", [])] if r else None})
     done = len([x for x in rows if x["verdict"]])
     total = s["minutes"] * 60
     speed = max(0, total - s.get("used_sec", total)) / total if done == len(rows) else 0
-    parts = {"accuracy": round(55 * acc / tot_w), "report": round(20 * rep / tot_w), "playbook": round(15 * pbk / tot_w), "speed": round(10 * speed)}
+    parts = {"accuracy": round(55 * acc / tot_w), "report": round(20 * rep / tot_w), "playbook": round(15 * (pbk / pb_w if pb_w else acc / tot_w)), "speed": round(10 * speed)}
     return {"score": sum(parts.values()), "parts": parts, "rows": rows, "triaged": done}
 
 
@@ -94,15 +97,23 @@ async def mine(sid, user):
 async def start(body: StartIn, user=Depends(get_current_user)):
     if body.minutes not in LENGTHS:
         raise HTTPException(400, "Pick a 15, 30 or 60 minute shift")
+    from routes_playbooks import unlocked_categories
+    await db.shifts.create_index("user_id", unique=True, partialFilterExpression={"status": "active"}, name="one_active_shift")
     active = await db.shifts.find_one({"user_id": user["id"], "status": "active"}, NO_ID)
     if active:
         v = await view(active)
         if v["status"] == "active":
             return v
     t = now()
-    s = {"id": new_id(), "user_id": user["id"], "user_name": user["name"], "minutes": body.minutes, "alerts": await pick(LENGTHS[body.minutes]), "results": {},
+    alerts = await pick(LENGTHS[body.minutes])
+    cats = await unlocked_categories(user)
+    avail = [c["id"] for c in await db.challenges.find({"id": {"$in": alerts}, "category": {"$in": list(cats)}}, {"_id": 0, "id": 1}).to_list(50)]
+    s = {"id": new_id(), "user_id": user["id"], "user_name": user["name"], "minutes": body.minutes, "alerts": alerts, "pb_available": avail, "results": {},
          "status": "active", "started_at": t.isoformat(), "ends_at": (t + timedelta(minutes=body.minutes)).isoformat()}
-    await db.shifts.insert_one(dict(s))
+    try:
+        await db.shifts.insert_one(dict(s))
+    except DuplicateKeyError:
+        return await view(await db.shifts.find_one({"user_id": user["id"], "status": "active"}, NO_ID))
     return await view(s)
 
 
@@ -120,6 +131,8 @@ async def triage(sid: str, cid: str, body: TriageIn, user=Depends(get_current_us
         raise HTTPException(400, "This shift has ended")
     if cid not in s["alerts"]:
         raise HTTPException(404, "That alert isn't in this shift")
+    if (s["results"].get(cid) or {}).get("verdict"):
+        raise HTTPException(400, "You already triaged this alert")
     c = await db.challenges.find_one({"id": cid}, NO_ID)
     hits = [k for k in c["keywords"] if k.lower() in body.report.lower()]
     prev = s["results"].get(cid) or {}
@@ -133,7 +146,7 @@ async def triage(sid: str, cid: str, body: TriageIn, user=Depends(get_current_us
 
 async def record_shift_playbook(sid, cid, user, run):
     s = await mine(sid, user)
-    if s["status"] != "active" or cid not in s["alerts"]:
+    if s["status"] != "active" or left(s) < -5 or cid not in s["alerts"]:
         raise HTTPException(400, "This shift has ended")
     if (s["results"].get(cid) or {}).get("playbook"):
         return False

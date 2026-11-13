@@ -59,6 +59,7 @@ async def challenge_playbooks(cid: str, user=Depends(get_current_user)):
     pbs = await db.playbooks.find({**LIVE, "categories": c["category"]}, NO_ID).to_list(50)
     pbs.sort(key=lambda p: (-(3 * len(words & toks(p["title"])) + len(words & toks(" ".join(p.get("triggers", []))))), p["source"]["type"] != "siem", p.get("order", 9999)))
     owned = await owns_sops(user)
+    pbs.sort(key=lambda p: not (owned or p["id"] in FREE_PB))
     out = []
     for p in pbs[:8]:
         cd = {**card(p, owned), "lab_info": await lab_info(p.get("labs"))}
@@ -151,6 +152,11 @@ async def record_run(pid: str, body: RunIn, user=Depends(get_current_user)):
 async def run_for(uid, cid):
     r = await db.playbook_runs.find_one({"user_id": uid, "challenge_id": cid}, NO_ID)
     return reveal(r) if r else None
+
+
+async def unlocked_categories(user):
+    q = LIVE if await owns_sops(user) else {**LIVE, "id": {"$in": list(FREE_PB)}}
+    return set(await db.playbooks.distinct("categories", q))
 
 
 @router.get("/instructor/playbook-runs")

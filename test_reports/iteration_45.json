@@ -1,0 +1,40 @@
+{
+  "summary": "Tested the Lock Paid Playbooks feature and the new Shift Simulator, both backend and UI. Backend: 12/12 pytest pass (new file tests/test_shift_and_pb_lock.py). Lock: free students get locked cards (no nodes/report/start/triggers) and locked cards sort last. Admin, instructor and SOP purchasers (temporary sop-bundle purchase, removed afterwards) get everything unlocked. A locked run by a free student returns 403; a free playbook run returns 200. Shift: minutes other than 15/30/60 returns 400. Lengths give 5/8/14 unique alerts with mixed categories and at least one FP. Verdict and keywords are hidden. Starting again or calling GET active resumes the same shift. Another user's shift returns 404. Bad triage input returns 422 (short report, bad verdict); an unknown alert returns 404. A playbook run with shift_id returns {recorded:true, shift:true, outcome} with no result shown; a second run returns recorded:false; nothing is written to playbook_runs. Triaging the last alert auto-finishes the shift. The weighted accuracy and playbook parts match the hand calculation (Critical 2, High 1.5). Speed is about 10 when the shift is finished fast and 0 when it is ended early. History, XP and challenge_submissions are unchanged. Expiry works: triage after ends_at+5s returns 400 'This shift has ended', 2s past the end is still accepted (grace window), and GET active auto-finishes the shift (used_sec 900, score 0). UI: the challenge panel lock list, pb-panel-lock 'unlock', the pb-panel-locked view, the Unlock link to /sops and Back all work. A single locked playbook (mocked) does not auto-open. Shift UI: the sidebar link, start options, empty history, sticky header, a countdown that ticks, resume on reload, the panel inside the shift (toast 'Playbook path saved for this shift', button label '· path saved', no pb-result), advance to the next alert, shift-alert-done, End shift with the confirm dialog, the results table (missed keywords, playbook 'off at ...' text), shift-again and history. The timer reaching 0:00 shows the toast and the results. Regression: the SOC Challenges panel run followed by Submit still shows pb-result and pb-wrong-step.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/challenges/{cid}/playbooks", "issue": "pbs[:8] is cut BEFORE the locked/unlocked sort, so free students lose free playbooks that do cover the category. Seen on 15 challenges: ch-12-1, ch-12-4 and ch-12-5 (Persistence) show 0 free of 2 available; ch-mal-01 and ch-03-1..3 (Malware) show 1 of 3; ch-07-2..5 (Cloud) show 1 of 2. 40 of 75 challenges show a free student no unlocked playbook at all. Fix: put the free/unlocked ones first, then cut to 8 (or always add the matching free ones)."},
+      {"endpoint": "POST /api/shift/start (pick)", "issue": "Alert picking ignores playbook availability. Free students often get shifts where every alert's playbooks are locked (seen: all 7 locked for ch-net-02), so the 15-point playbook part is out of reach for free users. Consider preferring alerts that have a free playbook for free users, or reweighting."},
+      {"endpoint": "record_shift_playbook", "issue": "Does not check the end time (left(s)): a playbook run is still recorded after ends_at as long as status is 'active'. The triage endpoint applies the +5s grace check; this one doesn't."},
+      {"endpoint": "POST /api/shift/{sid}/triage/{cid}", "issue": "An alert that is already triaged can be re-triaged through the API (the verdict is overwritten). The UI hides the form, so this is low risk, but the API doesn't enforce first-verdict-wins."},
+      {"endpoint": "POST /api/shift/start", "issue": "No unique guard on one active shift per user: two concurrent starts can insert two active shifts (find_one then insert is not atomic)."},
+      {"endpoint": "score()", "issue": "cs[cid] raises KeyError (500) if a challenge in a shift is deleted or unpublished later; the history/results for that shift would break."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Shift results", "issues": ["When a shift ended on expiry, '0:25 used of 15:00' is shown only because the test moved ends_at by hand (used_sec is computed from started_at). Not a bug in real use."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_shift_and_pb_lock.py", "/app/test_reports/pytest/pytest_iter45.xml"],
+  "action_items": [
+    "challenge_playbooks: sort unlocked first (or add the matching free playbooks) BEFORE cutting to 8, so free students see free playbooks that cover the category",
+    "Optional: when picking shift alerts for free users, prefer alerts that have a free playbook, so the playbook part can be earned",
+    "Optional: record_shift_playbook should reject runs after ends_at (+grace), and triage should reject re-triage of an alert that is already triaged"
+  ],
+  "critical_code_review_comments": [
+    "routes_playbooks.challenge_playbooks: out.sort(key=locked) runs after pbs[:8], so free ones that rank lower get cut",
+    "routes_shift.start: race between find_one(active) and insert_one; consider a partial unique index on {user_id, status:'active'}",
+    "routes_shift.score: guard against challenges that are missing (cs.get(cid))",
+    "Shift.jsx: Start's history fetch has no error handling (an unhandled promise if /shift/history fails)"
+  ],
+  "updated_files": ["/app/backend/tests/test_shift_and_pb_lock.py"],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% of tested flows"},
+  "seed_data_creation": "Registered fresh users test_sh45_*@example.com and test_sh45ui_*@example.com. All shifts created by tests (pytest ids plus 3 UI shifts, including 1 admin shift) were deleted; db.shifts is back to the 2 pre-existing docs. The temporary purchases row was deleted. Side effects: the UI student test_sh45ui_941134ae submitted ch-bf-01 (earned XP); the pytest regression posted an admin playbook run on ch-bf-01 (playbook_runs upsert for the admin).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest tests/test_shift_and_pb_lock.py -n 0 -p no:randomly`; it uses pymongo directly to change ends_at and cleans up its shifts. Free playbooks: pb-sop-{malware,phishing,impossible-travel,powershell,bruteforce}. Use ch-bf-01 for the lock UI (1 free + 7 locked). To test a single locked playbook, mock the route (no real case exists). App dashboard route is /app (not /app/dashboard). At test time playbooks were 58 ready / 13 planned / 4 generating.",
+  "rca of the issue": "Free playbooks missing from the challenge panel: challenge_playbooks sorts by relevance, cuts to 8 (pbs[:8]), then sorts locked last. For categories with many paid playbooks (Persistence, Malware, Cloud), the free playbooks rank below 8 and are dropped before the locked-last sort can bring them up. Repro: as a free student, GET /api/challenges/ch-12-1/playbooks gives 8 locked, 0 free, even though pb-sop-malware and pb-sop-impossible-travel cover Persistence. Fix: sort by (locked, relevance...) before slicing, or slice unlocked and locked separately."
+}
