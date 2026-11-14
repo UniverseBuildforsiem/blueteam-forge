@@ -4,12 +4,14 @@ import { BadgeCheck, XCircle, Download } from "lucide-react";
 import { api, API } from "../lib/api";
 import { Glass } from "../components/common";
 import PublicNav from "../components/PublicNav";
+import { CertShare } from "../components/academy/CertShare";
 
 export default function Verify() {
   const { id } = useParams();
   const [c, setC] = useState(undefined);
-  useEffect(() => { api.get(`/public/verify/${id}`).then((r) => setC(r.data)).catch(() => setC(null)); }, [id]);
-  const valid = c && c.status === "valid";
+  const course = id.startsWith("SOCP-C-");
+  useEffect(() => { api.get(course ? `/academy/certificates/${id}` : `/public/verify/${id}`).then((r) => setC(r.data)).catch(() => setC(null)); }, [id, course]);
+  const valid = c && (course || c.status === "valid");
   return (
     <div className="min-h-screen grid-bg">
       <PublicNav />
@@ -23,11 +25,13 @@ export default function Verify() {
             </div>
             {c && <div className="mt-6 space-y-2 font-mono text-sm">
               <div><span className="text-slate-500">Holder: </span><span data-testid="verify-holder">{c.username ? <Link to={`/u/${c.username}`} className="text-cyan-300 hover:underline" data-testid="verify-profile-link">{c.name}</Link> : c.name}</span></div>
-              <div><span className="text-slate-500">Path: </span>{c.path_title}</div>
-              <div><span className="text-slate-500">Score: </span>{c.score}%</div>
+              {course ? <><div><span className="text-slate-500">Course: </span><span data-testid="verify-course">{c.course_title}</span></div>
+                {c.instructor_name && <div><span className="text-slate-500">Instructor: </span>{c.instructor_name}</div>}</>
+                : <><div><span className="text-slate-500">Path: </span>{c.path_title}</div><div><span className="text-slate-500">Score: </span>{c.score}%</div></>}
               <div><span className="text-slate-500">Issued: </span>{c.issued_at.slice(0, 10)}</div>
               <div><span className="text-slate-500">ID: </span>{c.id}</div>
-              <a href={`${API}/public/certificates/${c.id}/pdf`} target="_blank" rel="noreferrer" className="ghost-btn mt-4" data-testid="verify-download-pdf"><Download className="h-4 w-4" /> View PDF</a>
+              {course ? <div className="pt-4"><CertShare cert={c} /></div>
+                : <a href={`${API}/public/certificates/${c.id}/pdf`} target="_blank" rel="noreferrer" className="ghost-btn mt-4" data-testid="verify-download-pdf"><Download className="h-4 w-4" /> View PDF</a>}
             </div>}
           </Glass>
         )}

@@ -1,5 +1,9 @@
+import io
+import os
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from PIL import Image, ImageDraw
 from pydantic import BaseModel, Field
 from core import db, get_current_user, now_iso, new_id, audit
 
@@ -137,10 +141,57 @@ async def mark_done(cid: str, iid: str, user=Depends(get_current_user)):
 
 @router.get("/academy/certificates/{cert_id}")
 async def get_cert(cert_id: str):
-    cert = await db.academy_certs.find_one({"id": cert_id}, {"_id": 0, "user_id": 0})
+    cert = await db.academy_certs.find_one({"id": cert_id}, NO_ID)
     if not cert:
         raise HTTPException(404, "Certificate not found")
+    u = await db.users.find_one({"id": cert.pop("user_id")}, {"_id": 0, "username": 1, "public_profile": 1, "status": 1})
+    cert["username"] = u["username"] if u and u.get("public_profile") is not False and u.get("status") == "active" else None
+    cert["verify_url"] = f"{os.environ['FRONTEND_URL'].rstrip('/')}/verify/{cert_id}"
     return cert
+
+
+def cert_png(c):
+    from routes_share import font, draw_logo, CYAN, GREEN, NAVY, MUTED
+    import qrcode
+    img = Image.new("RGB", (1600, 1130), NAVY)
+    d = ImageDraw.Draw(img)
+    d.rectangle((24, 24, 1576, 1106), outline=CYAN, width=3)
+    d.rectangle((36, 36, 1564, 1094), outline=GREEN, width=1)
+    draw_logo(d)
+    d.text((60, 170), "CERTIFICATE OF COURSE COMPLETION", font=font("LiberationMono-Bold.ttf", 28), fill=MUTED)
+    d.text((60, 300), "This certifies that", font=font("LiberationSans-Regular.ttf", 32), fill=(248, 250, 252))
+    d.text((60, 350), c["name"][:40], font=font("LiberationSans-Bold.ttf", 80), fill=(248, 250, 252))
+    d.text((60, 480), "has successfully completed the course", font=font("LiberationSans-Regular.ttf", 32), fill=(248, 250, 252))
+    d.text((60, 530), c["course_title"][:48], font=font("LiberationMono-Bold.ttf", 46), fill=GREEN)
+    mono = font("LiberationSans-Regular.ttf", 26)
+    url = f"{os.environ['FRONTEND_URL'].rstrip('/')}/verify/{c['id']}"
+    for i, line in enumerate([f"Instructor: {c.get('instructor_name') or '-'}", f"Issued: {c['issued_at'][:10]}", f"Certificate ID: {c['id']}", f"Verify: {url}"]):
+        d.text((60, 860 + i * 40), line, font=mono, fill=MUTED)
+    img.paste(qrcode.make(url, border=2).get_image().convert("RGB").resize((260, 260)), (1270, 790))
+    return img
+
+
+async def find_cert(cert_id):
+    c = await db.academy_certs.find_one({"id": cert_id}, NO_ID)
+    if not c:
+        raise HTTPException(404, "Certificate not found")
+    return c
+
+
+@router.get("/academy/certificates/{cert_id}/png")
+async def get_cert_png(cert_id: str):
+    buf = io.BytesIO()
+    cert_png(await find_cert(cert_id)).save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png", headers={"Content-Disposition": f"attachment; filename=SOCProfessionals-{cert_id}.png"})
+
+
+@router.get("/academy/certificates/{cert_id}/pdf")
+async def get_cert_pdf(cert_id: str):
+    buf = io.BytesIO()
+    cert_png(await find_cert(cert_id)).save(buf, format="PDF", resolution=150)
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=SOCProfessionals-{cert_id}.pdf"})
 
 
 # ---------- instructor / admin ----------

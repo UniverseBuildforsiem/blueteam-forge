@@ -7,6 +7,7 @@ import { payRazorpay, payCashfree } from "../../lib/pay";
 import { Glass, PageHeader, Empty } from "../../components/common";
 import { VideoFrame } from "../../components/VideoField";
 import { embedSrc } from "../../lib/video";
+import { CertShare } from "../../components/academy/CertShare";
 
 export const ITEM_TYPES = {
   video: ["Video", PlayCircle], quiz: ["Quiz", ListChecks], lab: ["Kali lab", Terminal], scenario: ["Scenario", Siren],
@@ -39,15 +40,22 @@ export default function AcademyList() {
 function Buy({ c, onPaid }) {
   const [cfg, setCfg] = useState(null);
   const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [deal, setDeal] = useState(null);
   useEffect(() => { api.get("/payments/config").then((r) => setCfg(r.data)).catch(() => {}); }, []);
   if (!cfg) return null;
   const item = `course:${c.id}`;
-  const rzp = () => payRazorpay(item, `Course: ${c.title}`, onPaid, (e) => toast.error(errMsg(e))).catch((e) => toast.error(errMsg(e)));
-  const cf = () => (/^\d{10}$/.test(phone) ? payCashfree(item, phone, cfg.cashfree_mode).catch((e) => toast.error(errMsg(e))) : toast.error("Enter a 10-digit mobile number for Cashfree"));
+  const apply = async () => { try { const r = await api.post("/academy/coupons/check", { code: code.trim(), course_id: c.id }); setDeal(r.data); toast.success(`Coupon applied — you save ₹${r.data.off.toLocaleString("en-IN")}`); } catch (e) { setDeal(null); toast.error(errMsg(e)); } };
+  const rzp = () => payRazorpay(item, `Course: ${c.title}`, onPaid, (e) => toast.error(errMsg(e)), undefined, undefined, deal?.code).catch((e) => toast.error(errMsg(e)));
+  const cf = () => (/^\d{10}$/.test(phone) ? payCashfree(item, phone, cfg.cashfree_mode, undefined, deal?.code).catch((e) => toast.error(errMsg(e))) : toast.error("Enter a 10-digit mobile number for Cashfree"));
   return (
     <Glass className="p-5 space-y-2.5" data-testid="academy-buy-box">
-      <div className="text-3xl font-mono font-bold neon-text">{price(c)}</div><div className="text-xs text-slate-400">One-time payment · lifetime access · certificate on completion</div>
+      {deal ? <div><span className="text-lg font-mono text-slate-500 line-through mr-2" data-testid="academy-original-price">{price(c)}</span><span className="text-3xl font-mono font-bold neon-text" data-testid="academy-final-price">₹{deal.amount.toLocaleString("en-IN")}</span></div>
+        : <div className="text-3xl font-mono font-bold neon-text">{price(c)}</div>}<div className="text-xs text-slate-400">One-time payment · lifetime access · certificate on completion</div>
       {!cfg.razorpay && !cfg.cashfree && <div className="text-xs font-mono text-yellow-300 border border-yellow-500/30 p-2" data-testid="academy-pay-not-configured">Payments open soon.</div>}
+      <div className="flex gap-2"><input className="field font-mono uppercase !text-xs" placeholder="Coupon code" value={code} onChange={(e) => { setCode(e.target.value); setDeal(null); }} data-testid="academy-coupon-input" />
+        <button className="ghost-btn !text-xs shrink-0" disabled={!code.trim()} onClick={apply} data-testid="academy-coupon-apply">Apply</button></div>
+      {deal && <div className="text-[11px] font-mono text-green-400" data-testid="academy-coupon-applied">{deal.code} applied · −₹{deal.off.toLocaleString("en-IN")}</div>}
       <button className="glow-btn w-full justify-center" disabled={!cfg.razorpay} onClick={rzp} data-testid="academy-buy-razorpay">Buy course with Razorpay</button>
       {cfg.cashfree && <><input className="field" placeholder="Mobile number (for Cashfree)" value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="academy-phone" />
         <button className="ghost-btn w-full justify-center" onClick={cf} data-testid="academy-buy-cashfree">Pay with Cashfree</button></>}
@@ -126,7 +134,9 @@ export function AcademyCert() {
         <div className="text-2xl font-bold neon-text mt-2" data-testid="academy-cert-course">{c.course_title}</div>
         <div className="text-xs font-mono text-slate-500 mt-8">{c.instructor_name ? `Instructor: ${c.instructor_name} · ` : ""}Issued {fmtDate(c.issued_at)} · ID {c.id}</div>
       </div>
-      <div className="flex gap-2 mt-4 print:hidden"><button className="glow-btn" onClick={() => window.print()} data-testid="academy-cert-print"><Printer className="h-4 w-4" />Print / save as PDF</button>
-        <Link to={`/app/courses/${c.course_id}`} className="ghost-btn" data-testid="academy-cert-back">Back to course</Link></div>
+      <div className="mt-4 print:hidden space-y-3"><CertShare cert={c} />
+        <div className="flex gap-2"><Link to={`/verify/${c.id}`} className="ghost-btn !text-xs" data-testid="academy-cert-verify-page">Public verify page</Link>
+          <button className="ghost-btn !text-xs" onClick={() => window.print()} data-testid="academy-cert-print"><Printer className="h-3.5 w-3.5" />Print</button>
+          <Link to={`/app/courses/${c.course_id}`} className="ghost-btn !text-xs" data-testid="academy-cert-back">Back to course</Link></div></div>
     </div>);
 }
