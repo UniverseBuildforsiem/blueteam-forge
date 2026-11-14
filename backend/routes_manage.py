@@ -277,7 +277,10 @@ PRODUCTS = {"soc-interview-ebook": {"name": "SOC Interview Preparation - Ebook",
             "soc-consultation": {"name": "Cyber & SOC Expert Consultation (30 min)", "amount": 99, "return": "/consultation"}}
 
 
-async def item_for(key):
+async def item_for(key, user=None):
+    if key.startswith("bundle:"):
+        from routes_bundles import bundle_item
+        return await bundle_item(key, user)
     if key.startswith("course:"):
         from routes_academy import pricing
         c = await db.academy_courses.find_one({"id": key[7:], "status": "published"}, {"_id": 0, "id": 1, "title": 1, "price": 1, "mrp": 1, "sale_ends_at": 1})
@@ -325,7 +328,11 @@ async def activate(user_id, pid):
         from routes_consult import confirm_consultation
         await confirm_consultation(p.get("ref"), pid)
     elif p:
-        if p["plan"].startswith("course:"):
+        if p["plan"].startswith("bundle:"):
+            for cid in [p["plan"]] + [f"course:{c}" for c in p.get("courses") or []]:
+                await db.purchases.update_one({"user_id": user_id, "product_id": cid},
+                                              {"$setOnInsert": {"user_id": user_id, "product_id": cid, "payment_id": pid, "at": now_iso()}}, upsert=True)
+        elif p["plan"].startswith("course:"):
             from routes_coupons import redeem
             await redeem(p)
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
@@ -345,11 +352,11 @@ async def activate(user_id, pid):
 @router.post("/payments/razorpay/order")
 async def rzp_order(body: PlanIn, user=Depends(get_current_user)):
     from routes_coupons import apply_coupon
-    plan = await apply_coupon(body.plan, await item_for(body.plan), body.coupon, user)
+    plan = await apply_coupon(body.plan, await item_for(body.plan, user), body.coupon, user)
     await prepare(body, user)
     o = rzp().order.create({"amount": plan["amount"] * 100, "currency": "INR", "receipt": f"rcpt_{new_id()}", "payment_capture": 1})
     await db.payments.insert_one({"id": o["id"], "provider": "razorpay", "user_id": user["id"], "plan": body.plan, "plan_name": plan["name"], "ref": body.ref,
-                                  "amount": plan["amount"], "coupon": plan.get("coupon"), "status": "created", "created_at": now_iso()})
+                                  "amount": plan["amount"], "coupon": plan.get("coupon"), "courses": plan.get("courses"), "status": "created", "created_at": now_iso()})
     return {"order_id": o["id"], "amount": o["amount"], "key_id": os.environ["RAZORPAY_KEY_ID"], "name": user["name"], "email": user["email"]}
 
 
@@ -389,7 +396,7 @@ def cf_base():
 @router.post("/payments/cashfree/order")
 async def cf_order(body: PlanIn, user=Depends(get_current_user)):
     from routes_coupons import apply_coupon
-    plan = await apply_coupon(body.plan, await item_for(body.plan), body.coupon, user)
+    plan = await apply_coupon(body.plan, await item_for(body.plan, user), body.coupon, user)
     await prepare(body, user)
     base = cf_base()
     oid = f"order_{uuid.uuid4().hex[:20]}"
@@ -401,7 +408,7 @@ async def cf_order(body: PlanIn, user=Depends(get_current_user)):
     if r.status_code >= 400:
         raise HTTPException(502, "Cashfree order creation failed")
     await db.payments.insert_one({"id": oid, "provider": "cashfree", "user_id": user["id"], "plan": body.plan, "plan_name": plan["name"], "ref": body.ref,
-                                  "amount": plan["amount"], "coupon": plan.get("coupon"), "status": "created", "created_at": now_iso()})
+                                  "amount": plan["amount"], "coupon": plan.get("coupon"), "courses": plan.get("courses"), "status": "created", "created_at": now_iso()})
     return {"order_id": oid, "payment_session_id": r.json()["payment_session_id"]}
 
 

@@ -8,6 +8,7 @@ import { Glass, Empty } from "../components/common";
 import { BuyCard } from "../components/academy/BuyCard";
 import { Curriculum, PreviewDialog } from "../components/academy/Curriculum";
 import { Reviews, Stars } from "../components/academy/Reviews";
+import { BundleOffers } from "../components/academy/Bundles";
 
 const List = ({ title, items, icon = true, testId }) => (items?.length ? (
   <section data-testid={testId}><h2 className="text-xl font-bold mb-3">{title}</h2>
@@ -62,6 +63,7 @@ export default function CourseLanding() {
       <div className="max-w-6xl mx-auto px-6">
         <div className="lg:pr-[400px] py-10 space-y-10">
           {c.outcomes?.length > 0 && <Glass className="p-6"><List title="What you'll learn" items={c.outcomes} testId="course-outcomes" /></Glass>}
+          {!c.owned && <BundleOffers courseId={c.id} />}
           <Curriculum c={c} onPreview={preview} />
           <List title="Requirements" items={c.requirements} icon={false} testId="course-requirements" />
           {c.description && <section data-testid="course-description"><h2 className="text-xl font-bold mb-3">Description</h2><p className="text-sm text-slate-300 whitespace-pre-line leading-relaxed">{c.description}</p></section>}

@@ -1,6 +1,6 @@
 crons:
   - name: session-reminders
-    description: "Live-session reminders, plus review requests 90 min after each paid consultation"
+    description: "Live-session reminders, consultation review requests, and wishlist sale-ending / price-drop emails"
     cron: "*/15 * * * *"
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
     endpoint: "{{BASE_URL}}/api/cron/session-reminders"

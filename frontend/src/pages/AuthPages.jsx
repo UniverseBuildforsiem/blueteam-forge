@@ -32,7 +32,7 @@ export const takePendingCase = () => {
   let c = null, p = null, t = null, k = null;
   try { c = JSON.parse(localStorage.getItem("pending_case")); p = JSON.parse(localStorage.getItem("pending_path")); t = JSON.parse(localStorage.getItem("pending_intel")); k = JSON.parse(localStorage.getItem("pending_course")); } catch { c = null; }
   localStorage.removeItem("pending_course");
-  if (k?.id && Date.now() - k.at < 3600e3) return `/course/${k.id}`;
+  if (k?.id && Date.now() - k.at < 3600e3) return `/${k.kind === "bundle" ? "bundle" : "course"}/${k.id}`;
   localStorage.removeItem("pending_case");
   localStorage.removeItem("pending_path");
   localStorage.removeItem("pending_intel");

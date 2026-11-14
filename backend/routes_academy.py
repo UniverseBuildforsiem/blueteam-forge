@@ -129,6 +129,7 @@ async def landing(cid: str, request: Request):
             "instructor": {"name": ins.get("name") or c.get("instructor_name"), "headline": ins.get("headline"), "bio": ins.get("bio"),
                            "username": ins.get("username") if ins.get("public_profile") is not False else None},
             "signed_in": bool(user), "owned": await owns(user, c), "my_review": mine,
+            "wishlisted": bool(user and await db.wishlists.find_one({"user_id": user["id"], "kind": "course", "item_id": cid})),
             "can_review": bool(user and await db.lesson_progress.find_one({"user_id": user["id"], "path_id": cid}))}
 
 

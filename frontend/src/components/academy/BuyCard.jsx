@@ -8,6 +8,7 @@ import { Glass } from "../common";
 import { VideoFrame } from "../VideoField";
 import { embedSrc } from "../../lib/video";
 import { PriceTag, Countdown, inr } from "./Price";
+import { WishlistButton } from "./Wishlist";
 
 function Includes({ c }) {
   const rows = [[PlayCircle, `${c.video_minutes >= 60 ? `${(c.video_minutes / 60).toFixed(1)} hours` : `${c.video_minutes} min`} on-demand video`, c.videos], [FileText, `${c.lessons_count} lessons in ${c.modules_count} modules`, c.lessons_count],
@@ -27,18 +28,17 @@ function Coupon({ c, deal, setDeal }) {
     {deal && <div className="text-[11px] font-mono text-green-400 mt-1" data-testid="academy-coupon-applied">{deal.code} applied · −{inr(deal.off)}</div>}</div>;
 }
 
-function Checkout({ c, onPaid }) {
+export function Checkout({ c, onPaid, item = `course:${c.id}`, label = `Course: ${c.title}`, coupons = true }) {
   const [cfg, setCfg] = useState(null);
   const [phone, setPhone] = useState("");
   const [deal, setDeal] = useState(null);
   useEffect(() => { api.get("/payments/config").then((r) => setCfg(r.data)).catch(() => {}); }, []);
   if (!cfg) return null;
-  const item = `course:${c.id}`;
-  const rzp = () => payRazorpay(item, `Course: ${c.title}`, onPaid, (e) => toast.error(errMsg(e)), undefined, undefined, deal?.code).catch((e) => toast.error(errMsg(e)));
+  const rzp = () => payRazorpay(item, label, onPaid, (e) => toast.error(errMsg(e)), undefined, undefined, deal?.code).catch((e) => toast.error(errMsg(e)));
   const cf = () => (/^\d{10}$/.test(phone) ? payCashfree(item, phone, cfg.cashfree_mode, undefined, deal?.code).catch((e) => toast.error(errMsg(e))) : toast.error("Enter a 10-digit mobile number for Cashfree"));
   return <div className="space-y-2.5">
     {deal && <div className="text-xs font-mono">Pay now: <b className="text-green-400 text-base" data-testid="academy-final-price">{inr(deal.amount)}</b></div>}
-    <Coupon c={c} deal={deal} setDeal={setDeal} />
+    {coupons && <Coupon c={c} deal={deal} setDeal={setDeal} />}
     {!cfg.razorpay && !cfg.cashfree && <div className="text-xs font-mono text-yellow-300 border border-yellow-500/30 p-2" data-testid="academy-pay-not-configured">Payments open soon.</div>}
     <button className="glow-btn w-full justify-center" disabled={!cfg.razorpay} onClick={rzp} data-testid="academy-buy-razorpay">Buy now</button>
     {cfg.cashfree && <><input className="field" placeholder="Mobile number (for Cashfree)" value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="academy-phone" />
@@ -64,6 +64,7 @@ export function BuyCard({ c, reload, onPreview }) {
         <PriceTag c={c} size="lg" testId="course-landing-price" />
         {c.sale_ends_at && <Countdown ends={c.sale_ends_at} onEnd={reload} />}
         <Action c={c} reload={reload} />
+        <WishlistButton kind="course" id={c.id} on={c.wishlisted} signedIn={c.signed_in} hidden={c.owned} />
         {c.previews > 0 && <button className="ghost-btn w-full justify-center !text-xs" onClick={onPreview} data-testid="course-open-previews"><PlayCircle className="h-3.5 w-3.5" />Watch {c.previews} free preview{c.previews > 1 ? "s" : ""}</button>}
         <Includes c={c} />
       </div>

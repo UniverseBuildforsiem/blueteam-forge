@@ -94,4 +94,6 @@ async def session_reminders(request: Request, background: BackgroundTasks):
     background.add_task(send_session_reminders)
     from routes_consult import send_review_requests
     background.add_task(send_review_requests)
+    from routes_bundles import send_wishlist_reminders
+    background.add_task(send_wishlist_reminders)
     return {"ok": True}

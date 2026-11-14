@@ -27,6 +27,7 @@ import Challenges from "./pages/app/Challenges";
 import Shift from "./pages/app/Shift";
 import AcademyList, { AcademyCert } from "./pages/app/Academy";
 import CourseLanding from "./pages/CourseLanding";
+import BundlePage from "./pages/BundlePage";
 import Drill from "./pages/app/Drill";
 import Badges from "./pages/app/Badges";
 import MockInterview from "./pages/app/MockInterview";
@@ -49,6 +50,7 @@ function AppRouter() {
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/course/:id" element={<CourseLanding />} />
+            <Route path="/bundle/:id" element={<BundlePage />} />
             <Route path="/book" element={<Book />} />
             <Route path="/consultation" element={<Consultation />} />
             <Route path="/review/:token" element={<ReviewPage />} />
