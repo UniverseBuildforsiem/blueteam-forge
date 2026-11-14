@@ -1,0 +1,43 @@
+{
+  "summary": "Tested the Academy Courses rebuild end to end: backend and UI. Backend: a new pytest file with 22 tests, plus the iter47 coupon/cert file updated for current seed data. 39 passed, 2 skipped, 1 failed. Covered: public list and detail with no login (only preview lessons expose video/content, unpublished course 404), ownership gating (403 on GET course, lesson complete, video and review for a paid course you don't own), purchase unlocking the course, LAUNCH30 bringing 499 down to 349, payment order 503 (not configured) / 400 for a free course, expired sale charging the MRP, the instructor edit -> pending -> admin approve/reject flow with the live version unchanged until approval, preview flag persisting, course cert issued after all lessons, final exam blocking the cert, one review per student, and regression of paths, cert verify and coupons. UI: logged-out landing page (hero, buy card, promo video, ₹499 with ₹3,499 struck out, 86% off, countdown, includes, every section, expand all, preview dialog with video and content), 'Sign in to buy' -> stores pending_course -> login -> back to /course/test-paid-course, logged-in checkout (coupon -> ₹349, Razorpay button disabled with the not-configured note), /app/courses/test-paid-course sending a non-owner back to the landing page, the app course list (cards and links for owned vs not owned), free course player tabs, certificate page with share buttons, review form (4 stars, then restored to 5 and 'Great!'), owned paid course player, instructor builder (meta panel, promo preview, price preview, free-preview checkbox, SIEM attachment, save, submit), admin Approve / edit-reload / approve changes / Unpublish / Delete, coupons tab, /verify page, mobile landing. Found 1 critical backend bug (lesson IDs shared between courses) and fixed 1 crash (a sale end date without a timezone gave a 500).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/paths/{courseId}/lessons/{lid}/complete (mark_complete / completed_set / issue_cert)", "issue": "Progress is stored per user + lesson_id only, ignoring which course it belongs to. Migrated courses reuse old item ids: test-paid-course and test-free-course both have a lesson 'i1'. After a student completes i1 in the free course, the paid course player already shows 'SIEM tour' as completed (33%). mark_complete then returns False, so no lesson_progress row is ever written with path_id=test-paid-course. issue_cert filters by path_id, so that student can NEVER get the paid course certificate. Reproduced by test_duplicate_lesson_ids_across_courses.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "PUT /api/academy/manage/{cid} (admin)", "issue": "When an admin saves a published course, pending_changes is removed but changes_submitted is not, so a stale 'changes to review' badge can stay on the row."},
+      {"endpoint": "routes_instructor.py:149, routes_manage.py:149", "issue": "Completion % counts every lesson_progress row for the user, including course lessons, so learning-path completion stats are inflated."},
+      {"endpoint": "pricing() / parse_dt", "issue": "FIXED by tester: a sale_ends_at without a timezone (e.g. '2030-01-01T10:00' sent through the API) raised TypeError (naive vs aware datetime) and returned 500 on the landing and list endpoints. parse_dt now treats such dates as UTC."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PreviewDialog (Curriculum.jsx)", "issue": "Escape does not close the preview dialog because Radix moves focus into the YouTube iframe. Only the X button closes it.", "selector": "[data-testid='course-preview-dialog']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Course landing (public)", "issues": ["The 'Courses' breadcrumb links to /app/courses, which needs a login; logged-out visitors get sent to /login. Consider a public courses list or the /courses catalog.", "On mobile (390px) the PublicNav logo text runs under the Dashboard button."]},
+      {"screen": "PathBuilder attachments (course mode)", "issue_note": "For the SIEM and Shift simulator types, you still have to pick the only item in the dropdown before Attach is enabled. Auto-select it.", "issues": ["Attach disabled until the single static option is selected"]},
+      {"screen": "Instructor Courses list", "issues": ["While changes are pending, the row shows the live title, not the pending one. Acceptable, but it could show a 'pending: <title>' hint."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_academy_courses_v2.py", "/app/backend/tests/test_coupons_certshare.py", "/app/test_reports/pytest/pytest_results_iter48.xml"],
+  "action_items": [
+    "HIGH: Track course progress per course. Scope lesson_progress lookups by path_id in mark_complete, completed_set (path_view) and the quiz complete checks, or give every migrated lesson a unique id (e.g. f'{course_id}-{item_id}') in migrate_courses and remap the existing lesson_progress rows. Then re-run test_duplicate_lesson_ids_across_courses.",
+    "Unset changes_submitted when an admin PUT overwrites a published course.",
+    "Optional: let Escape close the preview dialog (onOpenAutoFocus preventDefault); auto-select the SIEM/Shift attachment item; public breadcrumb target."
+  ],
+  "critical_code_review_comments": [
+    "routes_learn.mark_complete / completed_set are keyed by lesson_id only; ids are not unique across paths and courses (migration keeps old item ids like 'i1'). This is the root cause of the critical bug.",
+    "routes_academy.owns() also returns True when the user has any lesson_progress row for the course. Fine for migration, but once the progress bug is fixed, any write path that creates progress without ownership would grant access. Keep course_for on every progress write.",
+    "path_view sends lesson quiz answers to the client for non-required quizzes (same as Learning Paths). Only owners can see them, but they are still exposed.",
+    "The old test file /app/backend/tests/test_academy_courses.py targets the removed items/done API and is obsolete; delete it or rewrite it."
+  ],
+  "updated_files": ["/app/backend/routes_academy.py (parse_dt: naive datetime -> UTC)", "/app/backend/tests/test_academy_courses_v2.py (new)", "/app/backend/tests/test_coupons_certshare.py (expected values now derived from current price; LAUNCH30-already-used test skips when the redemption row is gone)"],
+  "success_rate": {"backend": "97% (39/40 executed; 1 real bug)", "frontend": "95% (all requested flows work; minor UX only)"},
+  "seed_data_creation": "Temporarily inserted a purchases doc for the student on course:test-paid-course (removed). The student's review on test-free-course was changed during the UI test and restored to 5 stars, 'Great!' (only its 'at' timestamp changed). All TEST_ courses and test users were cleaned up.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && set -a && . /app/frontend/.env && set +a && pytest tests/test_academy_courses_v2.py tests/test_coupons_certshare.py -n 0. The expected failure until fixed is TestProgress::test_duplicate_lesson_ids_across_courses. Seed: test-paid-course (499/3499, lesson l-tp1 is the preview, lesson 'i1' collides with test-free-course 'i1'), test-free-course (student completed it, cert SOCP-C-E2592278, 5-star review). Payments are not configured, so order requests return 503.",
+  "rca of the issue": "Shared lesson ids: migrate_courses keeps old item ids (i1, i2...), and the same id appears in several courses. lesson_progress is written and read by user_id + lesson_id (mark_complete checks find_one({user_id, lesson_id}); completed_set ignores path_id), while issue_cert reads distinct lesson_id filtered by path_id. Reproduce: as a student who completed i1 in test-free-course, buy or insert a purchase for test-paid-course and open /app/courses/test-paid-course; SIEM tour already shows completed, and finishing the remaining lessons never issues a certificate. Fix: include path_id in the progress keys (and in completed_set for path_view), or make lesson ids globally unique during migration and backfill."
+}

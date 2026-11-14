@@ -26,7 +26,7 @@ function Hero({ c, card }) {
     <div className="border-b border-cyan-500/20 bg-[#070A12] relative z-10">
       <div className="max-w-6xl mx-auto px-6 py-10 lg:pr-[400px] relative">
         {wide && <div className="absolute right-6 top-10 w-[360px]">{card}</div>}
-        <div className="text-xs font-mono text-cyan-400 flex items-center gap-1.5"><Link to="/app/courses" className="hover:underline">Courses</Link>{c.category && <><ChevronRight className="h-3 w-3" />{c.category}</>}</div>
+        <div className="text-xs font-mono text-cyan-400 flex items-center gap-1.5"><Link to={c.signed_in ? "/app/courses" : "/courses"} className="hover:underline" data-testid="course-breadcrumb">Courses</Link>{c.category && <><ChevronRight className="h-3 w-3" />{c.category}</>}</div>
         {c.status !== "published" && <div className="mt-3 text-xs font-mono text-yellow-300 border border-yellow-500/30 p-2 inline-block" data-testid="academy-preview-banner">Preview — this course is {c.status} and not visible to students yet.</div>}
         <h1 className="text-3xl sm:text-4xl font-bold mt-3 leading-tight" data-testid="course-landing-title">{c.title}</h1>
         {c.subtitle && <p className="text-base md:text-lg text-slate-300 mt-3" data-testid="course-landing-subtitle">{c.subtitle}</p>}

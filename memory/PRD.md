@@ -254,3 +254,17 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Pricing per course in INR (0 = free); everyone pays (incl. Pro). Purchase via payments product key course:<id> (item_for async). Owners: purchasers, course instructor, admin, or anyone with existing progress.
 - Workflow: instructor draft -> submit (pending) -> admin approve/reject(note)/unpublish. Instructor edits to a published course are stored as pending_changes until admin approves. Staff can preview unpublished.
 - Certificate SOCP-C-XXXX on 100% (/app/courses/certificate/:id, printable). Builder in Instructor + Admin "Courses" tab.
+
+## Jun 2026 — Course coupons + shareable course certificates
+- Admin > Coupons (routes_coupons.py, db.academy_coupons, coupon_redemptions): percent (1-99) or flat ₹ off, one course or all, optional expiry, one use per student (recorded on payment; also blocked if an open/paid order on another course used it). Final price min ₹1. POST /api/academy/coupons/check; PlanIn.coupon applied in razorpay/cashfree orders.
+- Course certs: public /verify/SOCP-C-* page, LinkedIn share post + Add to profile (Licenses & Certifications) links, PDF/PNG download (/api/academy/certificates/{id}/pdf|png), copy verify link (CertShare.jsx).
+
+## Jun 2026 — Courses rebuilt on the Learning Path engine + Udemy-style landing
+- Course doc = path-shaped modules/lessons (content, video, lesson quiz, attachments incl. new siem/shift types, resources, preview flag) + subtitle, category, cover, promo_video, outcomes, requirements, audience, final_quiz_id, price (sale), mrp (original), sale_ends_at. Old item-based courses auto-migrated at startup (migrate_courses).
+- Pricing: sale price until sale_ends_at, then mrp. Cards/landing show strike-out + % off + countdown.
+- Builder: CourseBuilder Meta panel + PathBuilder(course) (free-preview checkbox per lesson). Approval workflow unchanged.
+- Public landing /course/:id (CourseLanding.jsx): hero, promo video buy card, coupon + checkout, includes, what you'll learn, curriculum accordion with free preview dialog, requirements, description, audience, instructor, reviews (db.academy_reviews, 1 per student, needs >=1 completed lesson). Logged-out "Sign in to buy" returns via pending_course.
+- Player /app/courses/:id = PathDetail(course) (tabs, video tracking, quizzes, CTFs). Course lesson progress scoped by path_id (prog_q). Cert issued when all lessons done (+ final exam passed if set).
+
+## Backlog
+- P2 LinkedIn sign-in. P2 public all-courses catalog page for academy courses. P2 instructor bio/headline editor for landing page.

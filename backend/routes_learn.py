@@ -121,9 +121,13 @@ async def get_path(pid: str, user=Depends(get_current_user)):
     return await path_view(p, user)
 
 
+def prog_q(uid, lid, p):
+    return {"user_id": uid, "lesson_id": lid, **({"path_id": p["id"]} if p.get("_course") else {})}
+
+
 async def path_view(p, user):
     pid = p["id"]
-    done = await completed_set(user["id"])
+    done = set(await db.lesson_progress.distinct("lesson_id", {"user_id": user["id"], "path_id": pid})) if p.get("_course") else await completed_set(user["id"])
     final = await db.quizzes.find_one({"id": p["final_quiz_id"]} if p.get("final_quiz_id") else {"path_id": pid}, {"_id": 0, "id": 1, "title": 1, "pass_mark": 1})
     cert = await db.certificates.find_one({"user_id": user["id"], "path_id": pid}, NO_ID)
     ids = lesson_ids(p)
@@ -180,7 +184,7 @@ async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_cur
     mt = await tracked_meta(l)
     if not mt:
         raise HTTPException(400, "This lesson has no trackable video")
-    rec = await db.video_progress.find_one({"user_id": user["id"], "lesson_id": lid}, NO_ID) or {}
+    rec = await db.video_progress.find_one(prog_q(user["id"], lid, p), NO_ID) or {}
     if mt["duration"]:
         dur = float(mt["duration"])
     else:
@@ -201,15 +205,15 @@ async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_cur
         spans = trial
     percent = min(100, round(100 * covered(spans) / dur))
     watched = rec.get("watched") or percent >= 90
-    await db.video_progress.update_one({"user_id": user["id"], "lesson_id": lid}, {"$set": {
+    await db.video_progress.update_one(prog_q(user["id"], lid, p), {"$set": {
         "path_id": pid, "duration": dur, "spans": spans, "percent": percent, "watched": watched, "last_at": now_iso(),
         **({"position": min(body.position, dur)} if body.position is not None else {}),
         **({"watched_at": now_iso()} if watched and not rec.get("watched") else {})}}, upsert=True)
     return {"percent": percent, "watched": watched, "newly": watched and not rec.get("watched")}
 
 
-async def video_ok(uid, l):
-    return not await tracked_meta(l) or bool(await db.video_progress.find_one({"user_id": uid, "lesson_id": l["id"], "watched": True}))
+async def video_ok(uid, l, p):
+    return not await tracked_meta(l) or bool(await db.video_progress.find_one({**prog_q(uid, l["id"], p), "watched": True}))
 
 
 def pass_count(quiz):
@@ -234,8 +238,8 @@ async def course_cert(user, p):
     return await issue_cert(user, p)
 
 
-async def mark_complete(uid, pid, l):
-    if await db.lesson_progress.find_one({"user_id": uid, "lesson_id": l["id"]}):
+async def mark_complete(uid, pid, l, p):
+    if await db.lesson_progress.find_one(prog_q(uid, l["id"], p)):
         return False
     await db.lesson_progress.insert_one({"user_id": uid, "lesson_id": l["id"], "path_id": pid, "minutes": 10, "created_at": now_iso()})
     await award(uid, 10, f"Completed lesson: {l['title']}")
@@ -245,12 +249,13 @@ async def mark_complete(uid, pid, l):
 @router.post("/paths/{pid}/lessons/{lid}/complete")
 async def complete_lesson(pid: str, lid: str, user=Depends(get_current_user)):
     p, l = await find_lesson(pid, lid, user)
-    if (l.get("quiz") or {}).get("required") and not await db.lesson_quiz_attempts.find_one({"user_id": user["id"], "lesson_id": lid, "passed": True}) \
-            and not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}):
+    q = prog_q(user["id"], lid, p)
+    if (l.get("quiz") or {}).get("required") and not await db.lesson_quiz_attempts.find_one({**q, "passed": True}) \
+            and not await db.lesson_progress.find_one(q):
         raise HTTPException(400, "Pass this lesson's quiz to complete it")
-    if not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}) and not await video_ok(user["id"], l):
+    if not await db.lesson_progress.find_one(q) and not await video_ok(user["id"], l, p):
         raise HTTPException(400, "Watch at least 90% of the lesson video to complete it")
-    await mark_complete(user["id"], pid, l)
+    await mark_complete(user["id"], pid, l, p)
     return {"ok": True, "certificate": await course_cert(user, p)}
 
 
@@ -271,7 +276,7 @@ async def lesson_quiz_submit(pid: str, lid: str, body: LessonQuizIn, user=Depend
     score, need = sum(marks), pass_count(q)
     passed = score >= need
     await db.lesson_quiz_attempts.insert_one({"id": new_id(), "user_id": user["id"], "path_id": pid, "lesson_id": lid, "score": score, "total": len(qs), "passed": passed, "created_at": now_iso()})
-    newly = passed and await video_ok(user["id"], l) and await mark_complete(user["id"], pid, l)
+    newly = passed and await video_ok(user["id"], l, p) and await mark_complete(user["id"], pid, l, p)
     if newly:
         await course_cert(user, p)
     return {"score": score, "total": len(qs), "pass_count": need, "passed": passed, "completed": bool(newly), "xp": 10 if newly else 0,
@@ -609,8 +614,8 @@ async def analytics(user=Depends(get_current_user)):
         topics[s["category"]][0] += 1 if s["verdict_correct"] else 0
         topics[s["category"]][1] += 1
     acc = [{"topic": t, "accuracy": round(100 * c / n)} for t, (c, n) in topics.items() if n]
-    lessons = await db.lesson_progress.count_documents({"user_id": user["id"]})
     paths = await list_paths(user)
+    lessons = await db.lesson_progress.count_documents({"user_id": user["id"], "path_id": {"$in": [p["id"] for p in paths]}})
     total_lessons = sum(p["lesson_count"] for p in paths) or 1
     minutes = lessons * 10 + sum(a.get("time_spent", 0) for a in attempts) // 60
     return {"quiz_scores": [{"name": a["quiz_title"][:18], "score": a["score"], "date": a["created_at"][:10]} for a in attempts[-12:]],

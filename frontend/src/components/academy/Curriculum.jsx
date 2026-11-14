@@ -37,7 +37,7 @@ export function PreviewDialog({ c, open, setOpen, current, setCurrent }) {
   const src = l && embedSrc(l.video_url);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-3xl bg-[#0B0F1A] border-cyan-500/30" data-testid="course-preview-dialog">
+      <DialogContent className="max-w-3xl bg-[#0B0F1A] border-cyan-500/30" onOpenAutoFocus={(e) => e.preventDefault()} data-testid="course-preview-dialog">
         <DialogHeader><DialogTitle className="text-sm font-mono text-slate-400">Course preview · <span className="text-slate-100">{c.title}</span></DialogTitle></DialogHeader>
         {l && <div className="space-y-3">
           <div className="font-bold" data-testid="preview-lesson-title">{l.title}</div>

@@ -146,7 +146,7 @@ async def student_rows(q=None):
         att = await db.quiz_attempts.find({"user_id": uid}, {"_id": 0, "score": 1, "passed": 1}).to_list(500)
         out.append({"id": uid, "name": u["name"], "email": u["email"], "username": u.get("username"), "goal": u.get("goal"), "plan": u.get("plan", "free"),
                     "xp": u.get("xp", 0), "rank": rank_for(u.get("xp", 0)), "streak": u.get("streak", 0), "last_active": u.get("last_active"), "created_at": u.get("created_at"),
-                    "completion": round(100 * await db.lesson_progress.count_documents({"user_id": uid}) / total),
+                    "completion": round(100 * await db.lesson_progress.count_documents({"user_id": uid, "path_id": {"$in": [p["id"] for p in paths]}}) / total),
                     "quiz_attempts": len(att), "quiz_avg": round(sum(a["score"] for a in att) / len(att)) if att else None, "quiz_fails": len([a for a in att if not a.get("passed")]),
                     "challenges": await db.challenge_submissions.count_documents({"user_id": uid}),
                     "labs_done": await db.lab_progress.count_documents({"user_id": uid, "report_submitted": True}),

@@ -32,7 +32,10 @@ def lessons(c):
 
 
 def parse_dt(s):
-    return datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
+    if not s:
+        return None
+    d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
 
 
 def pricing(c):
@@ -294,7 +297,7 @@ async def update(cid: str, body: CourseIn, user=Depends(staff)):
     if c["status"] == "published" and user["role"] != "admin":
         await db.academy_courses.update_one({"id": cid}, {"$set": {"pending_changes": d, "changes_at": now_iso(), "updated_at": now_iso()}})
     else:
-        await db.academy_courses.update_one({"id": cid}, {"$set": {**d, "updated_at": now_iso()}, "$unset": {"pending_changes": ""}})
+        await db.academy_courses.update_one({"id": cid}, {"$set": {**d, "updated_at": now_iso()}, "$unset": {"pending_changes": "", "changes_submitted": ""}})
     return await db.academy_courses.find_one({"id": cid}, NO_ID)
 
 

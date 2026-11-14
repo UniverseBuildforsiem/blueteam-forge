@@ -146,7 +146,7 @@ async def students(user=Depends(staff)):
     total = sum(len([l for m in p["modules"] for l in m["lessons"]]) for p in paths) or 1
     out = []
     for u in us:
-        done = await db.lesson_progress.count_documents({"user_id": u["id"]})
+        done = await db.lesson_progress.count_documents({"user_id": u["id"], "path_id": {"$in": [p["id"] for p in paths]}})
         att = await db.quiz_attempts.find({"user_id": u["id"]}, {"_id": 0, "score": 1}).to_list(500)
         out.append({**u, "rank": rank_for(u.get("xp", 0)), "completion": round(100 * done / total), "quiz_avg": round(sum(a["score"] for a in att) / len(att)) if att else None,
                     "certs": await db.certificates.count_documents({"user_id": u["id"]})})
