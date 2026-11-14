@@ -46,9 +46,9 @@ export default function AdminBundles() {
   const [courses, setCourses] = useState([]);
   const [edit, setEdit] = useState(null);
   const load = () => api.get("/admin/bundles").then((r) => setBs(r.data));
-  useEffect(() => { load(); api.get("/academy/courses").then((r) => setCourses(r.data)); }, []);
+  useEffect(() => { load(); api.get("/academy/courses").then((r) => setCourses(r.data)); }, []); // eslint-disable-line
   const toggle = async (b) => { try { await api.put(`/admin/bundles/${b.id}`, { ...b, active: !b.active }); load(); } catch (e) { toast.error(errMsg(e)); } };
-  const del = async (b) => { if (!window.confirm(`Delete bundle "${b.title}"?`)) return; await api.delete(`/admin/bundles/${b.id}`); toast.success("Bundle deleted"); load(); };
+  const del = async (b) => { if (!window.confirm(`Delete bundle "${b.title}"?`)) return; try { await api.delete(`/admin/bundles/${b.id}`); toast.success("Bundle deleted"); load(); } catch (e) { toast.error(errMsg(e)); } };
   if (edit) return <BundleForm init={edit} courses={courses} onDone={() => { setEdit(null); load(); }} />;
   return (
     <div className="space-y-4" data-testid="admin-bundles">

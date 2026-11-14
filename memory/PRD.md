@@ -266,5 +266,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Public landing /course/:id (CourseLanding.jsx): hero, promo video buy card, coupon + checkout, includes, what you'll learn, curriculum accordion with free preview dialog, requirements, description, audience, instructor, reviews (db.academy_reviews, 1 per student, needs >=1 completed lesson). Logged-out "Sign in to buy" returns via pending_course.
 - Player /app/courses/:id = PathDetail(course) (tabs, video tracking, quizzes, CTFs). Course lesson progress scoped by path_id (prog_q). Cert issued when all lessons done (+ final exam passed if set).
 
+## Jun 2026 — Course bundles + wishlist reminders
+- Admin > Bundles (routes_bundles.py, db.academy_bundles): 2+ published courses, admin bundle price, optional sale_price + sale_ends_at (countdown). Shows separate total struck + savings. Partial owners pay a share in proportion to what they don't own yet (min ₹1; can't buy if they own everything). Payment key bundle:<id>; activate() adds purchases for the bundle + each remaining course. No coupons on bundles.
+- Public /bundle/:id page; bundles row + "My wishlist" tab in /app/courses; "Save with a bundle" on course landing.
+- Wishlist (db.wishlists, unique user+kind+item): courses + bundles. Emails via the existing 15-min session-reminders cron (max 5 crons used): price drop vs last_price, and 24h before sale_ends_at (once per sale). Skips owned items. Seeded @socprofessionals.academy emails are blocked by the provider (expected); delivered@resend.dev works.
+
 ## Backlog
 - P2 LinkedIn sign-in. P2 public all-courses catalog page for academy courses. P2 instructor bio/headline editor for landing page.

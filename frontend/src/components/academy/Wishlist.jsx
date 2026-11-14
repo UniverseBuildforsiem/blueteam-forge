@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { api, errMsg } from "../../lib/api";
 export function WishlistButton({ kind, id, on, signedIn, hidden, onChange }) {
   const [w, setW] = useState(!!on);
   const nav = useNavigate();
+  useEffect(() => { setW(!!on); }, [on]);
   if (hidden) return null;
   const toggle = async () => {
     if (!signedIn) { localStorage.setItem("pending_course", JSON.stringify({ id, kind, at: Date.now() })); nav("/login"); return; }

@@ -1,0 +1,37 @@
+{
+  "summary": "Tested Course Bundles and Wishlist Reminders end to end. Backend: 16/16 pytest checks pass. They cover admin CRUD and validation (<2 courses, duplicate ids, missing course, sale>=price, bad date -> 422; student 403; logged out 401), public bundle pricing (logged out 999/value 1999/50% off; student 249 with owned_courses [test-paid-course-2]), expired sale falling back to the regular price, the course_id filter, the Razorpay bundle order (503 not configured; 400 with a coupon; 400 when the student owns every course; 404 for an unknown bundle), wishlist toggle/list/404/422/401, and the cron (401 with no or wrong auth; 200 with Bearer secret; a price drop updates last_price and takes precedence; the next run sets sale_end_notified). I also called activate() directly with a TEST payment: it inserts purchases for the bundle and each course and is idempotent. Frontend: all requested flows work - logged-out bundle page, Sign in -> /login -> back to /bundle/{id}, student personal price, owned note and markers, no coupon box, Buy disabled with 'Payments open soon', wishlist toggle with toast, course landing wishlist and bundle offers (hidden on the owned course), /app/courses All and Wishlist tabs, and admin create/validate/toggle active/edit/delete.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST/PUT /api/admin/bundles", "issue": "check_bundle only checks that the courses exist, not that they are published. A draft course is accepted but then silently left out by bundle_courses(), so the bundle can show fewer courses or disappear from the public list (<2)."},
+      {"endpoint": "send_wishlist_reminders", "issue": "The 'sent' counter goes up even when send_email fails (send_email returns None on 422), so the log 'Wishlist reminders sent: N' overcounts. The sale_end_notified and last_price claims are also used up when delivery fails, so there is no retry."},
+      {"endpoint": "send_wishlist_reminders", "issue": "Price drop is measured on the generic bundle price, not the student's personal price. Emails quote the generic price (e.g. ₹999) while the student actually pays less (₹249)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "BundlePage buy card / BundleCard (student who owns some courses)", "issues": ["Personal price ₹249 is shown next to the struck full value ₹1,999 and the generic '50% off'/'save 50%'. 'Bundle price after the sale: ₹1,499' is also the generic price, not the student's prorated price. This is misleading; strike the remaining value (₹499) instead, or label it."]},
+      {"screen": "Admin bundle form", "issues": ["Sale-ends uses the browser's native datetime-local picker instead of the shadcn calendar/date picker."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_bundles_wishlist.py", "/app/test_reports/pytest/pytest_iter49.xml"],
+  "action_items": [
+    "Optional: in check_bundle, require status=published for the course_ids (or show only published courses in the AdminBundles picker)",
+    "Optional: count only successful send_email results in send_wishlist_reminders",
+    "Optional: for partial owners, show the struck remaining value and the personal post-sale price on the bundle page and cards",
+    "Optional: AdminBundles del() has no try/catch; WishlistButton useState(on) doesn't re-sync when the prop changes"
+  ],
+  "critical_code_review_comments": [
+    "Cron /api/cron/session-reminders needs a JSON body (accept() returns 400 'Invalid body' with no body). This is pre-existing behaviour; callers must send {}.",
+    "When a price drop and a sale ending within 24h happen in the same run, only the price-drop email goes out; the sale-end email follows on the next 15-min run. Acceptable.",
+    "activate() bundle branch relies on payment.courses saved when the order is created; the courses are not recomputed at payment time. Fine."
+  ],
+  "updated_files": ["/app/backend/tests/test_bundles_wishlist.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None kept. TEST_ bundles were created and deleted via the API and UI. The TEST payment and purchases for the activate() check were deleted. The student's wishlist for bundle 86fce03a566a was toggled off and back on in the UI (new 'at', last_price 999), and its sale_end_notified, set by my cron run, was removed. The student's purchases were not changed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: pytest /app/backend/tests/test_bundles_wishlist.py -n 0. The cron test creates a TEST bundle [test-paid-course, test-free-course] that the student wishlists, then sleeps 8s per run. Each cron run also sets sale_end_notified on the student's wishlist for 86fce03a566a while its sale ends within 24h. Test credentials are in /app/memory/test_credentials.md."
+}

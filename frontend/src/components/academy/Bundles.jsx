@@ -14,8 +14,8 @@ export function BundleCard({ b }) {
         <ul className="text-xs text-slate-400 mt-2 space-y-0.5 flex-1">{b.courses.map((c) => <li key={c.id} className="truncate">• {c.title}</li>)}</ul>
         <div className="mt-3 flex items-baseline gap-2 flex-wrap">
           {b.your_price ? <span className="font-mono font-bold neon-text" data-testid={`bundle-card-price-${b.id}`}>{inr(b.your_price)}</span> : <span className="font-mono text-green-400 text-sm">You own all of these</span>}
-          {b.value > b.price && <span className="font-mono text-xs text-slate-500 line-through">{inr(b.value)}</span>}
-          {b.off > 0 && <span className="font-mono text-[11px] text-yellow-300">save {b.off}%</span>}
+          {b.your_value > b.your_price && b.your_price > 0 && <span className="font-mono text-xs text-slate-500 line-through">{inr(b.your_value)}</span>}
+          {b.your_off > 0 && b.your_price > 0 && <span className="font-mono text-[11px] text-yellow-300">save {b.your_off}%</span>}
         </div>
       </Glass></Link>);
 }

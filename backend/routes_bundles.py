@@ -41,7 +41,7 @@ async def personal(b, cs, user):
     owned = [c["id"] for c in cs if await owns(user, c)] if user else []
     left = sum(pricing(c)["price"] for c in cs if c["id"] not in owned)
     amount = 0 if not left else bp["price"] if not owned or not bp["value"] else max(1, round(bp["price"] * left / bp["value"]))
-    return {**bp, "owned_courses": owned, "your_price": amount}
+    return {**bp, "owned_courses": owned, "your_price": amount, "your_value": left, "your_off": round(100 * (left - amount) / left) if left > amount else 0}
 
 
 async def find_bundle(bid, active=True):
@@ -67,8 +67,8 @@ async def check_bundle(body: BundleIn):
     d["course_ids"] = list(dict.fromkeys(d["course_ids"]))
     if len(d["course_ids"]) < 2:
         raise HTTPException(422, "Pick at least two courses")
-    if await db.academy_courses.count_documents({"id": {"$in": d["course_ids"]}}) != len(d["course_ids"]):
-        raise HTTPException(422, "One of the courses no longer exists")
+    if await db.academy_courses.count_documents({"id": {"$in": d["course_ids"]}, "status": "published"}) != len(d["course_ids"]):
+        raise HTTPException(422, "Every course in a bundle must exist and be published")
     if d["sale_price"] and d["sale_price"] >= d["price"]:
         raise HTTPException(422, "Sale price must be lower than the bundle price")
     if d["sale_ends_at"]:
@@ -210,7 +210,10 @@ async def send_wishlist_reminders():
                 hrs = max(1, round((parse_dt(ends) - datetime.now(timezone.utc)).total_seconds() / 3600))
                 subj = f"Sale ends in {hrs}h: {item['title']}"
                 lines = [f"The sale on '{item['title']}' from your wishlist ends in about {hrs} hours.", f"Today's price is {inr(p['price'])} — after the sale it goes back up."]
-        if lines:
-            await send_email(to=user["email"], subject=subj, html=email_template(user["name"], lines + ["Remove it from your wishlist to stop these reminders."], link, "View on SOCProfessionals Academy"))
+        if lines and w["kind"] == "bundle":
+            mine = (await personal(item, await bundle_courses(item), user))["your_price"]
+            if mine != p["price"]:
+                lines.append(f"Because you already own some of its courses, your price is just {inr(mine)}.")
+        if lines and await send_email(to=user["email"], subject=subj, html=email_template(user["name"], lines + ["Remove it from your wishlist to stop these reminders."], link, "View on SOCProfessionals Academy")):
             sent += 1
     logger.info(f"Wishlist reminders sent: {sent}")

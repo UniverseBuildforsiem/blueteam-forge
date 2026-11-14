@@ -14,11 +14,11 @@ function BundleBuy({ b, reload }) {
   return (
     <Glass className="p-5 space-y-3 lg:sticky lg:top-6" data-testid="bundle-buy-card">
       {b.your_price ? <div><span className="text-3xl font-mono font-bold neon-text" data-testid="bundle-your-price">{inr(b.your_price)}</span>
-        <span className="text-lg font-mono text-slate-500 line-through ml-2" data-testid="bundle-value">{inr(b.value)}</span>
-        {b.off > 0 && <span className="text-yellow-300 font-mono ml-2" data-testid="bundle-off">{b.off}% off</span>}</div>
+        <span className="text-lg font-mono text-slate-500 line-through ml-2" data-testid="bundle-value">{inr(b.your_value)}</span>
+        {b.your_off > 0 && <span className="text-yellow-300 font-mono ml-2" data-testid="bundle-off">{b.your_off}% off</span>}</div>
         : <div className="text-green-400 font-mono" data-testid="bundle-owned-all">You already own every course in this bundle.</div>}
-      {b.regular && b.your_price > 0 && <div className="text-[11px] font-mono text-slate-400">Bundle price after the sale: {inr(b.regular)}</div>}
-      {b.owned_courses.length > 0 && b.your_price > 0 && <div className="text-[11px] font-mono text-green-400" data-testid="bundle-owned-note">Price lowered — you already own {b.owned_courses.length} of these courses.</div>}
+      {b.regular && b.your_price > 0 && <div className="text-[11px] font-mono text-slate-400">Bundle price after the sale: {inr(b.owned_courses.length ? Math.max(1, Math.round((b.regular * b.your_value) / b.value)) : b.regular)}</div>}
+      {b.owned_courses.length > 0 && b.your_price > 0 && <div className="text-[11px] font-mono text-green-400" data-testid="bundle-owned-note">Price lowered — you already own {b.owned_courses.length} of these courses, so you only pay for the rest (full bundle {inr(b.price)}).</div>}
       {b.sale_ends_at && <Countdown ends={b.sale_ends_at} onEnd={reload} />}
       {b.your_price > 0 && (b.signed_in ? <Checkout c={b} item={`bundle:${b.id}`} label={`Bundle: ${b.title}`} coupons={false} onPaid={() => { toast.success("Payment confirmed — all courses unlocked"); reload(); }} />
         : <button className="glow-btn w-full justify-center" onClick={() => { localStorage.setItem("pending_course", JSON.stringify({ id: b.id, kind: "bundle", at: Date.now() })); nav("/login"); }} data-testid="bundle-signin-to-buy">Sign in to buy</button>)}
