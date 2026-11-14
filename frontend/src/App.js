@@ -25,7 +25,8 @@ import { Quizzes, QuizPlayer } from "./pages/app/Quizzes";
 import Progress from "./pages/app/Progress";
 import Challenges from "./pages/app/Challenges";
 import Shift from "./pages/app/Shift";
-import AcademyList, { AcademyDetail, AcademyCert } from "./pages/app/Academy";
+import AcademyList, { AcademyCert } from "./pages/app/Academy";
+import CourseLanding from "./pages/CourseLanding";
 import Drill from "./pages/app/Drill";
 import Badges from "./pages/app/Badges";
 import MockInterview from "./pages/app/MockInterview";
@@ -47,6 +48,7 @@ function AppRouter() {
             <Route path="/" element={<Landing />} />
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/courses" element={<Courses />} />
+            <Route path="/course/:id" element={<CourseLanding />} />
             <Route path="/book" element={<Book />} />
             <Route path="/consultation" element={<Consultation />} />
             <Route path="/review/:token" element={<ReviewPage />} />
@@ -79,7 +81,7 @@ function AppRouter() {
               <Route path="drill" element={<Drill />} />
               <Route path="courses" element={<AcademyList />} />
               <Route path="courses/certificate/:certId" element={<AcademyCert />} />
-              <Route path="courses/:id" element={<AcademyDetail />} />
+              <Route path="courses/:id" element={<PathDetail course />} />
               <Route path="badges" element={<Badges />} />
               <Route path="interview" element={<MockInterview />} />
               <Route path="challenges" element={<Challenges />} />

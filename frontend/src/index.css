@@ -82,7 +82,7 @@
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35), inset 0 -3px 0 rgba(0, 0, 0, .18);
     }
     .glow-btn:hover { background-color: #5ff6ff; transform: translateY(-1px); box-shadow: inset 0 0 14px rgba(255, 255, 255, .7), inset 0 -3px 0 rgba(0, 0, 0, .18); text-shadow: 0 0 8px rgba(255, 255, 255, .6); }
-    .glow-btn:disabled { opacity: .5; pointer-events: none; }
+    .glow-btn:disabled { opacity: .4; filter: grayscale(.7); pointer-events: none; }
     .ghost-btn {
         @apply text-cyan-300 px-5 py-2;
         background: rgba(0, 240, 255, .55);

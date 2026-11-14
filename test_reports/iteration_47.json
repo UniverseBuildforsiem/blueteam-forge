@@ -1,0 +1,37 @@
+{
+  "summary": "Tested Course Launch Coupons (admin CRUD, validation, student coupon check, order endpoints) and the Shareable Course Certificate (LinkedIn share/add-to-profile, PDF/PNG, copy link, public verify page). Backend: 19 passed and 1 skipped (wrong-course test: there is only one paid course). Frontend: every requested flow works end to end. One environment note: the seeded student already has a coupon_redemptions row for LAUNCH30 ({code: LAUNCH30, user_id: b9cafa42b8ca}, no payment_id; it looks like it was inserted by hand). Because of this, LAUNCH30 correctly returns 'You've already used this coupon' for the student instead of showing ₹700. I checked the 30%→₹700 flow with my own TEST_ 30% coupon instead.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/admin/coupons/{code}", "issue": "clean() returns 422 'Course not found' when the coupon's course_id points to a deleted course. The admin then cannot toggle that coupon's active state, and the UI shows a 'Deleted course' row whose switch fails."},
+      {"endpoint": "POST /api/payments/*/order with coupon", "issue": "One use per student is only recorded at activate() after payment. A student can open orders for course A and course B with the same all-courses coupon before paying either one, then pay both and get the discount twice."},
+      {"endpoint": "GET /api/academy/certificates/{id}/png|pdf", "issue": "PIL rendering plus the QR code run synchronously inside an async handler, which blocks the event loop. Wrap them in run_in_threadpool."},
+      {"endpoint": "DELETE /api/admin/coupons/{code}", "issue": "Returns 200 {ok:true} even if the code does not exist (no 404)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Paid course buy box", "issues": ["The 'Buy course with Razorpay' button is disabled when Razorpay is not configured, but the glow-btn has no disabled style (no reduced opacity or not-allowed cursor), so it looks clickable."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_coupons_certshare.py", "/app/test_reports/pytest/iter47.xml"],
+  "action_items": [
+    "Optional: let PUT /admin/coupons toggle active when the linked course was deleted (skip the course check when only active changes, or check only on create)",
+    "Optional: block a second pending discounted order with the same coupon (check payments with status created/paid + coupon + user_id)",
+    "Optional: add a disabled style to glow-btn",
+    "Optional: move cert_png to a threadpool"
+  ],
+  "critical_code_review_comments": [
+    "routes_coupons.apply_coupon: the coupon is validated before prepare(). That is fine, but plan_key validation happens after item_for, so pro_monthly with a coupon gives 400 'Coupons only work on courses' (verified).",
+    "AdminCoupons toggle sends the whole row (uses, created_at). Pydantic ignores the extras, so this works.",
+    "Verified: the frontend passes the coupon in the razorpay/cashfree order body through lib/pay.js (code review only, because the buy buttons are disabled in preview)."
+  ],
+  "updated_files": ["/app/backend/tests/test_coupons_certshare.py"],
+  "success_rate": {"backend": "100% (19/19, 1 skipped)", "frontend": "100%"},
+  "seed_data_creation": "Temporary TEST_* coupons were created through the API and the UI (TEST_UI30, TEST_UIFLAT, plus random TEST_xxxxxx ones) and all were deleted, along with their test redemption rows. The final DB holds only LAUNCH30, OLD10 and FLAT200 (all pre-existing). The pre-existing LAUNCH30 redemption for the student was not touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Coupons: LAUNCH30 (30% all, already redeemed by student b9cafa42b8ca), OLD10 (expired flat 100), FLAT200 (flat 200 on test-paid-course). Only one paid course exists: test-paid-course at ₹1000. The cert SOCP-C-E2592278 verify page works logged out. Path cert SOCF-2026-505C6885 still verifies and shows View PDF. Run with: pytest /app/backend/tests/test_coupons_certshare.py"
+}

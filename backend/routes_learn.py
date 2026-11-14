@@ -118,8 +118,13 @@ async def get_path(pid: str, user=Depends(get_current_user)):
     p = await db.paths.find_one({"id": pid}, NO_ID)
     if not p or (not p.get("published") and user["role"] == "student"):
         raise HTTPException(404, "Path not found")
+    return await path_view(p, user)
+
+
+async def path_view(p, user):
+    pid = p["id"]
     done = await completed_set(user["id"])
-    final = await db.quizzes.find_one({"path_id": pid}, {"_id": 0, "id": 1, "title": 1, "pass_mark": 1})
+    final = await db.quizzes.find_one({"id": p["final_quiz_id"]} if p.get("final_quiz_id") else {"path_id": pid}, {"_id": 0, "id": 1, "title": 1, "pass_mark": 1})
     cert = await db.certificates.find_one({"user_id": user["id"], "path_id": pid}, NO_ID)
     ids = lesson_ids(p)
     lessons = [l for m in p["modules"] for l in m["lessons"]]
@@ -171,7 +176,7 @@ class VideoIn(BaseModel):
 
 @router.post("/paths/{pid}/lessons/{lid}/video")
 async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_current_user)):
-    p, l = await find_lesson(pid, lid)
+    p, l = await find_lesson(pid, lid, user)
     mt = await tracked_meta(l)
     if not mt:
         raise HTTPException(400, "This lesson has no trackable video")
@@ -211,12 +216,22 @@ def pass_count(quiz):
     return -(-len(quiz["questions"]) * 3 // 5)
 
 
-async def find_lesson(pid, lid):
+async def find_lesson(pid, lid, user):
     p = await db.paths.find_one({"id": pid}, NO_ID)
+    if not p:
+        from routes_academy import course_for
+        p = await course_for(pid, user)
     l = next((l for m in (p or {}).get("modules", []) for l in m["lessons"] if l["id"] == lid), None)
     if not l:
         raise HTTPException(404, "Lesson not found")
     return p, l
+
+
+async def course_cert(user, p):
+    if not p.get("_course"):
+        return None
+    from routes_academy import issue_cert
+    return await issue_cert(user, p)
 
 
 async def mark_complete(uid, pid, l):
@@ -229,14 +244,14 @@ async def mark_complete(uid, pid, l):
 
 @router.post("/paths/{pid}/lessons/{lid}/complete")
 async def complete_lesson(pid: str, lid: str, user=Depends(get_current_user)):
-    p, l = await find_lesson(pid, lid)
+    p, l = await find_lesson(pid, lid, user)
     if (l.get("quiz") or {}).get("required") and not await db.lesson_quiz_attempts.find_one({"user_id": user["id"], "lesson_id": lid, "passed": True}) \
             and not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}):
         raise HTTPException(400, "Pass this lesson's quiz to complete it")
     if not await db.lesson_progress.find_one({"user_id": user["id"], "lesson_id": lid}) and not await video_ok(user["id"], l):
         raise HTTPException(400, "Watch at least 90% of the lesson video to complete it")
     await mark_complete(user["id"], pid, l)
-    return {"ok": True}
+    return {"ok": True, "certificate": await course_cert(user, p)}
 
 
 class LessonQuizIn(BaseModel):
@@ -245,7 +260,7 @@ class LessonQuizIn(BaseModel):
 
 @router.post("/paths/{pid}/lessons/{lid}/quiz")
 async def lesson_quiz_submit(pid: str, lid: str, body: LessonQuizIn, user=Depends(get_current_user)):
-    p, l = await find_lesson(pid, lid)
+    p, l = await find_lesson(pid, lid, user)
     q = l.get("quiz") or {}
     if not q.get("required"):
         raise HTTPException(400, "This lesson has no graded quiz")
@@ -257,6 +272,8 @@ async def lesson_quiz_submit(pid: str, lid: str, body: LessonQuizIn, user=Depend
     passed = score >= need
     await db.lesson_quiz_attempts.insert_one({"id": new_id(), "user_id": user["id"], "path_id": pid, "lesson_id": lid, "score": score, "total": len(qs), "passed": passed, "created_at": now_iso()})
     newly = passed and await video_ok(user["id"], l) and await mark_complete(user["id"], pid, l)
+    if newly:
+        await course_cert(user, p)
     return {"score": score, "total": len(qs), "pass_count": need, "passed": passed, "completed": bool(newly), "xp": 10 if newly else 0,
             "results": [{"correct": ok, **({"answer": int(x["answer"]), "explanation": x.get("explanation", "")} if passed or ok else {})} for ok, x in zip(marks, qs)]}
 
@@ -266,7 +283,11 @@ async def resource(name: str, user=Depends(get_current_user)):
     lid = name.replace(".txt", "")
     p = await db.paths.find_one({"modules.lessons.id": lid}, NO_ID)
     if not p:
-        raise HTTPException(404, "Resource not found")
+        c = await db.academy_courses.find_one({"modules.lessons.id": lid}, {"_id": 0, "id": 1})
+        if not c:
+            raise HTTPException(404, "Resource not found")
+        from routes_academy import course_for
+        p = await course_for(c["id"], user)
     l = next(l for m in p["modules"] for l in m["lessons"] if l["id"] == lid)
     return PlainTextResponse(f"SOCProfessionals Academy cheat-sheet — {l['title']}\n{'=' * 40}\n\n{l['content']}\n", headers={"Content-Disposition": f"attachment; filename={lid}.txt"})
 
@@ -307,7 +328,7 @@ class SubmitIn(BaseModel):
 @router.post("/quizzes/{qid}/check")
 async def check_question(qid: str, body: CheckIn, user=Depends(get_current_user)):
     q = await db.quizzes.find_one({"id": qid}, NO_ID)
-    if q and q.get("path_id"):
+    if q and (q.get("path_id") or await db.academy_courses.find_one({"final_quiz_id": qid}, {"_id": 1})):
         raise HTTPException(403, "Instant feedback is disabled for final exams")
     qu = next((x for x in (q or {}).get("questions", []) if x["id"] == body.question_id), None)
     if not qu:
@@ -337,6 +358,11 @@ async def submit_quiz(qid: str, body: SubmitIn, user=Depends(get_current_user)):
     cert = None
     if passed and q.get("path_id"):
         cert = await maybe_issue_cert(user, q["path_id"], score)
+    if passed and not cert:
+        c = await db.academy_courses.find_one({"final_quiz_id": qid, "status": "published"}, NO_ID)
+        if c:
+            from routes_academy import issue_cert
+            cert = await issue_cert(user, c, score) or {"pending": True, "message": "Exam passed! Complete every lesson in this course to unlock your certificate."}
     return {"score": score, "correct": correct, "total": total, "passed": passed, "results": results, "certificate": cert}
 
 
@@ -345,6 +371,12 @@ async def maybe_issue_cert(user, pid, score):
     if existing:
         return existing
     p = await db.paths.find_one({"id": pid}, NO_ID)
+    if not p:
+        c = await db.academy_courses.find_one({"id": pid, "status": "published"}, NO_ID)
+        if not c:
+            return None
+        from routes_academy import issue_cert
+        return await issue_cert(user, c, score) or {"pending": True, "message": "Exam passed! Complete every lesson in this course to unlock your certificate."}
     done = await completed_set(user["id"])
     if not all(i in done for i in lesson_ids(p)):
         return {"pending": True, "message": "Exam passed! Complete all lessons in this path to unlock your certificate."}

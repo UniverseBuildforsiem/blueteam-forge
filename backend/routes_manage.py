@@ -279,10 +279,11 @@ PRODUCTS = {"soc-interview-ebook": {"name": "SOC Interview Preparation - Ebook",
 
 async def item_for(key):
     if key.startswith("course:"):
-        c = await db.academy_courses.find_one({"id": key[7:], "status": "published"}, {"_id": 0, "id": 1, "title": 1, "price": 1})
-        if not c or not c.get("price"):
+        from routes_academy import pricing
+        c = await db.academy_courses.find_one({"id": key[7:], "status": "published"}, {"_id": 0, "id": 1, "title": 1, "price": 1, "mrp": 1, "sale_ends_at": 1})
+        if not c or not pricing(c)["price"]:
             raise HTTPException(400, "This course isn't for sale")
-        return {"name": f"Course: {c['title']}"[:100], "amount": int(c["price"]), "return": f"/app/courses/{c['id']}"}
+        return {"name": f"Course: {c['title']}"[:100], "amount": pricing(c)["price"], "return": f"/course/{c['id']}"}
     item = PLANS.get(key) or PRODUCTS.get(key)
     if not item:
         raise HTTPException(400, "Invalid plan")

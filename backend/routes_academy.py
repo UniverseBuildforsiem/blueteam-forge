@@ -1,15 +1,16 @@
 import io
 import os
+from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 from PIL import Image, ImageDraw
 from pydantic import BaseModel, Field
 from core import db, get_current_user, now_iso, new_id, audit
 
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
-TYPES = {"video", "quiz", "lab", "scenario", "sop", "siem", "shift"}
 LEVELS = ["Beginner", "Intermediate", "Advanced"]
 
 
@@ -19,124 +20,156 @@ def staff(user=Depends(get_current_user)):
     return user
 
 
-class Item(BaseModel):
-    id: str = Field(default_factory=lambda: new_id()[:10], max_length=40)
-    type: str
-    title: str = Field(min_length=1, max_length=160)
-    ref: str = Field(default="", max_length=80)
-    url: str = Field(default="", max_length=3000)
-    note: str = Field(default="", max_length=1000)
-    minutes: int = Field(default=10, ge=1, le=600)
+async def maybe_user(request: Request):
+    try:
+        return await get_current_user(request)
+    except HTTPException:
+        return None
 
 
-class Module(BaseModel):
-    id: str = Field(default_factory=lambda: new_id()[:10], max_length=40)
-    title: str = Field(min_length=1, max_length=160)
-    items: list[Item] = Field(default_factory=list, max_length=40)
+def lessons(c):
+    return [l for m in c.get("modules", []) for l in m.get("lessons", [])]
 
 
-class CourseIn(BaseModel):
-    title: str = Field(min_length=3, max_length=140)
-    subtitle: str = Field(default="", max_length=240)
-    description: str = Field(default="", max_length=6000)
-    level: str = "Beginner"
-    price: int = Field(default=0, ge=0, le=200000)
-    cover: str = Field(default="", max_length=1000)
-    modules: list[Module] = Field(default_factory=list, max_length=30)
+def parse_dt(s):
+    return datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
 
 
-def check(body: CourseIn):
-    if body.level not in LEVELS:
-        raise HTTPException(422, "Pick a valid level")
-    for m in body.modules:
-        for it in m.items:
-            if it.type not in TYPES:
-                raise HTTPException(422, f"Unknown item type '{it.type}'")
-            if it.type == "video" and not it.url.strip():
-                raise HTTPException(422, f"Video '{it.title}' needs a link")
-            if it.type in ("quiz", "lab", "scenario", "sop") and not it.ref:
-                raise HTTPException(422, f"Pick which {it.type} '{it.title}' uses")
-
-
-def items(c):
-    return [it for m in c.get("modules", []) for it in m.get("items", [])]
+def pricing(c):
+    price, mrp, ends = int(c.get("price") or 0), int(c.get("mrp") or 0), c.get("sale_ends_at")
+    on_sale = mrp > price and (not ends or parse_dt(ends) > datetime.now(timezone.utc))
+    cur = price if mrp <= price or on_sale else mrp
+    return {"price": cur, "mrp": mrp if mrp > cur else None, "off": round(100 * (mrp - cur) / mrp) if mrp > cur else 0,
+            "sale_ends_at": ends if on_sale and ends else None}
 
 
 async def owns(user, c):
-    if not c.get("price") or user["role"] == "admin" or c.get("instructor_id") == user["id"]:
+    if not user:
+        return False
+    if not pricing(c)["price"] or user["role"] == "admin" or c.get("instructor_id") == user["id"]:
         return True
     if await db.purchases.find_one({"user_id": user["id"], "product_id": f"course:{c['id']}"}):
         return True
-    return bool(await db.academy_progress.find_one({"user_id": user["id"], "course_id": c["id"]}))
+    return bool(await db.lesson_progress.find_one({"user_id": user["id"], "path_id": c["id"]}))
 
 
-async def done_set(uid, cid, c=None):
-    got = set(await db.academy_progress.distinct("item_id", {"user_id": uid, "course_id": cid}))
-    return got & {i["id"] for i in items(c)} if c else got
+def visible(c, user):
+    return c and (c["status"] == "published" or (user and (user["role"] == "admin" or c.get("instructor_id") == user["id"])))
 
 
-def card(c, owned, done):
-    total = len(items(c))
-    return {k: c.get(k) for k in ("id", "title", "subtitle", "level", "price", "cover", "instructor_name", "updated_at")} | {
-        "owned": owned, "modules_count": len(c.get("modules", [])), "items_count": total, "minutes": sum(i.get("minutes", 0) for i in items(c)),
-        "percent": round(100 * len(done) / total) if total else 0, "types": sorted({i["type"] for i in items(c)})}
+async def course_for(cid, user):
+    c = await db.academy_courses.find_one({"id": cid}, NO_ID)
+    if not visible(c, user):
+        raise HTTPException(404, "Course not found")
+    if not await owns(user, c):
+        raise HTTPException(403, "Buy this course to start it")
+    return {**c, "_course": True}
+
+
+def stats(c):
+    ls = lessons(c)
+    att = [a["type"] for l in ls for a in l.get("attachments", [])]
+    return {"modules_count": len(c.get("modules", [])), "lessons_count": len(ls), "minutes": sum(int(l.get("minutes") or 0) for l in ls),
+            "videos": sum(bool(l.get("video_url")) for l in ls), "video_minutes": sum(int(l.get("minutes") or 0) for l in ls if l.get("video_url")),
+            "quizzes": sum(bool((l.get("quiz") or {}).get("questions")) for l in ls) + att.count("quiz"),
+            "labs": att.count("lab"), "ctfs": att.count("ctf"), "challenges": att.count("challenge"), "sops": att.count("sop"),
+            "resources": sum(len([r for r in l.get("resources", []) if r.get("url")]) for l in ls), "previews": sum(bool(l.get("preview")) for l in ls),
+            "final_exam": bool(c.get("final_quiz_id"))}
+
+
+async def rating(cid):
+    rows = await db.academy_reviews.find({"course_id": cid}, {"_id": 0, "rating": 1}).to_list(5000)
+    return {"rating": round(sum(r["rating"] for r in rows) / len(rows), 1) if rows else None, "reviews_count": len(rows)}
+
+
+async def students(cid):
+    a = set(await db.purchases.distinct("user_id", {"product_id": f"course:{cid}"}))
+    return len(a | set(await db.lesson_progress.distinct("user_id", {"path_id": cid})))
+
+
+async def card(c, user):
+    done = set(await db.lesson_progress.distinct("lesson_id", {"user_id": user["id"], "path_id": c["id"]})) if user else set()
+    ids = {l["id"] for l in lessons(c)}
+    return {k: c.get(k) for k in ("id", "title", "subtitle", "level", "category", "cover", "instructor_name", "updated_at")} | pricing(c) | stats(c) | await rating(c["id"]) | {
+        "owned": await owns(user, c), "percent": round(100 * len(done & ids) / len(ids)) if ids else 0}
 
 
 @router.get("/academy/courses")
 async def list_courses(user=Depends(get_current_user)):
-    out = []
-    for c in await db.academy_courses.find({"status": "published"}, NO_ID).sort("published_at", -1).to_list(200):
-        out.append(card(c, await owns(user, c), await done_set(user["id"], c["id"], c)))
-    return out
+    return [await card(c, user) for c in await db.academy_courses.find({"status": "published"}, NO_ID).sort("published_at", -1).to_list(200)]
+
+
+@router.get("/public/academy/courses")
+async def public_courses(request: Request):
+    user = await maybe_user(request)
+    return [await card(c, user) for c in await db.academy_courses.find({"status": "published"}, NO_ID).sort("published_at", -1).to_list(200)]
+
+
+def outline(c):
+    return [{"id": m["id"], "title": m["title"], "lessons": [{"id": l["id"], "title": l["title"], "minutes": int(l.get("minutes") or 0), "video": bool(l.get("video_url")),
+             "quiz": bool((l.get("quiz") or {}).get("questions")), "practice": len(l.get("attachments", [])), "preview": bool(l.get("preview")),
+             **({"video_url": l.get("video_url", ""), "content": l.get("content", "")} if l.get("preview") else {})} for l in m["lessons"]]} for m in c.get("modules", [])]
+
+
+@router.get("/public/academy/courses/{cid}")
+async def landing(cid: str, request: Request):
+    user = await maybe_user(request)
+    c = await db.academy_courses.find_one({"id": cid}, NO_ID)
+    if not visible(c, user):
+        raise HTTPException(404, "Course not found")
+    ins = await db.users.find_one({"id": c.get("instructor_id")}, {"_id": 0, "name": 1, "username": 1, "headline": 1, "bio": 1, "public_profile": 1}) or {}
+    reviews = await db.academy_reviews.find({"course_id": cid}, {"_id": 0, "user_id": 0}).sort("at", -1).to_list(50)
+    mine = await db.academy_reviews.find_one({"course_id": cid, "user_id": user["id"]}, {"_id": 0, "user_id": 0}) if user else None
+    return {**{k: c.get(k) for k in ("id", "title", "subtitle", "description", "level", "category", "cover", "promo_video", "outcomes", "requirements", "audience",
+                                    "instructor_name", "status", "updated_at", "published_at")},
+            **pricing(c), **stats(c), **await rating(cid), "students": await students(cid), "modules": outline(c), "reviews": reviews,
+            "instructor": {"name": ins.get("name") or c.get("instructor_name"), "headline": ins.get("headline"), "bio": ins.get("bio"),
+                           "username": ins.get("username") if ins.get("public_profile") is not False else None},
+            "signed_in": bool(user), "owned": await owns(user, c), "my_review": mine,
+            "can_review": bool(user and await db.lesson_progress.find_one({"user_id": user["id"], "path_id": cid}))}
 
 
 @router.get("/academy/courses/{cid}")
 async def get_course(cid: str, user=Depends(get_current_user)):
-    c = await db.academy_courses.find_one({"id": cid}, NO_ID)
-    if not c or (c["status"] != "published" and user["role"] != "admin" and c.get("instructor_id") != user["id"]):
-        raise HTTPException(404, "Course not found")
-    owned = await owns(user, c)
-    done = await done_set(user["id"], cid, c)
-    mods = [{"id": m["id"], "title": m["title"], "items": [it if owned else {k: it[k] for k in ("id", "type", "title", "minutes")} for it in m["items"]]} for m in c["modules"]]
+    from routes_learn import path_view
+    c = await course_for(cid, user)
+    v = await path_view(c, user)
     cert = await db.academy_certs.find_one({"user_id": user["id"], "course_id": cid}, NO_ID)
-    return {**card(c, owned, done), "status": c["status"], "description": c.get("description", ""), "modules": mods, "done": sorted(done), "certificate": cert}
+    return {**v, **pricing(c), "kind": "course", "owned": True, "certificate": cert, "pending_changes": None}
 
 
-async def verify(uid, it):
-    t, ref = it["type"], it.get("ref")
-    if t == "quiz" and not await db.quiz_attempts.find_one({"user_id": uid, "quiz_id": ref}):
-        raise HTTPException(400, "Take this quiz first, then mark it done")
-    if t == "lab":
-        lab = await db.labs.find_one({"id": ref}, {"_id": 0, "tasks": 1})
-        prog = await db.lab_progress.find_one({"user_id": uid, "lab_id": ref}, NO_ID) or {}
-        if lab and len(prog.get("answered", {})) < len(lab.get("tasks", [])):
-            raise HTTPException(400, "Solve every task in this lab first")
-    if t == "scenario" and not await db.challenge_submissions.find_one({"user_id": uid, "challenge_id": ref}):
-        raise HTTPException(400, "Submit your verdict for this scenario first")
+async def issue_cert(user, c, score=None):
+    cert = await db.academy_certs.find_one({"user_id": user["id"], "course_id": c["id"]}, NO_ID)
+    if cert:
+        return cert
+    done = set(await db.lesson_progress.distinct("lesson_id", {"user_id": user["id"], "path_id": c["id"]}))
+    if not all(l["id"] in done for l in lessons(c)):
+        return None
+    if c.get("final_quiz_id") and not await db.quiz_attempts.find_one({"user_id": user["id"], "quiz_id": c["final_quiz_id"], "passed": True}):
+        return None
+    cert = {"id": f"SOCP-C-{new_id()[:8].upper()}", "user_id": user["id"], "name": user["name"], "course_id": c["id"], "course_title": c["title"],
+            "instructor_name": c.get("instructor_name"), "issued_at": now_iso(), **({"score": score} if score is not None else {})}
+    await db.academy_certs.insert_one(dict(cert))
+    cert.pop("_id", None)
+    return cert
 
 
-@router.post("/academy/courses/{cid}/items/{iid}/done")
-async def mark_done(cid: str, iid: str, user=Depends(get_current_user)):
+class ReviewBody(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    text: str = Field(default="", max_length=2000)
+
+
+@router.post("/academy/courses/{cid}/reviews")
+async def post_review(cid: str, body: ReviewBody, user=Depends(get_current_user)):
     c = await db.academy_courses.find_one({"id": cid, "status": "published"}, NO_ID)
-    if not c:
-        raise HTTPException(404, "Course not found")
-    if not await owns(user, c):
-        raise HTTPException(403, "Buy this course to start it")
-    it = next((i for i in items(c) if i["id"] == iid), None)
-    if not it:
-        raise HTTPException(404, "Item not found")
-    await verify(user["id"], it)
-    await db.academy_progress.update_one({"user_id": user["id"], "course_id": cid, "item_id": iid}, {"$setOnInsert": {"at": now_iso()}}, upsert=True)
-    done = await done_set(user["id"], cid, c)
-    cert = None
-    if all(i["id"] in done for i in items(c)):
-        cert = await db.academy_certs.find_one({"user_id": user["id"], "course_id": cid}, NO_ID)
-        if not cert:
-            cert = {"id": f"SOCP-C-{new_id()[:8].upper()}", "user_id": user["id"], "name": user["name"], "course_id": cid, "course_title": c["title"],
-                    "instructor_name": c.get("instructor_name"), "issued_at": now_iso()}
-            await db.academy_certs.insert_one(dict(cert))
-            cert.pop("_id", None)
-    return {"done": sorted(done), "percent": round(100 * len(done) / len(items(c))), "certificate": cert}
+    if not c or not await owns(user, c):
+        raise HTTPException(403, "Only enrolled students can review this course")
+    if not await db.lesson_progress.find_one({"user_id": user["id"], "path_id": cid}):
+        raise HTTPException(400, "Complete at least one lesson before reviewing")
+    doc = {"course_id": cid, "user_id": user["id"], "name": user["name"], "rating": body.rating, "text": body.text.strip(), "at": now_iso()}
+    await db.academy_reviews.update_one({"course_id": cid, "user_id": user["id"]}, {"$set": doc}, upsert=True)
+    doc.pop("user_id")
+    return {"review": doc, **await rating(cid)}
 
 
 @router.get("/academy/certificates/{cert_id}")
@@ -181,7 +214,8 @@ async def find_cert(cert_id):
 @router.get("/academy/certificates/{cert_id}/png")
 async def get_cert_png(cert_id: str):
     buf = io.BytesIO()
-    cert_png(await find_cert(cert_id)).save(buf, format="PNG")
+    img = await run_in_threadpool(cert_png, await find_cert(cert_id))
+    await run_in_threadpool(img.save, buf, format="PNG")
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png", headers={"Content-Disposition": f"attachment; filename=SOCProfessionals-{cert_id}.png"})
 
@@ -189,12 +223,49 @@ async def get_cert_png(cert_id: str):
 @router.get("/academy/certificates/{cert_id}/pdf")
 async def get_cert_pdf(cert_id: str):
     buf = io.BytesIO()
-    cert_png(await find_cert(cert_id)).save(buf, format="PDF", resolution=150)
+    img = await run_in_threadpool(cert_png, await find_cert(cert_id))
+    await run_in_threadpool(img.save, buf, format="PDF", resolution=150)
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=SOCProfessionals-{cert_id}.pdf"})
 
 
 # ---------- instructor / admin ----------
+class CourseIn(BaseModel):
+    title: str = Field(min_length=3, max_length=140)
+    subtitle: str = Field(default="", max_length=240)
+    description: str = Field(default="", max_length=8000)
+    level: str = "Beginner"
+    category: str = Field(default="", max_length=60)
+    price: int = Field(default=0, ge=0, le=200000)
+    mrp: int = Field(default=0, ge=0, le=500000)
+    sale_ends_at: Optional[str] = None
+    cover: str = Field(default="", max_length=1000)
+    promo_video: str = Field(default="", max_length=3000)
+    outcomes: list[str] = Field(default_factory=list, max_length=30)
+    requirements: list[str] = Field(default_factory=list, max_length=20)
+    audience: list[str] = Field(default_factory=list, max_length=20)
+    final_quiz_id: Optional[str] = None
+    modules: list[dict] = Field(default_factory=list, max_length=40)
+
+
+def check(body: CourseIn):
+    from routes_manage import validate
+    if body.level not in LEVELS:
+        raise HTTPException(422, "Pick a valid level")
+    if body.sale_ends_at:
+        try:
+            parse_dt(body.sale_ends_at)
+        except ValueError:
+            raise HTTPException(422, "Invalid sale end date")
+    d = body.model_dump()
+    for k in ("outcomes", "requirements", "audience"):
+        d[k] = [x.strip()[:300] for x in d[k] if x.strip()]
+    validate("paths", {"title": d["title"], "description": "-", "level": d["level"], "modules": d["modules"]})
+    for l in lessons(d):
+        l["preview"] = bool(l.get("preview"))
+    return d
+
+
 async def editable(cid, user):
     c = await db.academy_courses.find_one({"id": cid}, NO_ID)
     if not c or (user["role"] != "admin" and c["instructor_id"] != user["id"]):
@@ -208,18 +279,9 @@ async def manage_list(user=Depends(staff)):
     return await db.academy_courses.find(q, NO_ID).sort("updated_at", -1).to_list(300)
 
 
-@router.get("/academy/manage/options")
-async def options(user=Depends(staff)):
-    from routes_sop import all_sops
-    pick = lambda rows: [{"id": r["id"], "title": r["title"]} for r in rows]  # noqa: E731
-    return {"quiz": pick(await db.quizzes.find({}, {"_id": 0, "id": 1, "title": 1}).to_list(500)), "lab": pick(await db.labs.find({}, {"_id": 0, "id": 1, "title": 1}).to_list(200)),
-            "scenario": pick(await db.challenges.find({}, {"_id": 0, "id": 1, "title": 1}).to_list(500)), "sop": pick(await all_sops())}
-
-
 @router.post("/academy/manage")
 async def create(body: CourseIn, user=Depends(staff)):
-    check(body)
-    c = {**body.model_dump(), "id": new_id(), "instructor_id": user["id"], "instructor_name": user["name"], "status": "draft", "created_at": now_iso(), "updated_at": now_iso()}
+    c = {**check(body), "id": new_id(), "instructor_id": user["id"], "instructor_name": user["name"], "status": "draft", "created_at": now_iso(), "updated_at": now_iso()}
     await db.academy_courses.insert_one(dict(c))
     await audit(user, "academy course create", c["title"])
     return c
@@ -228,11 +290,11 @@ async def create(body: CourseIn, user=Depends(staff)):
 @router.put("/academy/manage/{cid}")
 async def update(cid: str, body: CourseIn, user=Depends(staff)):
     c = await editable(cid, user)
-    check(body)
+    d = check(body)
     if c["status"] == "published" and user["role"] != "admin":
-        await db.academy_courses.update_one({"id": cid}, {"$set": {"pending_changes": body.model_dump(), "changes_at": now_iso(), "updated_at": now_iso()}})
+        await db.academy_courses.update_one({"id": cid}, {"$set": {"pending_changes": d, "changes_at": now_iso(), "updated_at": now_iso()}})
     else:
-        await db.academy_courses.update_one({"id": cid}, {"$set": {**body.model_dump(), "updated_at": now_iso()}, "$unset": {"pending_changes": ""}})
+        await db.academy_courses.update_one({"id": cid}, {"$set": {**d, "updated_at": now_iso()}, "$unset": {"pending_changes": ""}})
     return await db.academy_courses.find_one({"id": cid}, NO_ID)
 
 
@@ -244,8 +306,8 @@ async def submit(cid: str, user=Depends(staff)):
             raise HTTPException(400, "No changes to submit")
         await db.academy_courses.update_one({"id": cid}, {"$set": {"changes_submitted": True, "review_note": ""}})
         return {"status": "published", "changes": "pending"}
-    if not items(c):
-        raise HTTPException(400, "Add at least one module item before submitting")
+    if not lessons(c):
+        raise HTTPException(400, "Add at least one lesson before submitting")
     await db.academy_courses.update_one({"id": cid}, {"$set": {"status": "pending", "review_note": "", "submitted_at": now_iso()}})
     return {"status": "pending"}
 
@@ -265,8 +327,8 @@ async def review(cid: str, body: ReviewIn, user=Depends(staff)):
         await db.academy_courses.update_one({"id": cid}, {"$set": {**upd, "review_note": body.note or "", "updated_at": now_iso()}, "$unset": {"pending_changes": "", "changes_submitted": ""}})
         await audit(user, f"academy course changes {body.action}", c["title"])
         return {"status": "published", "changes": body.action}
-    if body.action == "approve" and not items(c):
-        raise HTTPException(400, "This course has no content yet")
+    if body.action == "approve" and not lessons(c):
+        raise HTTPException(400, "This course has no lessons yet")
     status = {"approve": "published", "reject": "rejected", "unpublish": "draft"}[body.action]
     await db.academy_courses.update_one({"id": cid}, {"$set": {"status": status, "review_note": body.note or "", "reviewed_by": user["name"],
                                                                **({"published_at": c.get("published_at") or now_iso()} if status == "published" else {})}})
@@ -281,3 +343,23 @@ async def delete(cid: str, user=Depends(staff)):
         raise HTTPException(400, "Ask an admin to unpublish this course first")
     await db.academy_courses.delete_one({"id": cid})
     return {"ok": True}
+
+
+OLD_ATTACH = {"quiz": "quiz", "lab": "lab", "scenario": "challenge", "sop": "sop", "siem": "siem", "shift": "shift"}
+
+
+def old_to_lesson(it):
+    t = it["type"]
+    att = [{"type": OLD_ATTACH[t], "id": it.get("ref") or t, "title": it["title"]}] if t in OLD_ATTACH else []
+    return {"id": it["id"], "title": it["title"], "content": it.get("note", ""), "video_url": it.get("url", "") if t == "video" else "",
+            "minutes": it.get("minutes", 10), "resources": [], "attachments": att, "preview": False}
+
+
+async def migrate_courses():
+    async for c in db.academy_courses.find({"modules.items": {"$exists": True}}, NO_ID):
+        mods = [{"id": m["id"], "title": m["title"], "lessons": [old_to_lesson(i) for i in m.get("items", [])]} for m in c["modules"]]
+        await db.academy_courses.update_one({"id": c["id"]}, {"$set": {"modules": mods}, "$unset": {"pending_changes": ""}})
+        async for p in db.academy_progress.find({"course_id": c["id"]}, NO_ID):
+            await db.lesson_progress.update_one({"user_id": p["user_id"], "lesson_id": p["item_id"]},
+                                                {"$setOnInsert": {"path_id": c["id"], "minutes": 10, "created_at": p.get("at") or now_iso()}}, upsert=True)
+    await db.academy_reviews.create_index([("course_id", 1), ("user_id", 1)], unique=True)

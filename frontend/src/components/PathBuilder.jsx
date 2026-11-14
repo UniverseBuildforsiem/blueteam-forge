@@ -11,7 +11,8 @@ import { VideoField } from "./VideoField";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const Lbl = ({ l, children }) => <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
-const TYPES = [["quiz", "Quiz"], ["lab", "Lab"], ["challenge", "SOC challenge"], ["ctf", "CTF"], ["course", "Course"], ["sop", "SOP"]];
+const TYPES = [["quiz", "Quiz"], ["lab", "Lab"], ["challenge", "SOC challenge"], ["ctf", "CTF"], ["course", "Course"], ["sop", "SOP"], ["siem", "SIEM simulator"], ["shift", "Shift simulator"]];
+const STATIC = { siem: [{ id: "siem", title: "SIEM simulator" }], shift: [{ id: "shift", title: "Shift simulator" }] };
 const newLesson = () => ({ id: `l-${uid()}`, title: "New lesson", content: "", video_url: "", minutes: 10, resources: [], attachments: [] });
 
 const move = (arr, from, to) => { const a = [...arr]; const [x] = a.splice(from, 1); a.splice(to, 0, x); return a; };
@@ -20,7 +21,7 @@ function Attachments({ l, upL, assets, onAsset, level }) {
   const [type, setType] = useState("quiz");
   const [id, setId] = useState("");
   const [creating, setCreating] = useState(false);
-  const opts = assets?.[type] || [];
+  const opts = assets?.[type] || STATIC[type] || [];
   const created = (c) => { onAsset("ctf", { id: c.id, title: c.title }); upL((cur) => ({ ...cur, attachments: [...(cur.attachments || []), { type: "ctf", id: c.id, title: c.title }] })); setCreating(false); };
   const add = () => {
     const it = opts.find((o) => String(o.id) === id);
@@ -95,6 +96,7 @@ function LessonEditor({ l, upL, assets, onAsset, ctx }) {
           <Lbl l="Minutes"><input type="number" min={1} className="field" value={l.minutes} onChange={(e) => upL({ ...l, minutes: +e.target.value })} data-testid="builder-lesson-minutes" /></Lbl>
         </div>
         <Lbl l="Video (Vimeo or YouTube)"><VideoField key={l.id} l={l} upL={upL} /></Lbl>
+        {ctx.course && <label className="flex items-center gap-2 text-xs font-mono text-slate-300" data-testid="builder-lesson-preview-label"><input type="checkbox" checked={!!l.preview} onChange={(e) => upL({ ...l, preview: e.target.checked })} data-testid="builder-lesson-preview" />Free preview — anyone can watch this lesson on the course page</label>}
         <div><div className="flex items-center justify-between"><span className="text-[11px] font-mono uppercase text-slate-500">Content</span><WriteButton l={l} upL={upL} ctx={ctx} /></div>
           <textarea className="field h-44 text-sm mt-1" placeholder="Lesson content (line breaks and '- ' bullets)" value={l.content} onChange={(e) => upL({ ...l, content: e.target.value })} data-testid="builder-lesson-content" />
           <LessonQuizBuilder l={l} upL={upL} level={ctx.level} /></div>
@@ -149,6 +151,7 @@ function Outline({ mods, setMods, sel, setSel }) {
                 <GripVertical className="h-3.5 w-3.5 text-slate-600 cursor-grab shrink-0" /><FileText className="h-3.5 w-3.5 shrink-0" /><span className="truncate flex-1">{l.title || "Untitled lesson"}</span>
                 {l.quiz?.questions?.length > 0 && <span className={`font-mono text-[10px] ${l.quiz.required ? "text-yellow-300" : "text-slate-500"}`} title={l.quiz.required ? "required quiz" : "practice quiz"}>Q{l.quiz.required ? "*" : ""}</span>}
                 {l.attachments?.length > 0 && <span className="font-mono text-[10px] text-green-400">+{l.attachments.length}</span>}
+                {l.preview && <span className="font-mono text-[10px] text-yellow-300" title="free preview">FREE</span>}
                 <button disabled={li === 0} onClick={(e) => { e.stopPropagation(); upMod(mi, { ...m, lessons: move(m.lessons, li, li - 1) }); }} className="hover:text-cyan-300 disabled:opacity-30" data-testid={`builder-lesson-up-${mi}-${li}`}><ChevronUp className="h-3.5 w-3.5" /></button>
                 <button disabled={li === m.lessons.length - 1} onClick={(e) => { e.stopPropagation(); upMod(mi, { ...m, lessons: move(m.lessons, li, li + 1) }); }} className="hover:text-cyan-300 disabled:opacity-30" data-testid={`builder-lesson-down-${mi}-${li}`}><ChevronDown className="h-3.5 w-3.5" /></button>
                 <button onClick={(e) => { e.stopPropagation(); upMod(mi, { ...m, lessons: m.lessons.filter((_, j) => j !== li) }); }} className="hover:text-red-400" data-testid={`builder-lesson-delete-${mi}-${li}`}><Trash2 className="h-3 w-3" /></button>
@@ -162,7 +165,7 @@ function Outline({ mods, setMods, sel, setSel }) {
     </div>);
 }
 
-export default function PathBuilder({ d, set }) {
+export default function PathBuilder({ d, set, course }) {
   const [assets, setAssets] = useState(null);
   const [sel, setSel] = useState(d.modules?.[0]?.lessons?.[0]?.id || null);
   useEffect(() => { api.get("/builder/assets").then((r) => setAssets(r.data)).catch(() => {}); }, []);
@@ -174,18 +177,18 @@ export default function PathBuilder({ d, set }) {
   const total = mods.reduce((n, m) => n + m.lessons.length, 0);
   return (
     <div className="space-y-4">
-      <div className="grid sm:grid-cols-4 gap-3">
+      {!course && <div className="grid sm:grid-cols-4 gap-3">
         <div className="sm:col-span-2"><Lbl l="Title"><input className="field" value={d.title} onChange={(e) => set({ ...d, title: e.target.value })} data-testid="builder-path-title" /></Lbl></div>
         <Lbl l="Level"><select className="field" value={d.level} onChange={(e) => set({ ...d, level: e.target.value })} data-testid="builder-path-level">{["Beginner", "Intermediate", "Advanced"].map((x) => <option key={x}>{x}</option>)}</select></Lbl>
         <Lbl l="Order"><input type="number" className="field" value={d.order} onChange={(e) => set({ ...d, order: +e.target.value })} data-testid="builder-path-order" /></Lbl>
         <Lbl l="Category"><input className="field" value={d.category} onChange={(e) => set({ ...d, category: e.target.value })} data-testid="builder-path-category" /></Lbl>
         <div className="sm:col-span-3"><Lbl l="Description"><input className="field" value={d.description} onChange={(e) => set({ ...d, description: e.target.value })} data-testid="builder-path-description" /></Lbl></div>
-      </div>
+      </div>}
       <div className="flex flex-wrap items-center gap-3"><div className="text-[11px] font-mono text-slate-500 flex-1" data-testid="builder-summary">{mods.length} modules · {total} lessons · {mods.reduce((n, m) => n + m.lessons.reduce((k, l) => k + (+l.minutes || 0), 0), 0)} min · {mods.reduce((n, m) => n + m.lessons.reduce((k, l) => k + (l.attachments?.length || 0), 0), 0)} practice items</div>
         <BulkQuiz mods={mods} level={d.level || "Beginner"} updateLesson={(lid, fn) => setMods((ms) => ms.map((m) => ({ ...m, lessons: m.lessons.map((x) => (x.id === lid ? fn(x) : x)) })))} /></div>
       <div className="grid lg:grid-cols-[340px_1fr] gap-4 items-start">
         <Outline mods={mods} setMods={setMods} sel={sel} setSel={setSel} />
-        {lesson ? <LessonEditor key={lesson.id} l={lesson} upL={upL} assets={assets} onAsset={(t, it) => setAssets((a) => ({ ...(a || {}), [t]: [...(a?.[t] || []), it] }))} ctx={{ path_title: d.title || "", module_title: mods[pos.mi].title || "", level: d.level || "Beginner" }} /> : <Glass className="p-8"><Empty text="add or select a lesson to edit it" /></Glass>}
+        {lesson ? <LessonEditor key={lesson.id} l={lesson} upL={upL} assets={assets} onAsset={(t, it) => setAssets((a) => ({ ...(a || {}), [t]: [...(a?.[t] || []), it] }))} ctx={{ path_title: d.title || "", module_title: mods[pos.mi].title || "", level: d.level || "Beginner", course }} /> : <Glass className="p-8"><Empty text="add or select a lesson to edit it" /></Glass>}
       </div>
     </div>);
 }

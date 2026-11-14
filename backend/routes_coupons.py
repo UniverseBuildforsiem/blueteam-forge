@@ -21,7 +21,7 @@ def expired(c):
     return bool(c.get("expires_at")) and datetime.fromisoformat(c["expires_at"].replace("Z", "+00:00")) < datetime.now(timezone.utc)
 
 
-async def clean(body: CouponIn):
+async def clean(body: CouponIn, new=True):
     if body.kind == "percent" and body.value > 99:
         raise HTTPException(422, "Percent off must be between 1 and 99")
     if body.expires_at:
@@ -29,7 +29,7 @@ async def clean(body: CouponIn):
             datetime.fromisoformat(body.expires_at.replace("Z", "+00:00"))
         except ValueError:
             raise HTTPException(422, "Invalid expiry date")
-    if body.course_id and not await db.academy_courses.find_one({"id": body.course_id}, {"_id": 1}):
+    if new and body.course_id and not await db.academy_courses.find_one({"id": body.course_id}, {"_id": 1}):
         raise HTTPException(422, "Course not found")
     return {**body.model_dump(), "code": body.code.upper()}
 
@@ -58,7 +58,7 @@ async def create_coupon(body: CouponIn, user=Depends(admin_only)):
 
 @router.put("/admin/coupons/{code}")
 async def update_coupon(code: str, body: CouponIn, user=Depends(admin_only)):
-    c = await clean(body)
+    c = await clean(body, new=False)
     if c["code"] != code.upper():
         raise HTTPException(422, "Coupon code can't be changed")
     r = await db.academy_coupons.update_one({"code": c["code"]}, {"$set": c})
@@ -69,7 +69,8 @@ async def update_coupon(code: str, body: CouponIn, user=Depends(admin_only)):
 
 @router.delete("/admin/coupons/{code}")
 async def delete_coupon(code: str, user=Depends(admin_only)):
-    await db.academy_coupons.delete_one({"code": code.upper()})
+    if not (await db.academy_coupons.delete_one({"code": code.upper()})).deleted_count:
+        raise HTTPException(404, "Coupon not found")
     await audit(user, "coupon delete", code.upper())
     return {"ok": True}
 
@@ -86,6 +87,8 @@ async def apply_coupon(plan_key, plan, code, user):
         raise HTTPException(400, "This coupon has expired")
     if await db.coupon_redemptions.find_one({"code": c["code"], "user_id": user["id"]}):
         raise HTTPException(400, "You've already used this coupon")
+    if await db.payments.find_one({"user_id": user["id"], "coupon": c["code"], "plan": {"$ne": plan_key}, "status": {"$in": ["created", "paid"]}}):
+        raise HTTPException(400, "You've already used this coupon on another course")
     price = plan["amount"]
     off = round(price * c["value"] / 100) if c["kind"] == "percent" else c["value"]
     return {**plan, "amount": max(1, price - off), "original": price, "coupon": c["code"]}

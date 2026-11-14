@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { CheckCircle2, Circle, PlayCircle, Download, Award, ChevronRight, FileText, Lock, Eye, AlertTriangle } from "lucide-react";
 import { TrackedVideo } from "../../components/TrackedVideo";
 import { toast } from "sonner";
@@ -36,7 +36,7 @@ export function Paths() {
 }
 
 const ATTACH = { quiz: ["Quiz", (a) => `/app/quizzes/${a.id}`], lab: ["Lab", (a) => `/app/labs/${a.id}`], challenge: ["SOC challenge", (a) => `/app/challenges?case=${a.id}`],
-  ctf: ["CTF", () => "/app/ctf"], course: ["Course", (a) => a.url], sop: ["SOP", (a) => `/sops/${a.id}`] };
+  ctf: ["CTF", () => "/app/ctf"], course: ["Course", (a) => a.url], sop: ["SOP", (a) => `/sops/${a.id}`], siem: ["SIEM simulator", () => "/app/siem"], shift: ["Shift simulator", () => "/app/shift"] };
 
 export function LessonBody({ lesson, grade, completed, videoNode }) {
   const video = embedSrc(lesson.video_url);
@@ -77,16 +77,18 @@ function LessonView({ lesson, p, onComplete, grade, onWatched, onProgress }) {
   );
 }
 
-export function PathDetail() {
+export function PathDetail({ course }) {
   const { id } = useParams();
+  const nav = useNavigate();
   const [p, setP] = useState(null);
   const [cur, setCur] = useState(null);
   const [tab, setTab] = useState("lessons");
-  const load = () => api.get(`/paths/${id}`).then((r) => { setP(r.data); setCur((c) => c || r.data.modules[0]?.lessons[0]); });
+  const load = () => api.get(course ? `/academy/courses/${id}` : `/paths/${id}`).then((r) => { setP(r.data); setCur((c) => c || r.data.modules[0]?.lessons[0]); })
+    .catch((e) => { if (course) { toast.error(errMsg(e)); nav(`/course/${id}`, { replace: true }); } });
   useEffect(() => { load(); }, [id]); // eslint-disable-line
   if (!p) return null;
   const complete = async () => {
-    try { await api.post(`/paths/${id}/lessons/${cur.id}/complete`); toast.success("+10 XP · lesson complete"); load(); } catch (e) { toast.error(errMsg(e)); }
+    try { const { data } = await api.post(`/paths/${id}/lessons/${cur.id}/complete`); toast.success(data.certificate && !p.certificate ? "Course complete — certificate issued!" : "+10 XP · lesson complete"); load(); } catch (e) { toast.error(errMsg(e)); }
   };
   return (
     <div>
@@ -121,8 +123,11 @@ export function PathDetail() {
           ))}
           <Glass className="p-4">
             <div className="font-bold mb-2 flex items-center gap-2"><FileText className="h-4 w-4 text-orange-300" />Final exam</div>
+            {course && <Link to={`/course/${id}`} className="text-[11px] font-mono text-slate-400 hover:text-cyan-300 block mb-2" data-testid="course-landing-link">Course page & reviews →</Link>}
             {p.final_quiz ? <Link to={`/app/quizzes/${p.final_quiz.id}`} className="ghost-btn w-full justify-between" data-testid="path-final-exam-button">{p.final_quiz.title}<ChevronRight className="h-4 w-4" /></Link> : <div className="text-xs text-slate-500">No exam configured</div>}
-            {p.certificate && <a href={`${API}/public/certificates/${p.certificate.id}/pdf`} target="_blank" rel="noreferrer" className="glow-btn w-full justify-center mt-3" data-testid="path-certificate-button"><Award className="h-4 w-4" />Certificate</a>}
+            {p.certificate && course && <Link to={`/app/courses/certificate/${p.certificate.id}`} className="glow-btn w-full justify-center mt-3" data-testid="course-certificate-button"><Award className="h-4 w-4" />Certificate · share</Link>}
+            {course && !p.final_quiz && !p.certificate && <div className="text-[11px] font-mono text-slate-500 mt-2">Complete every lesson to earn your certificate.</div>}
+            {p.certificate && !course && <a href={`${API}/public/certificates/${p.certificate.id}/pdf`} target="_blank" rel="noreferrer" className="glow-btn w-full justify-center mt-3" data-testid="path-certificate-button"><Award className="h-4 w-4" />Certificate</a>}
           </Glass>
         </div>
         {cur && <LessonView key={cur.id} lesson={cur} p={p} onComplete={complete} onWatched={() => { toast.success("Video watched — you can complete this lesson"); load(); }}

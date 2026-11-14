@@ -134,6 +134,8 @@ async def startup():
     await ensure_sop_labs()
     await ensure_promos()
     await ensure_playbooks()
+    from routes_academy import migrate_courses
+    await migrate_courses()
     logger.info("Seed complete")
 
 
