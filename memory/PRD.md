@@ -275,5 +275,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - /courses (public "Courses" menu) now = AcademyCatalog (Catalog.jsx): academy courses + bundles, search, level/category filters, sort (newest/rating/price), quick filters (All/On sale/Free), countdowns. Old external store list moved below.
 - Gifts (routes_gifts.py, db.gifts): "Buy as a gift" (Gift.jsx) on paid course + bundle pages; PlanIn.gift {to_name,to_email,message,send_on}; course gifts accept coupons, bundle gifts = full bundle price. activate() → create_gift (no buyer purchase), emails recipient now or at send_on (08:00 local) via session-reminders cron (send_scheduled_gifts; stale 'sending' recovered after 10 min). /gift/:code redeem page (sign in → redeem → purchases; owners told to forward link). /app/courses?tab=gifts = My gifts (copy link, send now/resend). pending_course redirect now honoured for all roles.
 
+## Jun 2026 — Festival gift campaigns
+- Admin > Festivals (routes_campaigns.py, db.campaigns): name, theme (diwali/newyear/christmas/holi/festive), headline, subtext, start/end, coupon code+kind+value. Auto-syncs an all-courses coupon (starts_at/expires_at = window, campaign_id). GET /api/public/campaign = live one.
+- Coupons now work on bundles too (all-courses coupons only) and on gifts; coupons/check takes {code, plan, gift}.
+- FestivalBanner.jsx (themed CSS .fest-* in index.css, countdown, copy code, dismiss per campaign) on /, /courses, /course/:id, /bundle/:id, /app/courses. Checkout coupon inputs pre-fill the campaign code.
+
 ## Backlog
 - P2 LinkedIn sign-in. P2 instructor bio/headline editor for landing page.

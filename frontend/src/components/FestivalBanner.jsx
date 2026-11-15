@@ -13,8 +13,8 @@ const THEME = {
   festive: { I: Sparkles, cls: "fest-festive", accent: "text-cyan-200", chip: "border-cyan-300/60 text-cyan-100", deco: "fireworks" },
 };
 
-function Deco({ kind }) {
-  if (kind === "diyas") return <div className="fest-deco">{[8, 22, 70, 84, 94].map((l, i) => <Flame key={l} className="fest-diya" style={{ left: `${l}%`, animationDelay: `${i * 0.4}s` }} />)}</div>;
+function Deco({ kind, compact }) {
+  if (kind === "diyas") return <div className="fest-deco">{(compact ? [72, 84] : [60, 72, 84, 94]).map((l, i) => <Flame key={l} className="fest-diya" style={{ left: `${l}%`, animationDelay: `${i * 0.4}s` }} />)}</div>;
   if (kind === "snow") return <div className="fest-deco">{Array.from({ length: 18 }, (_, i) => <span key={i} className="fest-snow" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 6) * 0.7}s` }} />)}</div>;
   if (kind === "splash") return <div className="fest-deco">{["#ec4899", "#facc15", "#22c55e", "#3b82f6", "#f97316"].map((c, i) => <span key={c} className="fest-splash" style={{ background: c, left: `${10 + i * 20}%`, top: i % 2 ? "55%" : "-10%" }} />)}</div>;
   return <div className="fest-deco">{[12, 35, 62, 88].map((l, i) => <span key={l} className="fest-burst" style={{ left: `${l}%`, top: `${20 + (i % 2) * 40}%`, animationDelay: `${i * 0.6}s` }} />)}</div>;
@@ -29,7 +29,7 @@ export function FestivalBanner({ compact = false, cta = true, className = "" }) 
   const close = () => { localStorage.setItem("fest_dismissed", c.id); setGone(true); };
   return (
     <div className={`fest-banner ${t.cls} relative overflow-hidden border ${className}`} data-testid="festival-banner" data-theme={c.theme}>
-      <Deco kind={t.deco} />
+      <Deco kind={t.deco} compact={compact} />
       <div className={`relative flex flex-wrap items-center gap-x-6 gap-y-3 ${compact ? "px-4 py-3" : "px-6 py-5"}`}>
         <t.I className={`${compact ? "h-6 w-6" : "h-9 w-9"} ${t.accent} shrink-0`} />
         <div className="flex-1 min-w-[220px]">

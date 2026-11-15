@@ -1,0 +1,43 @@
+{
+  "summary": "Tested Festival Gift Campaigns end-to-end. Backend: 18/18 pytest checks passed (1 skipped because no course-specific coupon exists; verified separately with an ad-hoc TEST coupon, which was rejected for the bundle and then deleted). Covered admin CRUD, validation (422 end<=start, 422 percent>99, 422 bad theme, 409 LAUNCH30 and DIWALI25 code clash, 403 non-admin, 401 anon, 404 update/delete), coupon sync (all-courses coupon with starts_at/expires_at = campaign window, code change deactivates the old coupon, deactivate/delete deactivates the coupon), 'isn't active yet' and 'expired' rejection, public campaign endpoint, and coupons/check for course (499->374), legacy course_id, bundle personal price, and bundle gift (1499->1124). Frontend: the banner (diwali) appears on /, /courses, /course/test-paid-course, /bundle/86fce03a566a and student /app/courses. Countdown works. Copy puts DIWALI25 on the clipboard and shows a toast. The CTA goes to /courses and only shows on the home page. Dismissing it persists across reloads and clearing fest_dismissed brings it back. Checkout and gift coupon inputs are pre-filled with DIWALI25, apply works, and a bad code shows an error toast. Admin Festivals tab: list, LIVE badge, create (409/422 toasts shown, then saved), edit pre-fill, active switch (also deactivates the coupon), delete with confirm. Theme switch newyear/christmas/holi/festive renders correctly with the same banner size each time, then set back to diwali. Mobile (390px) has no horizontal overflow. One unrelated 500 found: GET admin analytics crashes on payments without created_at.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET admin analytics (routes_admin.py full_analytics line ~170)", "issue": "500 KeyError 'created_at'. The payments pay_TESTGIFT1 and pay_TESTGIFT2 (status paid, inserted by gift simulation in iter 50) have no created_at, and the code does p['created_at']. /admin opens on the Analytics tab, so every /admin visit shows the Emergent 'Request failed with status code 500' overlay, which blocks clicks until closed.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/admin/campaigns", "issue": "After a campaign is deleted, its coupon stays (inactive) with the old campaign_id, so a new campaign can't reuse that code: 409 'already used by another coupon'. Reproduced. Fix: on delete, either delete the campaign coupon or let check() reuse a coupon whose campaign_id points to a campaign that no longer exists."},
+      {"endpoint": "PUT /api/admin/campaigns/{id}", "issue": "No audit() call on update (create and delete are audited)."},
+      {"endpoint": "PUT /api/admin/coupons/{code}", "issue": "An admin can edit or reactivate a campaign coupon in the Coupons tab without the campaign knowing, so the two can fall out of sync (for example the coupon is active while the campaign is off). Consider making campaign coupons read-only there, or showing a 'managed by campaign' note."},
+      {"endpoint": "POST /api/academy/coupons/check", "issue": "An unknown code returns 'This coupon isn't valid for this bundle/course' instead of 'Coupon not found'. Cosmetic."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Admin panel load", "issue": "The analytics 500 shows the error overlay on every /admin visit (see backend critical).", "affected_selectors": ["[data-testid=admin-tab-campaigns]"]}
+    ],
+    "design_issues": [
+      {"screen": "Compact FestivalBanner (course page, bundle page, /app/courses) diwali theme", "issues": ["The diya flame decorations (.fest-diya bottom:6px, at left 8% and 22%) sit on top of the 'Offer ends in …' countdown text in compact mode. Hide the diyas in compact mode or move them to the right side."]},
+      {"screen": "Mobile home banner", "issues": ["Diyas at the bottom-left touch the 'Gift a course' button edge. Minor."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_campaigns.py", "/app/backend/tests/campaign_extra.py", "/app/test_reports/pytest/pytest_campaigns.xml"],
+  "action_items": [
+    "Make routes_admin.full_analytics tolerate payments without created_at (use p.get('created_at') or fall back to paid_at), and/or add created_at to pay_TESTGIFT1/2",
+    "Allow reusing the coupon code of a deleted campaign (clean up or re-link orphan campaign coupons)",
+    "Fix the compact-banner diya decorations overlapping the countdown text",
+    "Add audit on campaign update"
+  ],
+  "critical_code_review_comments": [
+    "routes_campaigns.check: other.get('campaign_id') != cid blocks reuse of codes from deleted campaigns",
+    "list_campaigns runs one count query per campaign (N+1). Fine at small scale",
+    "lib/campaign.js caches the campaign at module level for the whole SPA session, so a campaign that ends mid-session still shows until reload (the countdown reaches 0). Consider hiding the banner when ends_at has passed",
+    "FestivalBanner: the gone state is set from any fest_dismissed value, but rendering also checks the id, so it is correct. Works as intended"
+  ],
+  "updated_files": ["/app/backend/tests/test_campaigns.py", "/app/backend/tests/campaign_extra.py"],
+  "success_rate": {"backend": "100% of campaign features (one unrelated 500 in admin analytics)", "frontend": "100% of campaign flows"},
+  "seed_data_creation": "Registered fresh users test_camp_<tag>@example.com and test_fest_<tag>@example.com (left in place). All TEST_ campaigns and their coupons (TF/TE/TU/TN/TR/TZ*, TCS*, TESTUIX99) were deleted. The live Diwali campaign (91f74b605e45) was set to newyear/christmas/holi/festive and back to diwali, and is still active and LIVE.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Live campaign id 91f74b605e45 (DIWALI25, 25%, ends 2026-11-20). Future NY = NY2027 flat 200. The container clock is 2026-11-15. The Emergent error overlay on /admin comes from the analytics 500; remove [data-emergent-overlay-host] with JS in Playwright to click through. The test_campaigns.py teardown deletes the campaigns it created but leaves their inactive coupons; campaign_extra.py cleans them up by regex."
+}

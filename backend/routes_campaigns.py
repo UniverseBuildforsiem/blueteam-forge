@@ -34,7 +34,8 @@ async def check(body: CampaignIn, cid=None):
     if d["coupon_kind"] == "percent" and d["coupon_value"] > 99:
         raise HTTPException(422, "Percent off must be between 1 and 99")
     other = await db.academy_coupons.find_one({"code": d["coupon_code"]}, NO_ID)
-    if other and other.get("campaign_id") != cid:
+    orphan = other and other.get("campaign_id") and not await db.campaigns.find_one({"id": other["campaign_id"]})
+    if other and other.get("campaign_id") != cid and not orphan:
         raise HTTPException(409, "That coupon code is already used by another coupon")
     return d
 
@@ -72,6 +73,7 @@ async def update_campaign(cid: str, body: CampaignIn, user=Depends(admin_only)):
     c = {**await check(body, cid), "id": cid}
     await db.campaigns.update_one({"id": cid}, {"$set": c})
     await sync_coupon(c)
+    await audit(user, "campaign update", c["name"])
     return c
 
 

@@ -167,18 +167,18 @@ async def full_analytics(days: int = 30, user=Depends(admin_only)):
     sign_prev = len([u for u in us if prev <= u["created_at"][:10] < start])
     act_cur = len({a["user_id"] for a in acts if in_period(a["created_at"])})
     act_prev = len({a["user_id"] for a in acts if prev <= a["created_at"][:10] < start})
-    rev_cur = sum(p["amount"] for p in pays if in_period(p["created_at"]))
-    rev_prev = sum(p["amount"] for p in pays if prev <= p["created_at"][:10] < start)
+    rev_cur = sum(p["amount"] for p in pays if in_period((p.get("created_at") or p.get("paid_at") or "")))
+    rev_prev = sum(p["amount"] for p in pays if prev <= (p.get("created_at") or p.get("paid_at") or "")[:10] < start)
     payers = {p["user_id"] for p in pays}
     daily_active = defaultdict(set)
     for a in acts:
         daily_active[a["created_at"][:10]].add(a["user_id"])
     signups, rev = Counter(u["created_at"][:10] for u in us), defaultdict(int)
     for p in pays:
-        rev[p["created_at"][:10]] += p["amount"]
+        rev[(p.get("created_at") or p.get("paid_at") or "")[:10]] += p["amount"]
     by_product = defaultdict(lambda: {"revenue": 0, "orders": 0})
     for p in pays:
-        if in_period(p["created_at"]):
+        if in_period((p.get("created_at") or p.get("paid_at") or "")):
             k = p.get("plan_name") or p.get("plan")
             by_product[k]["revenue"] += p["amount"]
             by_product[k]["orders"] += 1
