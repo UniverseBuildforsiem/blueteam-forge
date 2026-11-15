@@ -176,3 +176,5 @@
 .fest-splash { position: absolute; width: 130px; height: 130px; border-radius: 50%; filter: blur(38px); opacity: .45; animation: fest-pulse 5s ease-in-out infinite; }
 @keyframes fest-pulse { 50% { transform: scale(1.25); opacity: .6; } }
 @media (prefers-reduced-motion: reduce) { .fest-diya, .fest-burst, .fest-snow, .fest-splash { animation: none; } }
+.fest-digit { animation: fest-tick .35s ease-out; }
+@keyframes fest-tick { from { transform: translateY(-4px); opacity: .55; } to { transform: none; opacity: 1; } }

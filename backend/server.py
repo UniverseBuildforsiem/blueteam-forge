@@ -140,6 +140,7 @@ async def startup():
     from routes_academy import migrate_courses
     await migrate_courses()
     await db.gifts.create_index("code", unique=True)
+    await db.campaign_emails.create_index([("campaign_id", 1), ("user_id", 1)], unique=True)
     await db.wishlists.create_index([("user_id", 1), ("kind", 1), ("item_id", 1)], unique=True)
     logger.info("Seed complete")
 

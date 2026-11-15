@@ -280,5 +280,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Coupons now work on bundles too (all-courses coupons only) and on gifts; coupons/check takes {code, plan, gift}.
 - FestivalBanner.jsx (themed CSS .fest-* in index.css, countdown, copy code, dismiss per campaign) on /, /courses, /course/:id, /bundle/:id, /app/courses. Checkout coupon inputs pre-fill the campaign code.
 
+- Banner now has a big ticking DD:HH:MM:SS countdown (BigCountdown in FestivalBanner.jsx).
+- Festival email blast: campaign.email_blast (default on). session-reminders cron → send_campaign_blasts(): once a campaign is live, claims it (blast_started_at, stale after 30 min), emails every active student with promo_emails != False using a themed HTML banner (core.email_template banner=) + coupon + unsubscribe (/api/public/unsubscribe/promos, HMAC token). db.campaign_emails unique (campaign_id,user_id) prevents duplicates; 0.6s between sends. Admin row shows emailed count.
+
 ## Backlog
 - P2 LinkedIn sign-in. P2 instructor bio/headline editor for landing page.

@@ -7,7 +7,7 @@ import { Switch } from "../ui/switch";
 import { campaignOff } from "../../lib/campaign";
 
 const THEMES = [["diwali", "Diwali — diyas & gold"], ["newyear", "New Year — fireworks & midnight blue"], ["christmas", "Christmas — snow & red"], ["holi", "Holi — colour splashes"], ["festive", "Any festival — neon sparkles"]];
-const BLANK = { name: "Diwali Gifting Fest", theme: "diwali", headline: "Light up someone's career this Diwali", subtext: "Gift a SOC course to a friend — or treat yourself.", coupon_code: "DIWALI25", coupon_kind: "percent", coupon_value: 25, starts_at: "", ends_at: "", active: true };
+const BLANK = { name: "Diwali Gifting Fest", theme: "diwali", headline: "Light up someone's career this Diwali", subtext: "Gift a SOC course to a friend — or treat yourself.", coupon_code: "DIWALI25", coupon_kind: "percent", coupon_value: 25, starts_at: "", ends_at: "", active: true, email_blast: true };
 const F = ({ l, children, cls = "" }) => <label className={`block ${cls}`}><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
 const toLocal = (iso) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : "");
 const live = (c) => c.active && new Date(c.starts_at) <= new Date() && new Date() < new Date(c.ends_at);
@@ -33,6 +33,9 @@ function CampaignForm({ init, onDone }) {
         <F l={f.coupon_kind === "percent" ? "Percent (1-99)" : "Amount ₹"}><input type="number" min="1" className="field" value={f.coupon_value} onChange={up("coupon_value", true)} data-testid="campaign-coupon-value" /></F>
         <p className="sm:col-span-3 text-[11px] font-mono text-slate-400">The coupon is created for you, works on every course, bundle and gift purchase only between the start and end time, once per student.</p>
       </div>
+      <label className="flex items-center gap-2 text-xs font-mono text-slate-300" data-testid="campaign-email-blast-label">
+        <input type="checkbox" checked={f.email_blast !== false} disabled={!!f.blast_done_at} onChange={(e) => setF({ ...f, email_blast: e.target.checked })} data-testid="campaign-email-blast" />
+        {f.blast_done_at ? `Festival email already sent (${fmtDate(f.blast_done_at)})` : "Email all students (except opted-out) with the banner and coupon when the campaign goes live"}</label>
       <div className="flex gap-2"><button className="glow-btn" disabled={!f.starts_at || !f.ends_at} onClick={save} data-testid="campaign-save"><Plus className="h-4 w-4" />Save campaign</button>
         <button className="ghost-btn" onClick={onDone} data-testid="campaign-cancel">Cancel</button></div>
     </Glass>);
@@ -54,7 +57,7 @@ export default function AdminCampaigns() {
       <Glass className="divide-y divide-white/5">{(cs || []).map((c) => (
         <div key={c.id} className="p-3 flex flex-wrap items-center gap-3 text-sm" data-testid={`campaign-row-${c.id}`}>
           <div className="flex-1 min-w-[220px]"><div className="font-bold">{c.name} {live(c) && <span className="text-[10px] font-mono text-green-400 border border-green-500/40 px-1.5 ml-1" data-testid={`campaign-live-${c.id}`}>LIVE</span>}</div>
-            <div className="text-[11px] font-mono text-slate-500">{c.theme} · {fmtDate(c.starts_at)} → {fmtDate(c.ends_at)} · {c.uses} used</div></div>
+            <div className="text-[11px] font-mono text-slate-500">{c.theme} · {fmtDate(c.starts_at)} → {fmtDate(c.ends_at)} · {c.uses} used · <span data-testid={`campaign-email-status-${c.id}`}>{c.email_blast === false ? "no email" : c.blast_done_at ? `emailed ${c.emailed} students` : c.blast_started_at ? `emailing… ${c.emailed} sent` : "email goes out at launch"}</span></div></div>
           <span className="font-mono text-yellow-300">{c.coupon_code} · {campaignOff(c)}</span>
           <Switch checked={c.active} onCheckedChange={() => toggle(c)} data-testid={`campaign-active-${c.id}`} />
           <button onClick={() => setEdit(c)} className="text-slate-400 hover:text-cyan-300" data-testid={`campaign-edit-${c.id}`}><Pencil className="h-4 w-4" /></button>
