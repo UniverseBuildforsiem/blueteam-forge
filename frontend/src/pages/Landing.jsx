@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { api } from "../lib/api";
 import { Glass, SeverityBadge } from "../components/common";
 import PublicNav, { Footer } from "../components/PublicNav";
+import { FestivalBanner } from "../components/FestivalBanner";
 import LandingIntel, { ThreatTicker, useLandingIntel } from "../components/LandingIntel";
 import PromoSpotlight from "../components/PromoSpotlight";
 import LiveClasses from "../components/LiveClasses";
@@ -178,6 +179,7 @@ export default function Landing() {
   return (
     <div className="grid-bg min-h-screen">
       <PublicNav />
+      <div className="max-w-7xl mx-auto px-6 pt-6"><FestivalBanner /></div>
       <section className="max-w-7xl mx-auto px-6 pt-16 pb-24 grid lg:grid-cols-[1.1fr_1fr] gap-14 items-center">
         <div className="rise">
           <div className="eyebrow mb-5">// blue team training ground</div>

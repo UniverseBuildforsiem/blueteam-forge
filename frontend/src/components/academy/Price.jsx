@@ -10,11 +10,11 @@ function left(ends) {
   return d ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`;
 }
 
-export function Countdown({ ends, onEnd }) {
+export function Countdown({ ends, onEnd, label = "Sale ends in" }) {
   const [t, setT] = useState(() => left(ends));
   useEffect(() => { const i = setInterval(() => { const v = left(ends); setT(v); if (!v) { clearInterval(i); onEnd?.(); } }, 1000); return () => clearInterval(i); }, [ends]); // eslint-disable-line
   if (!t) return null;
-  return <div className="text-xs font-mono text-red-300 inline-flex items-center gap-1.5" data-testid="sale-countdown"><Timer className="h-3.5 w-3.5" />Sale ends in <b>{t}</b></div>;
+  return <div className="text-xs font-mono text-red-300 inline-flex items-center gap-1.5" data-testid="sale-countdown"><Timer className="h-3.5 w-3.5" />{label} <b>{t}</b></div>;
 }
 
 export function PriceTag({ c, size = "sm", testId = "course-price" }) {

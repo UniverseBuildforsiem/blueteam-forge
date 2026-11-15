@@ -10,6 +10,7 @@ import { embedSrc } from "../../lib/video";
 import { PriceTag, Countdown, inr } from "./Price";
 import { WishlistButton } from "./Wishlist";
 import { GiftBox } from "./Gift";
+import { useCampaign } from "../../lib/campaign";
 
 function Includes({ c }) {
   const rows = [[PlayCircle, `${c.video_minutes >= 60 ? `${(c.video_minutes / 60).toFixed(1)} hours` : `${c.video_minutes} min`} on-demand video`, c.videos], [FileText, `${c.lessons_count} lessons in ${c.modules_count} modules`, c.lessons_count],
@@ -20,9 +21,11 @@ function Includes({ c }) {
     <ul className="space-y-1.5">{rows.filter((r) => r[2]).map(([I, t]) => <li key={t} className="text-xs text-slate-300 flex items-center gap-2"><I className="h-3.5 w-3.5 text-cyan-400 shrink-0" />{t}</li>)}</ul></div>;
 }
 
-function Coupon({ c, deal, setDeal, tid = "academy" }) {
+function Coupon({ deal, setDeal, tid = "academy", item, gift }) {
+  const camp = useCampaign();
   const [code, setCode] = useState("");
-  const apply = async () => { try { const r = await api.post("/academy/coupons/check", { code: code.trim(), course_id: c.id }); setDeal(r.data); toast.success(`Coupon applied — you save ${inr(r.data.off)}`); } catch (e) { setDeal(null); toast.error(errMsg(e)); } };
+  useEffect(() => { if (camp && !code) setCode(camp.coupon_code); }, [camp]); // eslint-disable-line
+  const apply = async () => { try { const r = await api.post("/academy/coupons/check", { code: code.trim(), plan: item, gift: !!gift }); setDeal(r.data); toast.success(`Coupon applied — you save ${inr(r.data.off)}`); } catch (e) { setDeal(null); toast.error(errMsg(e)); } };
   return <div>
     <div className="flex gap-2"><input className="field font-mono uppercase !text-xs" placeholder="Coupon code" value={code} onChange={(e) => { setCode(e.target.value); setDeal(null); }} data-testid={`${tid}-coupon-input`} />
       <button className="ghost-btn !text-xs shrink-0" disabled={!code.trim()} onClick={apply} data-testid={`${tid}-coupon-apply`}>Apply</button></div>
@@ -41,7 +44,7 @@ export function Checkout({ c, onPaid, item = `course:${c.id}`, label = `Course: 
   const cf = () => ready() && (/^\d{10}$/.test(phone) ? payCashfree(item, phone, cfg.cashfree_mode, undefined, extra).catch((e) => toast.error(errMsg(e))) : toast.error("Enter a 10-digit mobile number for Cashfree"));
   return <div className="space-y-2.5">
     {deal && <div className="text-xs font-mono">Pay now: <b className="text-green-400 text-base" data-testid="academy-final-price">{inr(deal.amount)}</b></div>}
-    {coupons && <Coupon c={c} deal={deal} setDeal={setDeal} tid={gift ? "gift" : "academy"} />}
+    {coupons && <Coupon deal={deal} setDeal={setDeal} tid={gift ? "gift" : "academy"} item={item} gift={gift} />}
     {!cfg.razorpay && !cfg.cashfree && <div className="text-xs font-mono text-yellow-300 border border-yellow-500/30 p-2" data-testid="academy-pay-not-configured">Payments open soon.</div>}
     <button className="glow-btn w-full justify-center" disabled={!cfg.razorpay} onClick={rzp} data-testid={gift ? "gift-buy-razorpay" : "academy-buy-razorpay"}>{gift ? "Buy gift" : "Buy now"}</button>
     {cfg.cashfree && <><input className="field" placeholder="Mobile number (for Cashfree)" value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="academy-phone" />

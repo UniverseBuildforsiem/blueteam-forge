@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from routes_academy import parse_dt
 from core import db, get_current_user, now_iso, audit, admin_only
 
 router = APIRouter(prefix="/api")
@@ -78,11 +79,14 @@ async def delete_coupon(code: str, user=Depends(admin_only)):
 async def apply_coupon(plan_key, plan, code, user):
     if not code:
         return plan
-    if not plan_key.startswith("course:"):
-        raise HTTPException(400, "Coupons only work on courses")
+    if not plan_key.startswith(("course:", "bundle:")):
+        raise HTTPException(400, "Coupons only work on courses and bundles")
     c = await db.academy_coupons.find_one({"code": code.strip().upper(), "active": True}, NO_ID)
-    if not c or c.get("course_id") not in ("", plan_key[7:]):
-        raise HTTPException(400, "This coupon isn't valid for this course")
+    target = plan_key[7:] if plan_key.startswith("course:") else None
+    if not c or c.get("course_id") not in ("", target):
+        raise HTTPException(400, "This coupon isn't valid for this " + ("course" if target else "bundle"))
+    if c.get("starts_at") and parse_dt(c["starts_at"]) > datetime.now(timezone.utc):
+        raise HTTPException(400, "This coupon isn't active yet")
     if expired(c):
         raise HTTPException(400, "This coupon has expired")
     if await db.coupon_redemptions.find_one({"code": c["code"], "user_id": user["id"]}):
@@ -96,13 +100,16 @@ async def apply_coupon(plan_key, plan, code, user):
 
 class CheckIn(BaseModel):
     code: str = Field(min_length=1, max_length=30)
-    course_id: str
+    course_id: Optional[str] = None
+    plan: Optional[str] = Field(default=None, pattern=r"^(course|bundle):[\w-]+$")
+    gift: bool = False
 
 
 @router.post("/academy/coupons/check")
 async def check_coupon(body: CheckIn, user=Depends(get_current_user)):
     from routes_manage import item_for
-    plan = await apply_coupon(f"course:{body.course_id}", await item_for(f"course:{body.course_id}"), body.code, user)
+    key = body.plan or f"course:{body.course_id}"
+    plan = await apply_coupon(key, await item_for(key, None if body.gift else user), body.code, user)
     return {"code": plan["coupon"], "original": plan["original"], "amount": plan["amount"], "off": plan["original"] - plan["amount"]}
 
 

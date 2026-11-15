@@ -3,6 +3,7 @@ import { Search, ExternalLink } from "lucide-react";
 import PublicNav, { Footer } from "../components/PublicNav";
 import { CourseGrid } from "../components/CourseGrid";
 import { AcademyCatalog } from "../components/academy/Catalog";
+import { FestivalBanner } from "../components/FestivalBanner";
 import { useCourses, COURSE_TYPES, COURSES_URL } from "../lib/courses";
 
 export default function Courses() {
@@ -19,6 +20,7 @@ export default function Courses() {
           <h1 className="text-4xl sm:text-5xl font-extrabold">SOC courses with labs, CTFs & certificates.</h1>
           <p className="mt-4 text-slate-400 max-w-2xl">Hands-on courses with video lessons, Kali labs, SIEM and shift simulators, a final exam and a verifiable certificate. Watch the free previews before you buy.</p>
         </div>
+        <FestivalBanner className="mt-8" cta={false} />
         <div className="mt-10"><AcademyCatalog /></div>
         <div className="mt-20 pt-10 border-t border-white/10" data-testid="external-courses">
           <div className="eyebrow mb-3">// more from soc professionals</div>

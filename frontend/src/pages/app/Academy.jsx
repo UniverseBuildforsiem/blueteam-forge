@@ -7,6 +7,7 @@ import { CertShare } from "../../components/academy/CertShare";
 import { PriceTag } from "../../components/academy/Price";
 import { BundleCard } from "../../components/academy/Bundles";
 import { SentGifts } from "../../components/academy/SentGifts";
+import { FestivalBanner } from "../../components/FestivalBanner";
 
 export default function AcademyList() {
   const [all, setAll] = useState(null);
@@ -21,6 +22,7 @@ export default function AcademyList() {
   return (
     <div>
       <PageHeader eyebrow="// academy courses" title="Courses" sub="Full SOC courses with video lessons, lesson quizzes, Kali labs, CTFs, SOPs, the SIEM & Shift simulators, a final exam and a shareable certificate." />
+      <FestivalBanner compact className="mb-5" cta={false} />
       <div className="flex gap-1 mb-5 border-b border-white/10" data-testid="academy-tabs">{[["all", "All courses", GraduationCap], ["wishlist", "My wishlist", Heart], ["gifts", "My gifts", Gift]].map(([v, l, I]) => (
         <button key={v} onClick={() => setTab(v)} data-testid={`academy-tab-${v}`} className={`px-4 py-2 text-xs font-mono border-b-2 -mb-px inline-flex items-center gap-1.5 transition-colors ${tab === v ? "border-cyan-400 text-cyan-300" : "border-transparent text-slate-400 hover:text-slate-200"}`}><I className="h-3.5 w-3.5" />{l}</button>))}</div>
       {tab === "gifts" && <SentGifts />}

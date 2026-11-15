@@ -155,3 +155,24 @@
 .promo-timer { width: 0%; animation-name: promo-timer; animation-timing-function: linear; animation-fill-mode: forwards; }
 @keyframes promo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .promo-in { animation: promo-in .45s ease-out both; }
+
+/* festival campaign banners */
+.fest-banner { border-color: rgba(255,255,255,.15); }
+.fest-diwali { background: radial-gradient(120% 140% at 10% 0%, #7c2d12 0%, #3b0a0a 45%, #140505 100%); border-color: rgba(251,191,36,.45); }
+.fest-newyear { background: radial-gradient(120% 140% at 80% 0%, #312e81 0%, #0b1033 55%, #05060f 100%); border-color: rgba(125,211,252,.4); }
+.fest-christmas { background: radial-gradient(120% 140% at 0% 100%, #14532d 0%, #052e16 50%, #020d07 100%); border-color: rgba(252,165,165,.4); }
+.fest-holi { background: #12081a; border-color: rgba(244,114,182,.45); }
+.fest-festive { background: #070d1a; border-color: rgba(34,211,238,.4); }
+.fest-deco { position: absolute; inset: 0; pointer-events: none; }
+.fest-diya { position: absolute; bottom: 6px; width: 18px; height: 18px; color: #fb923c; filter: drop-shadow(0 0 8px rgba(251,146,60,.9)); animation: fest-flicker 1.6s ease-in-out infinite; opacity: .55; }
+@keyframes fest-flicker { 0%,100% { transform: scale(1) translateY(0); opacity: .45; } 50% { transform: scale(1.18) translateY(-2px); opacity: .85; } }
+.fest-burst { position: absolute; width: 70px; height: 70px; margin: -35px; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, transparent 38%, #fde68a 40%, transparent 43%), conic-gradient(from 0deg, #f472b6 0 8%, transparent 8% 25%, #7dd3fc 25% 33%, transparent 33% 50%, #fde68a 50% 58%, transparent 58% 75%, #a7f3d0 75% 83%, transparent 83%);
+  -webkit-mask: radial-gradient(circle, transparent 30%, #000 31%, #000 50%, transparent 51%); mask: radial-gradient(circle, transparent 30%, #000 31%, #000 50%, transparent 51%);
+  animation: fest-burst 2.6s ease-out infinite; }
+@keyframes fest-burst { 0% { transform: scale(.2); opacity: 0; } 20% { opacity: .9; } 100% { transform: scale(1.5); opacity: 0; } }
+.fest-snow { position: absolute; top: -6px; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,.8); animation: fest-snow 4.5s linear infinite; }
+@keyframes fest-snow { to { transform: translateY(140px) translateX(14px); opacity: 0; } }
+.fest-splash { position: absolute; width: 130px; height: 130px; border-radius: 50%; filter: blur(38px); opacity: .45; animation: fest-pulse 5s ease-in-out infinite; }
+@keyframes fest-pulse { 50% { transform: scale(1.25); opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .fest-diya, .fest-burst, .fest-snow, .fest-splash { animation: none; } }

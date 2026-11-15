@@ -11,6 +11,7 @@ import AdminUsers from "../components/AdminUsers";
 import AdminPromos from "../components/AdminPromos";
 import AdminCoupons from "../components/academy/AdminCoupons";
 import AdminBundles from "../components/academy/AdminBundles";
+import AdminCampaigns from "../components/academy/AdminCampaigns";
 import AdminLive from "../components/AdminLive";
 import AdminSeries from "../components/AdminSeries";
 
@@ -72,7 +73,7 @@ function Settings() {
   );
 }
 
-const TABS = [["analytics", "Analytics", AdminAnalytics], ["users", "Users", AdminUsers], ["live", "Live classes", AdminLive], ["promos", "Promotions", AdminPromos], ["blog", "SOC Blog", AdminSeries], ["publishing", "Publishing", Publishing], ["academy", "Courses", CourseBuilder], ["coupons", "Coupons", AdminCoupons], ["bundles", "Bundles", AdminBundles], ["builder", "Path builder", () => <ContentEditor kind="paths" />],
+const TABS = [["analytics", "Analytics", AdminAnalytics], ["users", "Users", AdminUsers], ["live", "Live classes", AdminLive], ["promos", "Promotions", AdminPromos], ["blog", "SOC Blog", AdminSeries], ["publishing", "Publishing", Publishing], ["academy", "Courses", CourseBuilder], ["coupons", "Coupons", AdminCoupons], ["bundles", "Bundles", AdminBundles], ["campaigns", "Festivals", AdminCampaigns], ["builder", "Path builder", () => <ContentEditor kind="paths" />],
   ["categories", "Categories", () => <SimpleList kind="categories" fields={["name"]} />], ["certificates", "Certificates", Certs],
   ["announcements", "Announcements", () => <SimpleList kind="announcements" fields={["title", "body"]} />], ["audit", "Audit logs", Audit], ["settings", "Settings", Settings]];
 

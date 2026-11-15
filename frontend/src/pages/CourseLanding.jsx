@@ -9,6 +9,7 @@ import { BuyCard } from "../components/academy/BuyCard";
 import { Curriculum, PreviewDialog } from "../components/academy/Curriculum";
 import { Reviews, Stars } from "../components/academy/Reviews";
 import { BundleOffers } from "../components/academy/Bundles";
+import { FestivalBanner } from "../components/FestivalBanner";
 
 const List = ({ title, items, icon = true, testId }) => (items?.length ? (
   <section data-testid={testId}><h2 className="text-xl font-bold mb-3">{title}</h2>
@@ -59,6 +60,7 @@ export default function CourseLanding() {
   return (
     <div className="min-h-screen grid-bg" data-testid="course-landing">
       <PublicNav />
+      <div className="max-w-6xl mx-auto px-6 py-3"><FestivalBanner compact cta={false} /></div>
       <Hero c={c} card={<BuyCard c={c} reload={load} onPreview={() => preview(null)} />} />
       <div className="max-w-6xl mx-auto px-6">
         <div className="lg:pr-[400px] py-10 space-y-10">
