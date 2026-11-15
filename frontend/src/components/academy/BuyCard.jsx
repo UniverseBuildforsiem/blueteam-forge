@@ -9,6 +9,7 @@ import { VideoFrame } from "../VideoField";
 import { embedSrc } from "../../lib/video";
 import { PriceTag, Countdown, inr } from "./Price";
 import { WishlistButton } from "./Wishlist";
+import { GiftBox } from "./Gift";
 
 function Includes({ c }) {
   const rows = [[PlayCircle, `${c.video_minutes >= 60 ? `${(c.video_minutes / 60).toFixed(1)} hours` : `${c.video_minutes} min`} on-demand video`, c.videos], [FileText, `${c.lessons_count} lessons in ${c.modules_count} modules`, c.lessons_count],
@@ -28,19 +29,21 @@ function Coupon({ c, deal, setDeal }) {
     {deal && <div className="text-[11px] font-mono text-green-400 mt-1" data-testid="academy-coupon-applied">{deal.code} applied · −{inr(deal.off)}</div>}</div>;
 }
 
-export function Checkout({ c, onPaid, item = `course:${c.id}`, label = `Course: ${c.title}`, coupons = true }) {
+export function Checkout({ c, onPaid, item = `course:${c.id}`, label = `Course: ${c.title}`, coupons = true, gift, giftOk = true }) {
   const [cfg, setCfg] = useState(null);
   const [phone, setPhone] = useState("");
   const [deal, setDeal] = useState(null);
   useEffect(() => { api.get("/payments/config").then((r) => setCfg(r.data)).catch(() => {}); }, []);
   if (!cfg) return null;
-  const rzp = () => payRazorpay(item, label, onPaid, (e) => toast.error(errMsg(e)), undefined, undefined, deal?.code).catch((e) => toast.error(errMsg(e)));
-  const cf = () => (/^\d{10}$/.test(phone) ? payCashfree(item, phone, cfg.cashfree_mode, undefined, deal?.code).catch((e) => toast.error(errMsg(e))) : toast.error("Enter a 10-digit mobile number for Cashfree"));
+  const extra = { ...(deal ? { coupon: deal.code } : {}), ...(gift ? { gift } : {}) };
+  const ready = () => giftOk || (toast.error("Add the recipient's name and a valid email"), false);
+  const rzp = () => ready() && payRazorpay(item, label, onPaid, (e) => toast.error(errMsg(e)), undefined, undefined, extra).catch((e) => toast.error(errMsg(e)));
+  const cf = () => ready() && (/^\d{10}$/.test(phone) ? payCashfree(item, phone, cfg.cashfree_mode, undefined, extra).catch((e) => toast.error(errMsg(e))) : toast.error("Enter a 10-digit mobile number for Cashfree"));
   return <div className="space-y-2.5">
     {deal && <div className="text-xs font-mono">Pay now: <b className="text-green-400 text-base" data-testid="academy-final-price">{inr(deal.amount)}</b></div>}
     {coupons && <Coupon c={c} deal={deal} setDeal={setDeal} />}
     {!cfg.razorpay && !cfg.cashfree && <div className="text-xs font-mono text-yellow-300 border border-yellow-500/30 p-2" data-testid="academy-pay-not-configured">Payments open soon.</div>}
-    <button className="glow-btn w-full justify-center" disabled={!cfg.razorpay} onClick={rzp} data-testid="academy-buy-razorpay">Buy now</button>
+    <button className="glow-btn w-full justify-center" disabled={!cfg.razorpay} onClick={rzp} data-testid={gift ? "gift-buy-razorpay" : "academy-buy-razorpay"}>{gift ? "Buy gift" : "Buy now"}</button>
     {cfg.cashfree && <><input className="field" placeholder="Mobile number (for Cashfree)" value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="academy-phone" />
       <button className="ghost-btn w-full justify-center" onClick={cf} data-testid="academy-buy-cashfree">Pay with Cashfree / UPI</button></>}
   </div>;
@@ -64,6 +67,7 @@ export function BuyCard({ c, reload, onPreview }) {
         <PriceTag c={c} size="lg" testId="course-landing-price" />
         {c.sale_ends_at && <Countdown ends={c.sale_ends_at} onEnd={reload} />}
         <Action c={c} reload={reload} />
+        {c.price > 0 && <GiftBox c={c} item={`course:${c.id}`} label={`Gift: ${c.title}`} price={c.price} />}
         <WishlistButton kind="course" id={c.id} on={c.wishlisted} signedIn={c.signed_in} hidden={c.owned} />
         {c.previews > 0 && <button className="ghost-btn w-full justify-center !text-xs" onClick={onPreview} data-testid="course-open-previews"><PlayCircle className="h-3.5 w-3.5" />Watch {c.previews} free preview{c.previews > 1 ? "s" : ""}</button>}
         <Includes c={c} />

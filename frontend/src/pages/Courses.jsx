@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Search, ExternalLink } from "lucide-react";
 import PublicNav, { Footer } from "../components/PublicNav";
 import { CourseGrid } from "../components/CourseGrid";
+import { AcademyCatalog } from "../components/academy/Catalog";
 import { useCourses, COURSE_TYPES, COURSES_URL } from "../lib/courses";
 
 export default function Courses() {
@@ -14,12 +15,18 @@ export default function Courses() {
       <PublicNav />
       <section className="max-w-7xl mx-auto px-6 pt-14 pb-24">
         <div className="rise">
-          <div className="eyebrow mb-4">// self-paced courses · by soc professionals</div>
-          <h1 className="text-4xl sm:text-5xl font-extrabold">Recorded courses & exam prep.</h1>
-          <p className="mt-4 text-slate-400 max-w-2xl">Video courses, practice exams and ebooks from SOC Professionals. Learn at your own pace, then drill the skills in SOCProfessionals Academy labs. Click a course to see the matching labs and drills.</p>
+          <div className="eyebrow mb-4">// academy courses · learn by doing</div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold">SOC courses with labs, CTFs & certificates.</h1>
+          <p className="mt-4 text-slate-400 max-w-2xl">Hands-on courses with video lessons, Kali labs, SIEM and shift simulators, a final exam and a verifiable certificate. Watch the free previews before you buy.</p>
+        </div>
+        <div className="mt-10"><AcademyCatalog /></div>
+        <div className="mt-20 pt-10 border-t border-white/10" data-testid="external-courses">
+          <div className="eyebrow mb-3">// more from soc professionals</div>
+          <h2 className="text-2xl font-bold">Recorded courses & exam prep</h2>
+          <p className="mt-2 text-sm text-slate-400 max-w-2xl">Video courses, practice exams and ebooks on the SOC Professionals store. Click a course to see the matching labs and drills.</p>
           {synced_at && <p className="mt-2 text-[11px] font-mono text-slate-500" data-testid="courses-synced-at">prices synced {new Date(synced_at).toLocaleString()}</p>}
         </div>
-        <div className="mt-10 flex flex-wrap items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           {COURSE_TYPES.map((t) => (
             <button key={t} onClick={() => setType(t)} data-testid={`courses-filter-${t.toLowerCase()}`}
               className={`font-mono text-xs px-3 py-1.5 border rounded-sm transition-colors ${type === t ? "border-cyan-400 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-slate-400 hover:text-cyan-200"}`}>

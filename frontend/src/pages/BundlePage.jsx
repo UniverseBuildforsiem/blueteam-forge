@@ -7,6 +7,7 @@ import PublicNav from "../components/PublicNav";
 import { Glass, Empty } from "../components/common";
 import { Checkout } from "../components/academy/BuyCard";
 import { WishlistButton } from "../components/academy/Wishlist";
+import { GiftBox } from "../components/academy/Gift";
 import { Countdown, PriceTag, inr } from "../components/academy/Price";
 
 function BundleBuy({ b, reload }) {
@@ -22,6 +23,7 @@ function BundleBuy({ b, reload }) {
       {b.sale_ends_at && <Countdown ends={b.sale_ends_at} onEnd={reload} />}
       {b.your_price > 0 && (b.signed_in ? <Checkout c={b} item={`bundle:${b.id}`} label={`Bundle: ${b.title}`} coupons={false} onPaid={() => { toast.success("Payment confirmed — all courses unlocked"); reload(); }} />
         : <button className="glow-btn w-full justify-center" onClick={() => { localStorage.setItem("pending_course", JSON.stringify({ id: b.id, kind: "bundle", at: Date.now() })); nav("/login"); }} data-testid="bundle-signin-to-buy">Sign in to buy</button>)}
+      <GiftBox c={b} item={`bundle:${b.id}`} label={`Gift: ${b.title}`} price={b.price} coupons={false} />
       <WishlistButton kind="bundle" id={b.id} on={b.wishlisted} signedIn={b.signed_in} hidden={!b.your_price} />
     </Glass>);
 }
