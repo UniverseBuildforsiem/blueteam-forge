@@ -274,6 +274,7 @@ async def put_settings(body: dict, user=Depends(admin_only)):
 PLANS = {"pro_monthly": {"name": "Pro Monthly", "amount": 999}, "pro_yearly": {"name": "Pro Yearly", "amount": 7999}}
 PRODUCTS = {"soc-interview-ebook": {"name": "SOC Interview Preparation - Ebook", "amount": 973, "return": "/book"},
             "sop-bundle": {"name": "SOC SOP Library - Full Access", "amount": 499, "return": "/sops"},
+            "phish-sim": {"name": "Phishing Simulator - All Cases", "amount": 199, "return": "/app/phishing"},
             "soc-consultation": {"name": "Cyber & SOC Expert Consultation (30 min)", "amount": 99, "return": "/consultation"}}
 
 
@@ -353,9 +354,10 @@ async def activate(user_id, pid):
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
             from routes_book import send_book_receipt
             from routes_sop import send_sop_receipt
-            t = asyncio.create_task((send_sop_receipt if p["plan"] == "sop-bundle" else send_book_receipt)(user_id, p))
-            BG_TASKS.add(t)
-            t.add_done_callback(BG_TASKS.discard)
+            if p["plan"] in ("sop-bundle", "soc-interview-ebook"):
+                t = asyncio.create_task((send_sop_receipt if p["plan"] == "sop-bundle" else send_book_receipt)(user_id, p))
+                BG_TASKS.add(t)
+                t.add_done_callback(BG_TASKS.discard)
         else:
             await db.users.update_one({"id": user_id}, {"$set": {"plan": "pro", "plan_name": p["plan_name"]}})
 

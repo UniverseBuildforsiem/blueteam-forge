@@ -19,9 +19,15 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from core import db, get_current_user, now_iso, new_id, award, logger
 from phish_data import TYPES, CASES, V
+from phish_cases2 import CASES2
+from phish_learn import DEEP, GROUPS
 import intel_sources as S
 
 router = APIRouter(prefix="/api/phish")
+public_router = APIRouter(prefix="/api/public")
+PHISH_PRODUCT, PHISH_PRICE = "phish-sim", 199
+SLA_MIN = {"Easy": 10, "Medium": 15, "Hard": 20}
+TYPES = [{**t, **DEEP[t["id"]]} for t in TYPES]
 NO_ID = {"_id": 0}
 XP = {"Easy": 40, "Medium": 60, "Hard": 80}
 PANELS = {"email", "code", "chat", "table", "browser", "qr", "wifi"}
@@ -40,11 +46,13 @@ def shuffled(items, seed):
     return sorted(items, key=lambda x: hashlib.md5(f"{seed}{x['text']}".encode()).hexdigest())
 
 
-STARTER = {c["id"]: {**fix(c), "red_flags": shuffled(c["red_flags"], c["id"]), "response": shuffled(c["response"], c["id"] + "r"), "source": "starter"} for c in CASES}
+STARTER = {c["id"]: {"verdict": V[0], **fix(c), "red_flags": shuffled(c["red_flags"], c["id"]), "response": shuffled(c["response"], c["id"] + "r"), "source": "starter"} for c in CASES + CASES2}
 
 
-def paid(user):
-    return user["role"] in ("admin", "instructor") or user.get("plan") == "pro"
+async def paid(user):
+    if user["role"] in ("admin", "instructor") or user.get("plan") == "pro":
+        return True
+    return bool(await db.purchases.find_one({"user_id": user["id"], "product_id": PHISH_PRODUCT}))
 
 
 async def all_cases(staff=False):
@@ -56,14 +64,14 @@ async def get_case(cid, user):
     c = STARTER.get(cid) or await db.phish_cases.find_one({"id": cid, "status": "ready"}, NO_ID)
     if not c or (c.get("source") == "ai" and not c.get("published") and user["role"] not in ("admin", "instructor")):
         raise HTTPException(404, "Case not found")
-    if not c.get("free") and not paid(user):
+    if not c.get("free") and not await paid(user):
         raise HTTPException(403, "This case is for paid members — upgrade to unlock every phishing investigation")
     return c
 
 
-def card(c, user, best):
+def card(c, owned, best):
     return {"id": c["id"], "type": c["type"], "title": c["title"], "difficulty": c["difficulty"], "free": bool(c.get("free")), "source": c.get("source", "ai"),
-            "locked": not c.get("free") and not paid(user), "best": best.get(c["id"]), "xp": XP.get(c["difficulty"], 50)}
+            "locked": not c.get("free") and not owned, "best": best.get(c["id"]), "xp": XP.get(c["difficulty"], 50)}
 
 
 async def bests(user):
@@ -76,13 +84,38 @@ async def bests(user):
 
 @router.get("/types")
 async def list_types(user=Depends(get_current_user)):
-    cs, best = await all_cases(), await bests(user)
-    return {"paid": paid(user), "types": [{**t, "cases": [card(c, user, best) for c in cs if c["type"] == t["id"]]} for t in TYPES]}
+    cs, best, owned = await all_cases(), await bests(user), await paid(user)
+    return {"paid": owned, "price": PHISH_PRICE, "groups": GROUPS, "types": [{**t, "cases": [card(c, owned, best) for c in cs if c["type"] == t["id"]]} for t in TYPES]}
+
+
+@public_router.get("/phish")
+async def public_phish():
+    cs = await all_cases()
+    return {"price": PHISH_PRICE, "groups": GROUPS, "total_cases": len(cs), "free_count": sum(1 for c in cs if c.get("free")),
+            "types": [{k: t[k] for k in ("id", "name", "icon", "group", "channel", "summary")} | {"case_count": sum(1 for c in cs if c["type"] == t["id"])} for t in TYPES]}
+
+
+def panel_text(p):
+    if isinstance(p, dict):
+        return " ".join(panel_text(v) for v in p.values())
+    if isinstance(p, list):
+        return " ".join(panel_text(v) for v in p)
+    return str(p)
+
+
+def artifacts(c):
+    out = []
+    for p in c["panels"]:
+        out += [u.rstrip(".,") for u in URL_RE.findall(panel_text(p))] + list(p.get("attachments") or []) + ([p["payload"]] if p.get("type") == "qr" else [])
+    return list(dict.fromkeys(out))[:12]
 
 
 def public_case(c):
+    t = next(t for t in TYPES if t["id"] == c["type"])
+    heads = [{"panel": i, **parse_headers(p["text"], True)} for i, p in enumerate(c["panels"]) if p.get("type") == "code" and p.get("lang") == "headers"]
     return {**{k: c[k] for k in ("id", "type", "title", "difficulty", "brief", "panels")}, "free": bool(c.get("free")),
-            "red_flags": [f["text"] for f in c["red_flags"]], "response": [r["text"] for r in c["response"]], "verdicts": V, "ioc_count": len(c["iocs"])}
+            "red_flags": [f["text"] for f in c["red_flags"]], "response": [r["text"] for r in c["response"]], "verdicts": V, "ioc_count": len(c["iocs"]),
+            "mitre": t["mitre"], "group": t["group"], "artifacts": artifacts(c), "headers": heads, "sla_minutes": SLA_MIN.get(c["difficulty"], 15), "playbook": "/sops/sop-phishing"}
 
 
 @router.get("/cases/{cid}")
@@ -142,9 +175,10 @@ IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 URL_RE = re.compile(r"https?://[^\s\"'<>)\]]+", re.I)
 
 
-def public_ip(ip):
+def public_ip(ip, any_ip=False):
     try:
-        return ipaddress.ip_address(ip).is_global
+        a = ipaddress.ip_address(ip)
+        return a.is_global or (any_ip and not a.is_loopback)
     except ValueError:
         return False
 
@@ -160,12 +194,16 @@ class HeadersIn(BaseModel):
 
 @router.post("/osint/headers")
 async def analyze_headers(body: HeadersIn, user=Depends(get_current_user)):
-    raw = body.raw.replace("\r\n", "\n")
+    return parse_headers(body.raw)
+
+
+def parse_headers(raw, any_ip=False):
+    raw = raw.replace("\r\n", "\n")
     h = HeaderParser().parsestr(raw if "\n\n" in raw else raw + "\n\n")
     hops = []
     for r in reversed(h.get_all("Received") or []):
         r1 = " ".join(r.split())
-        ips = [i for i in IP_RE.findall(r1) if public_ip(i)]
+        ips = [i for i in IP_RE.findall(r1) if public_ip(i, any_ip)]
         m_from, m_by = re.search(r"from\s+(\S+)", r1), re.search(r"by\s+(\S+)", r1)
         hops.append({"from": m_from.group(1) if m_from else None, "by": m_by.group(1) if m_by else None, "ip": ips[0] if ips else None,
                      "time": r1.rsplit(";", 1)[1].strip() if ";" in r1 else None})
@@ -194,7 +232,7 @@ async def analyze_headers(body: HeadersIn, user=Depends(get_current_user)):
     if fd in ("gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "proton.me", "protonmail.com"):
         warn.append(f"Sent from a free mail provider ({fd})")
     orig = h.get("X-Originating-IP")
-    ips = sorted({i for i in IP_RE.findall(raw) if public_ip(i)})
+    ips = sorted({i for i in IP_RE.findall(raw) if public_ip(i, any_ip)})
     domains = sorted({d for d in [fd, rd, rp, *(dom(a) for _, a in getaddresses(h.get_all("To") or []))] if d} | {S.url_host(u) for u in URL_RE.findall(raw)})
     return {"hops": hops, "auth": res, "addresses": addrs, "warnings": warn, "originating_ip": orig.strip("[] ") if orig else None,
             "iocs": {"ips": ips, "domains": domains, "urls": sorted(set(URL_RE.findall(raw)))[:20]}}

@@ -178,3 +178,19 @@
 @media (prefers-reduced-motion: reduce) { .fest-diya, .fest-burst, .fest-snow, .fest-splash { animation: none; } }
 .fest-digit { animation: fest-tick .35s ease-out; }
 @keyframes fest-tick { from { transform: translateY(-4px); opacity: .55; } to { transform: none; opacity: 1; } }
+
+/* phishing threat radar */
+.radar-scope { filter: drop-shadow(0 0 18px rgba(34,211,238,.25)); }
+.radar-sweep { transform-origin: 100px 100px; animation: radar-sweep 4s linear infinite; }
+@keyframes radar-sweep { to { transform: rotate(360deg); } }
+.radar-blip { animation: radar-blip 8s ease-out forwards; }
+@keyframes radar-blip { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 6% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: .85; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.8); } }
+.radar-ping { animation: radar-ping 1.4s ease-out 1 forwards; }
+@keyframes radar-ping { from { transform: scale(1); opacity: .8; } to { transform: scale(3.4); opacity: 0; } }
+.radar-feed-in { animation: promo-in .4s ease-out both; }
+.pin-target { cursor: pointer; border-radius: 2px; outline: none; transition: background-color .15s, box-shadow .15s; }
+.pin-target:hover, .pin-target:focus-visible { background-color: rgba(34,211,238,.08); box-shadow: inset 2px 0 0 rgba(34,211,238,.7); }
+.pin-target.pinned { background-color: rgba(250,204,21,.1); box-shadow: inset 2px 0 0 rgba(250,204,21,.9); }
+.detonate-bar { animation: promo-timer 1.8s linear forwards; }
+@media (prefers-reduced-motion: reduce) { .radar-sweep, .radar-ping, .detonate-bar { animation: none; } .radar-blip { animation: radar-blip-still 8s steps(1, end) forwards; } }
+@keyframes radar-blip-still { 0% { opacity: 1; transform: translate(-50%, -50%); } 100% { opacity: 0; transform: translate(-50%, -50%); } }

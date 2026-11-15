@@ -16,7 +16,7 @@ from path_templates import BUILTIN_TEMPLATES
 router = APIRouter(prefix="/api")
 NO_ID = {"_id": 0}
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$")
-GRANTS = {"sop": "sop-bundle", "book": "soc-interview-ebook"}
+GRANTS = {"sop": "sop-bundle", "book": "soc-interview-ebook", "phish": "phish-sim"}
 USER_COLLECTIONS = ["lesson_progress", "quiz_attempts", "lab_progress", "challenge_submissions", "challenge_hints", "drill_submissions", "drill_practice", "drill_freezes",
                     "drill_rescue", "ctf_solves", "ctf_hints", "activity", "certificates", "course_completions", "course_bonus", "course_alerts", "rsvps", "saved_searches",
                     "purchases", "interviews", "digest_sends", "rank_emails", "password_reset_tokens", "cases", "lesson_quiz_attempts", "toolkit_usage"]
@@ -99,6 +99,7 @@ class AccessIn(BaseModel):
     plan: Optional[str] = Field(default=None, pattern="^(free|pro)$")
     sop: Optional[bool] = None
     book: Optional[bool] = None
+    phish: Optional[bool] = None
     reset_xp: bool = False
     name: Optional[str] = Field(default=None, min_length=2, max_length=60)
 

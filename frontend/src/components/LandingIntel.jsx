@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Lock, Unlock, Radio, FileText, Terminal as TermIcon } from "lucide-react";
 import { Glass } from "./common";
 import { api } from "../lib/api";
+import { PhishShowcase } from "./phish/Showcase";
 
 const SEV_DOT = { Critical: "bg-red-500", High: "bg-orange-400", Medium: "bg-yellow-300", Low: "bg-green-400" };
 const ago = (iso) => { const h = Math.max(1, Math.round((Date.now() - new Date(iso)) / 36e5)); return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`; };
@@ -77,5 +78,5 @@ export function useLandingIntel() {
 }
 
 export default function LandingIntel({ posts, sops }) {
-  return <SopShowcase d={sops} />;
+  return <><SopShowcase d={sops} /><PhishShowcase /></>;
 }

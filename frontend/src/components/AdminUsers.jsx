@@ -62,7 +62,7 @@ function UserDetail({ uid, onClose, onChanged }) {
           <Glass className="p-4 space-y-3" data-testid="user-access">
             <div className="flex items-center justify-between text-sm"><span>Plan</span>
               <select className="field !w-32 !py-1 text-xs" value={u.plan || "free"} onChange={(e) => patch({ plan: e.target.value }, `Plan set to ${e.target.value}`)} data-testid="user-plan-select">{["free", "pro"].map((p) => <option key={p}>{p}</option>)}</select></div>
-            {[["sop", "Full SOP library (₹499)"], ["book", "Interview ebook"]].map(([k, l]) => <label key={k} className="flex items-center justify-between text-sm"><span>{l}{k === "sop" && u.plan === "pro" && <span className="text-[11px] font-mono text-green-400 ml-2" data-testid="user-sop-via-pro">included with Pro</span>}</span>
+            {[["sop", "Full SOP library (₹499)"], ["book", "Interview ebook"], ["phish", "Phishing Simulator (₹199)"]].map(([k, l]) => <label key={k} className="flex items-center justify-between text-sm"><span>{l}{k === "sop" && u.plan === "pro" && <span className="text-[11px] font-mono text-green-400 ml-2" data-testid="user-sop-via-pro">included with Pro</span>}</span>
               <input type="checkbox" checked={d.access[k]} onChange={(e) => { const v = e.target.checked; setD({ ...d, access: { ...d.access, [k]: v } }); patch({ [k]: v }, v ? `${l} granted` : `${l} removed`); }} data-testid={`user-grant-${k}`} /></label>)}
             <div className="flex flex-wrap gap-2 pt-1">
               <button className="ghost-btn !text-xs" onClick={() => window.confirm("Reset XP and streak to 0?") && patch({ reset_xp: true }, "XP reset")} data-testid="user-reset-xp"><RotateCcw className="h-3.5 w-3.5" />Reset XP</button>

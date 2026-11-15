@@ -6,13 +6,15 @@ import { useAuth } from "../../context/AuthContext";
 import { Glass, PageHeader } from "../../components/common";
 import { OsintToolkit } from "../../components/phish/Osint";
 import { PhishManage } from "../../components/phish/Manage";
+import { ThreatRadar, GROUP_COLOR } from "../../components/phish/Radar";
+import { PhishUnlock } from "../../components/phish/Unlock";
 
 const Icons = { Mail, Crosshair, Crown, Briefcase, MessageSquare, PhoneCall, QrCode, Copy, CalendarDays, Network, AtSign, Globe, Wifi, Droplets };
 const DIFF = { Easy: "text-green-400", Medium: "text-yellow-300", Hard: "text-red-400" };
 const tabCls = (on) => `px-4 py-2 text-xs font-mono border-b-2 -mb-px transition-colors ${on ? "border-cyan-400 text-cyan-300" : "border-transparent text-slate-400 hover:text-slate-200"}`;
 
 export function CaseRow({ c }) {
-  return <Link to={c.locked ? "/app/billing" : `/app/phishing/case/${c.id}`} data-testid={`phish-case-${c.id}`}>
+  return <Link to={c.locked ? "/app/phishing?unlock=1" : `/app/phishing/case/${c.id}`} data-testid={`phish-case-${c.id}`}>
     <Glass className="p-3 flex items-center gap-3 hover:border-cyan-400/50 transition-colors">
       {c.locked ? <Lock className="h-4 w-4 text-slate-500" /> : c.best >= 70 ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <Swords className="h-4 w-4 text-cyan-400" />}
       <span className="flex-1 text-sm">{c.title}{c.source === "ai" && <Sparkles className="inline h-3 w-3 ml-1.5 text-purple-300" />}</span>
@@ -26,13 +28,20 @@ function TypeGrid({ types }) {
     const solved = t.cases.filter((c) => c.best >= 70).length;
     return <Link key={t.id} to={`/app/phishing/${t.id}`} data-testid={`phish-type-${t.id}`}>
       <Glass className="p-5 h-full hover:border-cyan-400/50 transition-colors flex flex-col">
-        <div className="flex items-center gap-3"><span className="h-10 w-10 grid place-items-center bg-red-500/10 border border-red-500/30"><I className="h-5 w-5 text-red-300" /></span><div className="font-bold">{t.name}</div></div>
+        <div className="flex items-center gap-3"><span className="h-10 w-10 grid place-items-center bg-red-500/10 border border-red-500/30"><I className="h-5 w-5 text-red-300" /></span><div><div className="font-bold">{t.name}</div><div className="text-[10px] font-mono uppercase" style={{ color: GROUP_COLOR[t.group] }}>{t.channel}</div></div></div>
         <p className="text-xs text-slate-400 mt-3 flex-1">{t.summary}</p>
         <div className="text-[11px] font-mono text-slate-500 mt-3">{t.cases.length} case{t.cases.length !== 1 ? "s" : ""} · {solved} solved{t.cases.some((c) => c.free) && <span className="text-green-400"> · free case</span>}</div>
       </Glass></Link>; })}</div>;
 }
 
 const Sec = ({ title, items, testId }) => <Glass className="p-5" data-testid={testId}><div className="eyebrow mb-3">{title}</div><ul className="space-y-1.5">{items.map((x, i) => <li key={i} className="text-sm text-slate-300 flex gap-2"><span className="text-cyan-400 font-mono">{String(i + 1).padStart(2, "0")}</span>{x}</li>)}</ul></Glass>;
+
+function Queries({ qs }) {
+  const [lang, setLang] = useState("kql");
+  return <Glass className="p-5 lg:col-span-2" data-testid="phish-queries"><div className="flex items-center justify-between mb-3"><div className="eyebrow">detection queries</div>
+    <div className="flex border border-white/10 text-[11px] font-mono">{[["kql", "KQL"], ["spl", "Splunk"]].map(([k, l]) => <button key={k} onClick={() => setLang(k)} aria-pressed={lang === k} className={`px-2.5 py-1 ${lang === k ? "bg-cyan-500/15 text-cyan-300" : "text-slate-500"}`} data-testid={`phish-query-lang-${k}`}>{l}</button>)}</div></div>
+    <div className="space-y-3">{qs.map((q) => <div key={q.name}><div className="text-xs text-slate-300 mb-1">{q.name}</div><pre className="text-xs font-mono text-green-300/90 bg-black/40 border border-white/10 p-3 whitespace-pre-wrap break-words">{q[lang]}</pre></div>)}</div></Glass>;
+}
 
 function TypeDetail({ t }) {
   const I = Icons[t.icon] || ShieldAlert;
@@ -46,6 +55,9 @@ function TypeDetail({ t }) {
       <Sec title="red flags to spot" items={t.red_flags} testId="phish-red-flags" />
       <Sec title="defences & SOC controls" items={t.defenses} testId="phish-defenses" />
       <Glass className="p-5" data-testid="phish-example"><div className="eyebrow mb-3">real-world example</div><p className="text-sm text-slate-300">{t.example}</p></Glass>
+      <Sec title="investigation checklist" items={t.checklist} testId="phish-checklist" />
+      <Sec title="common analyst mistakes" items={t.mistakes} testId="phish-mistakes" />
+      <Queries qs={t.queries} />
     </div>
     <div><div className="eyebrow mb-3">investigation cases</div><div className="space-y-2">{t.cases.map((c) => <CaseRow key={c.id} c={c} />)}</div></div>
   </div>;
@@ -58,7 +70,9 @@ export default function Phishing() {
   const [d, setD] = useState(null);
   const staff = ["admin", "instructor"].includes(user?.role);
   const tab = sp.get("tab") === "manage" && !staff ? "learn" : sp.get("tab") || "learn";
-  useEffect(() => { if (tab === "learn") api.get("/phish/types").then((r) => setD(r.data)); }, [tab]);
+  const load = () => api.get("/phish/types").then((r) => setD(r.data));
+  useEffect(() => { if (tab === "learn") load(); }, [tab]); // eslint-disable-line
+  const total = d ? d.types.reduce((n, x) => n + x.cases.length, 0) : 0;
   const t = d && typeId && d.types.find((x) => x.id === typeId);
   return <div>
     <PageHeader eyebrow="// phishing simulator" title="Phishing Simulator" sub="Learn 14 phishing techniques, investigate realistic evidence, then prove it with real OSINT tools." />
@@ -68,7 +82,8 @@ export default function Phishing() {
     {tab === "osint" && <OsintToolkit initValue={sp.get("value")} initQr={sp.get("qr")} />}
     {tab === "manage" && staff && <PhishManage types={d?.types || []} />}
     {tab === "learn" && d && (t ? <TypeDetail t={t} /> : <>
-      {!d.paid && <div className="mb-4 text-xs font-mono text-yellow-300 border border-yellow-500/30 p-3" data-testid="phish-free-note">All learning is free. The first 3 investigation cases are free — <Link to="/app/billing" className="underline">upgrade</Link> to unlock every case.</div>}
+      <ThreatRadar types={d.types} groups={d.groups} />
+      {!d.paid && <PhishUnlock price={d.price} total={total} onPaid={load} />}
       <TypeGrid types={d.types} /></>)}
   </div>;
 }
