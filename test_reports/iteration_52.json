@@ -1,0 +1,45 @@
+{
+  "summary": "Phishing Simulator end-to-end test (backend pytest 37/38 + Playwright UI as free student and admin). Sidebar nav, 14-type grid, free note, type detail (MITRE/how/red flags/defences/example), case gating (3 free, rest locked + 403), all 14 starter cases render (QR image + decode link, wifi table), ph-email-1 scoring (100% with refanged/hxxps IOCs, +40 XP once, wrong-pick penalty, retry reset), OSINT toolkit (reputation via intel + ?value deep link, expand + bit.ly trace + SSRF block for 169.254/127/localhost/10.x, header analyzer auth badges/warnings/hops/IOC chips filling reputation, QR ?qr= auto-decode + file upload + Trace, lookalike paypal.com -> 40 registered), Manage tab (AI generation of 1 case finished in ~15s, preview, publish toggle -> appears with sparkle for admin and locked for student, unpublish hides it, delete, 403 for non-staff) all work. Issues: locked-case link /pricing is a non-existent route (redirects to landing), IOC prefix matching double-counts, minor UI nits.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/phish/cases/{cid}/submit", "issue": "IOC prefix matching (norm(i).startswith(g) / g.startswith(norm(i))) over-credits: entering only 'micros0ft-securemail.com' hits both the domain AND the full URL IOC -> 10/20 instead of 5/20. Also '185.234.219.123' would match '185.234.219.12'. Use exact normalized match (plus maybe URL==URL ignoring trailing slash/scheme) instead of startswith."},
+      {"endpoint": "POST /api/phish/osint/expand", "issue": "SSRF check resolves DNS in safe_target() but httpx resolves again when connecting -> DNS-rebinding TOCTOU. Consider connecting to the vetted IP (or a custom transport) to close the gap."},
+      {"endpoint": "POST /api/phish/cases/{cid}/submit", "issue": "XP 'first pass' check is read-then-insert (not atomic); concurrent double-submits could award XP twice. Low risk."},
+      {"endpoint": "GET /api/phish/qr", "issue": "Unauthenticated public QR generator (max 600 chars). Acceptable but could be abused as an open QR service; consider auth or rate limit."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CaseRow (locked) + phish-free-note 'upgrade' link (Phishing.jsx lines 15 & 71)", "issue": "Links to '/pricing' but App.js has no /pricing route -> catch-all Navigate to '/' (landing). Paid upsell is broken. Use '/app/billing' (existing route) or '/#pricing'.", "selector": "[data-testid^='phish-case-'] (locked), [data-testid='phish-free-note'] a", "priority": "HIGH"},
+      {"component": "PhishCase direct-open of locked case", "issue": "Toast 'This case is for paid members' shows twice (effect runs twice in StrictMode/dev) before redirect to /app/phishing. Cosmetic.", "selector": "[data-sonner-toast]", "priority": "LOW"},
+      {"component": "Phishing ?tab=manage as non-staff", "issue": "Student opening /app/phishing?tab=manage gets an empty page (no tab content, no grid). Fall back to learn tab.", "selector": "[data-testid='phish-tabs']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Evil Twin case wifi panel (Panels.jsx WifiP)", "issues": ["WifiP renders <Table p={{title:''}}> which renders a second, empty Head bar (just a radar icon) under the Wi-Fi header. Render the table body without Head."]},
+      {"screen": "OSINT toolkit", "issues": ["'Look up' and 'Find lookalikes' buttons wrap onto 2 lines at 1920px (add whitespace-nowrap/shrink-0)."]},
+      {"screen": "Phishing type page / Learn tab", "issues": ["Types data is fetched once on mount; after publishing in Manage tab and switching to Learn, list is stale until reload (minor)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_phishing_sim.py", "/app/test_reports/pytest/pytest_phish.xml"],
+  "action_items": [
+    "Fix '/pricing' links in Phishing.jsx (CaseRow locked + free-note upgrade) -> route that exists (e.g. /app/billing or /#pricing)",
+    "Tighten IOC matching in routes_phish.submit to avoid one IOC counting for several (domain vs URL prefix, IP prefix)",
+    "Remove empty header in WifiP panel; add whitespace-nowrap to OSINT run buttons",
+    "Optional: fallback to learn tab for non-staff ?tab=manage; dedupe locked-case toast; harden expand against DNS rebinding"
+  ],
+  "critical_code_review_comments": [
+    "routes_phish.py submit(): startswith-based IOC fuzzy match is too lenient (see minor issue).",
+    "routes_phish.py expand(): resolve-then-connect TOCTOU for SSRF protection.",
+    "list_types always calls all_cases() (published only) even for staff — fine, drafts are previewed via Manage, but staff can't see drafts on type pages (intended?).",
+    "Files sizes OK (<430 lines); data-testids present on all key elements."
+  ],
+  "updated_files": ["/app/backend/tests/test_phishing_sim.py"],
+  "success_rate": {"backend": "97% (37/38; failing test = IOC over-credit)", "frontend": "~92% (all flows work; /pricing link broken)"},
+  "seed_data_creation": "Generated 1 AI case ph-ai-538db6b0 (smishing Easy) and deleted it via UI. ph-ai-9ea4aebc toggled published->unpublished and restored to draft (original state). Side effects on seeded accounts: student and admin now have phish_attempts for ph-email-1 and received +40 XP for passing it (expected behaviour of the feature, but note student/admin XP changed).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: REACT_APP_BACKEND_URL=... pytest /app/backend/tests/test_phishing_sim.py -n 0. test_single_domain_ioc_partial intentionally asserts exact IOC matching (fails until fixed). Admin login redirects to /admin (wait for **/admin**), student to /app. Red-flag/response options mapped by text. bit.ly/3IndPst returns 404 from bit.ly (single hop) — tracer works but that sample link is dead. AI generation took ~15s.",
+  "rca of the issue": "/pricing: App.js defines only '/' (Landing with #pricing anchor) and /app/billing; Phishing.jsx hard-codes '/pricing', so the '*' route redirects to '/'. IOC over-credit: hits list comprehension counts an expected IOC as hit if any given value is a >6-char prefix of it, so a bare domain matches the URL IOC that starts with it."
+}

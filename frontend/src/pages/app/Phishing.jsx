@@ -12,7 +12,7 @@ const DIFF = { Easy: "text-green-400", Medium: "text-yellow-300", Hard: "text-re
 const tabCls = (on) => `px-4 py-2 text-xs font-mono border-b-2 -mb-px transition-colors ${on ? "border-cyan-400 text-cyan-300" : "border-transparent text-slate-400 hover:text-slate-200"}`;
 
 export function CaseRow({ c }) {
-  return <Link to={c.locked ? "/pricing" : `/app/phishing/case/${c.id}`} data-testid={`phish-case-${c.id}`}>
+  return <Link to={c.locked ? "/app/billing" : `/app/phishing/case/${c.id}`} data-testid={`phish-case-${c.id}`}>
     <Glass className="p-3 flex items-center gap-3 hover:border-cyan-400/50 transition-colors">
       {c.locked ? <Lock className="h-4 w-4 text-slate-500" /> : c.best >= 70 ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <Swords className="h-4 w-4 text-cyan-400" />}
       <span className="flex-1 text-sm">{c.title}{c.source === "ai" && <Sparkles className="inline h-3 w-3 ml-1.5 text-purple-300" />}</span>
@@ -56,9 +56,9 @@ export default function Phishing() {
   const { user } = useAuth();
   const [sp, setSp] = useSearchParams();
   const [d, setD] = useState(null);
-  const tab = sp.get("tab") || "learn";
-  useEffect(() => { api.get("/phish/types").then((r) => setD(r.data)); }, []);
   const staff = ["admin", "instructor"].includes(user?.role);
+  const tab = sp.get("tab") === "manage" && !staff ? "learn" : sp.get("tab") || "learn";
+  useEffect(() => { if (tab === "learn") api.get("/phish/types").then((r) => setD(r.data)); }, [tab]);
   const t = d && typeId && d.types.find((x) => x.id === typeId);
   return <div>
     <PageHeader eyebrow="// phishing simulator" title="Phishing Simulator" sub="Learn 14 phishing techniques, investigate realistic evidence, then prove it with real OSINT tools." />
@@ -68,7 +68,7 @@ export default function Phishing() {
     {tab === "osint" && <OsintToolkit initValue={sp.get("value")} initQr={sp.get("qr")} />}
     {tab === "manage" && staff && <PhishManage types={d?.types || []} />}
     {tab === "learn" && d && (t ? <TypeDetail t={t} /> : <>
-      {!d.paid && <div className="mb-4 text-xs font-mono text-yellow-300 border border-yellow-500/30 p-3" data-testid="phish-free-note">All learning is free. The first 3 investigation cases are free — <Link to="/pricing" className="underline">upgrade</Link> to unlock every case.</div>}
+      {!d.paid && <div className="mb-4 text-xs font-mono text-yellow-300 border border-yellow-500/30 p-3" data-testid="phish-free-note">All learning is free. The first 3 investigation cases are free — <Link to="/app/billing" className="underline">upgrade</Link> to unlock every case.</div>}
       <TypeGrid types={d.types} /></>)}
   </div>;
 }

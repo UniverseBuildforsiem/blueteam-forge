@@ -7,7 +7,7 @@ import { Glass } from "../common";
 
 const Box = ({ icon: I, title, sub, children, testId }) => (
   <Glass className="p-5 space-y-3" data-testid={testId}><div><div className="font-bold flex items-center gap-2"><I className="h-4 w-4 text-cyan-400" />{title}</div><p className="text-xs text-slate-400 mt-0.5">{sub}</p></div>{children}</Glass>);
-const Run = ({ busy, onClick, label, testId, disabled }) => <button className="glow-btn !text-xs" disabled={busy || disabled} onClick={onClick} data-testid={testId}>{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{label}</button>;
+const Run = ({ busy, onClick, label, testId, disabled }) => <button className="glow-btn !text-xs whitespace-nowrap shrink-0" disabled={busy || disabled} onClick={onClick} data-testid={testId}>{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{label}</button>;
 const Chip = ({ v, onLookup }) => <button onClick={() => onLookup(v)} className="text-[11px] font-mono border border-cyan-500/30 text-cyan-200 px-1.5 py-0.5 hover:bg-cyan-500/10 break-all text-left" title="Check reputation">{v}</button>;
 
 function useTool(path) {

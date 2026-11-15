@@ -36,7 +36,7 @@ export default function PhishCase() {
   const [resp, setResp] = useState([]);
   const [iocs, setIocs] = useState("");
   const [r, setR] = useState(null);
-  useEffect(() => { api.get(`/phish/cases/${cid}`).then((x) => setC(x.data)).catch((e) => { toast.error(errMsg(e)); nav("/app/phishing"); }); }, [cid]); // eslint-disable-line
+  useEffect(() => { let on = true; api.get(`/phish/cases/${cid}`).then((x) => on && setC(x.data)).catch((e) => { if (on) { toast.error(errMsg(e), { id: "phish-case-err" }); nav("/app/phishing"); } }); return () => { on = false; }; }, [cid]); // eslint-disable-line
   if (!c) return null;
   const submit = async () => { try { const x = await api.post(`/phish/cases/${cid}/submit`, { verdict, flags, response: resp, iocs: iocs.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean) }); setR(x.data);
     window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) { toast.error(errMsg(e)); } };

@@ -39,7 +39,7 @@ function Chat({ p }) {
 
 const Code = ({ p }) => <><Head icon={Radar} title={p.title} /><pre className="p-4 text-xs font-mono text-green-300/90 whitespace-pre-wrap break-all max-h-80 overflow-auto" data-testid="phish-code">{p.text}</pre></>;
 
-const Table = ({ p }) => <><Head icon={Radar} title={p.title} /><div className="overflow-x-auto"><table className="w-full text-xs font-mono"><thead><tr>{p.columns.map((c) => <th key={c} className="text-left px-3 py-2 text-slate-500 border-b border-white/10">{c}</th>)}</tr></thead>
+const Table = ({ p }) => <>{p.title && <Head icon={Radar} title={p.title} />}<div className="overflow-x-auto"><table className="w-full text-xs font-mono"><thead><tr>{p.columns.map((c) => <th key={c} className="text-left px-3 py-2 text-slate-500 border-b border-white/10">{c}</th>)}</tr></thead>
   <tbody>{p.rows.map((r, i) => <tr key={i} className="border-b border-white/5">{r.map((c, j) => <td key={j} className="px-3 py-2 text-slate-300 align-top">{String(c)}</td>)}</tr>)}</tbody></table></div></>;
 
 const Browser = ({ p }) => <><Head icon={Lock} title={p.title} />

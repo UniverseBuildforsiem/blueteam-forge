@@ -283,5 +283,10 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Banner now has a big ticking DD:HH:MM:SS countdown (BigCountdown in FestivalBanner.jsx).
 - Festival email blast: campaign.email_blast (default on). session-reminders cron → send_campaign_blasts(): once a campaign is live, claims it (blast_started_at, stale after 30 min), emails every active student with promo_emails != False using a themed HTML banner (core.email_template banner=) + coupon + unsubscribe (/api/public/unsubscribe/promos, HMAC token). db.campaign_emails unique (campaign_id,user_id) prevents duplicates; 0.6s between sends. Admin row shows emailed count.
 
+## Jun 2026 — Phishing Simulator (/app/phishing)
+- phish_data.py: 14 types (email, spear, whaling, bec, smishing, vishing, quishing, clone, calendar, aitm, angler, pharming, eviltwin, watering) with how/red_flags/defenses/example/MITRE + one hand-written starter case each (panels: email/code/chat/table/browser/qr/wifi). First 3 starters free; rest need plan=pro or staff.
+- routes_phish.py: /api/phish/types, /cases/{id}, /cases/{id}/submit (verdict 30, red flags 30, IOCs 20 exact refanged match, response 20; pass>=70, XP once), /qr PNG, OSINT: /osint/headers, /osint/expand (SSRF-guarded redirect tracer + base64/URL params), /osint/lookalike (typo/homoglyph/TLD variants via DNS). Reputation reuses /api/intel/lookup. QR decode is client-side (jsqr).
+- Staff Manage tab: AI-drafted cases (claude-sonnet-5-5 via emergentintegrations), db.phish_cases draft→publish.
+
 ## Backlog
 - P2 LinkedIn sign-in. P2 instructor bio/headline editor for landing page.

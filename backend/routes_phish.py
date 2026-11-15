@@ -115,7 +115,7 @@ def pick_score(opts, chosen, weight):
 async def submit(cid: str, body: SubmitIn, user=Depends(get_current_user)):
     c = await get_case(cid, user)
     given = {norm(x) for x in body.iocs if x.strip()}
-    hits = [i for i in c["iocs"] if norm(i) in given or any(g and (norm(i).startswith(g) or g.startswith(norm(i))) and len(g) > 6 for g in given)]
+    hits = [i for i in c["iocs"] if norm(i) in given]
     parts = {"verdict": 30 if body.verdict == c["verdict"] else 0, "red_flags": pick_score(c["red_flags"], body.flags, 30),
              "iocs": round(20 * len(hits) / len(c["iocs"])) if c["iocs"] else 20, "response": pick_score(c["response"], body.response, 20)}
     score = sum(parts.values())
