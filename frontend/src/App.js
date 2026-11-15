@@ -25,6 +25,8 @@ import { Quizzes, QuizPlayer } from "./pages/app/Quizzes";
 import Progress from "./pages/app/Progress";
 import Challenges from "./pages/app/Challenges";
 import Shift from "./pages/app/Shift";
+import Phishing from "./pages/app/Phishing";
+import PhishCase from "./pages/app/PhishCase";
 import AcademyList, { AcademyCert } from "./pages/app/Academy";
 import CourseLanding from "./pages/CourseLanding";
 import BundlePage from "./pages/BundlePage";
@@ -90,6 +92,9 @@ function AppRouter() {
               <Route path="interview" element={<MockInterview />} />
               <Route path="challenges" element={<Challenges />} />
               <Route path="shift" element={<Shift />} />
+              <Route path="phishing" element={<Phishing />} />
+              <Route path="phishing/case/:cid" element={<PhishCase />} />
+              <Route path="phishing/:typeId" element={<Phishing />} />
               <Route path="ctf" element={<CTF />} />
               <Route path="labs" element={<Labs />} />
               <Route path="labs/:id" element={<LabRunner />} />

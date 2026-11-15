@@ -34,11 +34,12 @@ from routes_coupons import router as coupons_router
 from routes_bundles import router as bundles_router
 from routes_gifts import router as gifts_router
 from routes_campaigns import router as campaigns_router
+from routes_phish import router as phish_router, fail_stale as phish_fail_stale
 from playbook_writer import ensure_playbooks
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCProfessionals Academy API")
-for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router, series_share_router, intel_router, intel_guest_router, sop_lab_router, playbooks_router, shift_router, academy_router, coupons_router, bundles_router, gifts_router, campaigns_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router, series_share_router, intel_router, intel_guest_router, sop_lab_router, playbooks_router, shift_router, academy_router, coupons_router, bundles_router, gifts_router, campaigns_router, phish_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])
@@ -139,6 +140,7 @@ async def startup():
     await ensure_playbooks()
     from routes_academy import migrate_courses
     await migrate_courses()
+    await phish_fail_stale()
     await db.gifts.create_index("code", unique=True)
     await db.campaign_emails.create_index([("campaign_id", 1), ("user_id", 1)], unique=True)
     await db.wishlists.create_index([("user_id", 1), ("kind", 1), ("item_id", 1)], unique=True)
