@@ -112,7 +112,7 @@ def artifacts(c):
 
 def public_case(c):
     t = next(t for t in TYPES if t["id"] == c["type"])
-    heads = [{"panel": i, **parse_headers(p["text"], True)} for i, p in enumerate(c["panels"]) if p.get("type") == "code" and p.get("lang") == "headers"]
+    heads = [{"panel": i, **{k: v for k, v in parse_headers(p["text"], True).items() if k != "iocs"}} for i, p in enumerate(c["panels"]) if p.get("type") == "code" and p.get("lang") == "headers"]
     return {**{k: c[k] for k in ("id", "type", "title", "difficulty", "brief", "panels")}, "free": bool(c.get("free")),
             "red_flags": [f["text"] for f in c["red_flags"]], "response": [r["text"] for r in c["response"]], "verdicts": V, "ioc_count": len(c["iocs"]),
             "mitre": t["mitre"], "group": t["group"], "artifacts": artifacts(c), "headers": heads, "sla_minutes": SLA_MIN.get(c["difficulty"], 15), "playbook": "/sops/sop-phishing"}

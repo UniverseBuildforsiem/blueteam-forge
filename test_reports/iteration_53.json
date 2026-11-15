@@ -1,0 +1,41 @@
+{
+  "summary": "Phishing Simulator v2 (radar hub, investigation console, run engine, ₹199 gating, landing section) tested end-to-end. Backend: new suite test_phish_console.py (12 tests) + legacy test_phishing_sim.py = 48/48 pass. Frontend: hub radar (blips every 2s, legend 4 groups, counters, feed ≤4, match card Open/Unlock + guide), mobile 390px strip (no SVG, no horizontal overflow), unlock box ₹199 with disabled pay + 'Payments open soon' for student / hidden for admin, type page checklist/mistakes/KQL↔Splunk toggle, case console (SLA countdown, hints −5/−10, ATT&CK tags, stepper incl. keyboard Enter/Space, Report phishing → Reported, link hover real URL, pin dialog with 7 options incl. distractors, keyboard-Enter pin, edit/unpin, SPF/DKIM/DMARC chips, domain mismatch x3, lookalike '0' highlight, sandbox detonate progress → seeded malicious result, IOC box, OSINT link, respond effects green/red, summary min-20 gate, full debrief + playbook link + retry resets to 10:00/100), landing-phish directly after landing-sops with '3 free cases · all 28 for ₹199', OSINT header analyzer + admin Manage tab regression all working. Two real defects found (hop order on ph-spear-2, pins not persisted on reload) plus minor items.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/phish/cases/ph-spear-2 (headers[].hops) / phish_cases2.hdr()", "issue": "hdr() writes Received lines oldest-first, but parse_headers() reverses them (RFC newest-on-top assumption). Result: the 'Received hops (oldest first)' timeline shows relay.hostingco.test (16:05:03) before vps-77.hostingco.test (16:05:01) — reversed, and originating hop is wrong. Fix: in phish_cases2.hdr build rec from reversed(hops) so the newest Received is on top (affects only multi-hop cases; currently ph-spear-2)."},
+      {"endpoint": "GET /api/phish/cases/{cid}", "issue": "headers[].iocs (parse_headers output) returns header-extracted IPs/domains (e.g. ph-email-1: 185.234.219.12, mailer-svc.top, micros0ft-securemail.com = 3 of 4 graded IOCs). UI doesn't render it, but answers are in the payload. Strip 'iocs' (and maybe 'warnings') from public_case headers if IOCs must stay server-side."},
+      {"endpoint": "POST /api/payments/razorpay/order {plan:'phish-sim'}", "issue": "Returns 503 'Razorpay is not configured yet' (not 'Invalid plan') — product is recognised; expected in preview."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PhishCase console state", "issue": "Pins, IOC text, verdict and summary are client-only. Reloading the page resumes the server run (SLA, hints, reported, actions persist) but all pins are lost, while the timeline still lists the earlier 'Pinned …' events → debrief timeline says items were pinned that aren't scored (evidence 8/30). Persist pins (e.g. via event payload or a run.pins field) or reset timeline consistently.", "selector": "[data-testid^='pin-item-']", "priority": "MEDIUM"},
+      {"component": "Stepper done marks", "issue": "done array is [seen[1], pins>0||seen[2], verdict, actions, false] — pinning on Evidence marks 'Analyze' green before it's opened. Minor semantic mismatch.", "selector": "[data-testid='phish-step-analyze']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/app/phishing hub radar (desktop)", "issues": ["Glass grid uses items-center: when radar-match-card opens, the right column grows and the radar scope jumps down ~60px; use items-start to avoid layout shift."]},
+      {"screen": "Case console mobile 390px", "issues": ["Email From/Date values break mid-word (no-re|ply@…, +05|30) — consider break-all only for addresses or stacking label/value."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_phish_console.py", "/app/backend/tests/test_phishing_sim.py", "/app/test_reports/pytest/phish_console.xml"],
+  "action_items": [
+    "Reverse hop order in phish_cases2.hdr() (newest Received first) so ph-spear-2 hop timeline is correct",
+    "Persist pins (and optionally IOCs/verdict draft) on the run so reload/resume doesn't silently drop evidence",
+    "Remove headers[].iocs from public_case payload to keep graded IOCs server-side",
+    "Optional: items-start on radar grid; stepper done logic for Analyze"
+  ],
+  "critical_code_review_comments": [
+    "routes_phish_run.restart marks the old run submitted+abandoned even if it was already submitted (filter has submitted:False so OK) — fine.",
+    "state(): response penalty in max_score uses round(20*wrong/right); final scoring uses pick_score (right-wrong)/right — consistent enough but HUD 'max score' doesn't reflect skipped correct actions (by design).",
+    "Radar useMemo(() => types, [types]) is a no-op; if parent re-creates d.types the interval restarts — currently stable.",
+    "Hints for cases without explicit hints auto-generate 'Key finding: <correct red flag>' — intended trade-off for −15."
+  ],
+  "updated_files": ["/app/backend/tests/test_phish_console.py"],
+  "success_rate": {"backend": "100% (48/48)", "frontend": "~95% (all requested flows pass; 1 medium state-persistence bug, 1 data-order bug)"},
+  "seed_data_creation": "No seed data. Test runs/attempts created for student (ph-email-1) and admin (ph-email-2, ph-smishing-2, ph-calendar-2, ph-spear-2 run) with TEST_ summaries. Student phish grant was set true then reverted to false (verified 403 again).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use tests/test_phish_console.py (run engine, gating with grant+revert, benign scoring, leak check). Student has an open ph-email-1 run that is reused (fresh_run helper restarts if hints/actions exist). Payments unconfigured in preview (503). Verify hop order fix with ph-spear-2 public_case headers[0].hops[0].from == 'vps-77.hostingco.test' and pins persistence after reload."
+}

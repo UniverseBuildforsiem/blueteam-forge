@@ -290,3 +290,16 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 
 ## Backlog
 - P2 LinkedIn sign-in. P2 instructor bio/headline editor for landing page.
+
+## Phishing Simulator v2 — 2026-06 (DONE, iteration_53: backend 48/48, frontend all flows pass; follow-up fixes self-verified)
+- Hub threat radar (SVG/CSS sweep, 4 colour groups, blip every 2s, severity = distance, 8s fade, simulated feed of 4, counters, blip/feed → matching case card / coming soon, reduced-motion, mobile strip)
+- Case investigation console: stepper Evidence → Analyze → Verdict → Respond → Report; email-client frame + Report phishing + link-hover real URL; SPF/DKIM/DMARC chips with why, hop timeline, domain comparison + lookalike highlight; click-to-pin evidence (finding options incl. distractors + note) replaces checkboxes; simulated sandbox (seeded, no network); response actions with consequences; HUD SLA timer (−10 on breach), max score, hints (−5/−10/−15), ATT&CK tags; debrief timeline, IOCs found vs missed, score breakdown, playbook link (/sops/sop-phishing)
+- Server-side run engine: backend/routes_phish_run.py (`db.phish_runs`; /cases/{cid}/run, /runs/{rid}/hint|act|detonate|event|draft|submit|restart). Answers only revealed on submit; drafts (pins/IOCs/verdict/summary) persist across reload
+- 14 new in-depth cases (backend/phish_cases2.py, fictional .test/.invalid/example domains, documentation IPs; includes 1 spam + 2 legitimate) → 28 cases total
+- Per-type learning: investigation checklist, KQL/Splunk queries, common analyst mistakes (backend/phish_learn.py)
+- ₹199 one-time unlock product `phish-sim` (Razorpay/Cashfree; Pro/admin/instructor included; admin can grant via user access "phish"); 3 free cases
+- Landing page: Phishing Simulator section after the SOC SOP library section (GET /api/public/phish)
+
+## Backlog
+- P2: Instructor bio/headline editor for landing page
+- P2: LinkedIn Sign-In

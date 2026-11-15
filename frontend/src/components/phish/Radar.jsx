@@ -85,7 +85,7 @@ export function ThreatRadar({ types, groups }) {
   const [open, setOpen] = useState(null);
   const mobile = useMobile();
   return <section className="mb-8" data-testid="phish-radar" aria-label="Simulated phishing detection radar">
-    {!mobile ? <Glass className="grid grid-cols-[minmax(240px,340px)_1fr] gap-8 p-6 items-center">
+    {!mobile ? <Glass className="grid grid-cols-[minmax(240px,340px)_1fr] gap-8 p-6 items-start">
       <RadarScope>{blips.map((b) => <button key={b.id} onClick={() => setOpen(b)} aria-label={`Simulated ${b.t.name} detection, ${b.sev} severity. Open matching case`}
         className="radar-blip absolute h-3 w-3 rounded-full focus-visible:ring-2 focus-visible:ring-white" style={{ left: `${b.x}%`, top: `${b.y}%`, background: GROUP_COLOR[b.t.group], boxShadow: `0 0 10px ${GROUP_COLOR[b.t.group]}` }} data-testid="radar-blip">
         <span className="radar-ping absolute inset-0 rounded-full" style={{ background: GROUP_COLOR[b.t.group] }} /></button>)}</RadarScope>

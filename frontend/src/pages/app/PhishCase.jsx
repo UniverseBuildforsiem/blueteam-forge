@@ -56,6 +56,9 @@ export default function PhishCase() {
   const [summary, setSummary] = useState("");
   const [busy, setBusy] = useState(false);
   const [r, setR] = useState(null);
+  const runId = run?.id;
+  useEffect(() => { if (!run) return; const d = run.draft || {}; setPins(d.pins || []); setIocs(d.iocs || ""); setVerdict(d.verdict || ""); setSummary(d.summary || ""); }, [runId]); // eslint-disable-line
+  useEffect(() => { if (!runId || r) return undefined; const id = setTimeout(() => api.put(`/phish/runs/${runId}/draft`, { pins, iocs, verdict, summary }).catch(() => {}), 600); return () => clearTimeout(id); }, [runId, pins, iocs, verdict, summary]); // eslint-disable-line
   const ev = (kind, text) => api.post(`/phish/runs/${run.id}/event`, { kind, text: text.slice(0, 240) }).catch(() => {});
   const call = async (fn) => { setBusy(true); try { await fn(); } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); } };
   const ctx = useMemo(() => ({ pinned: new Set(pins.map((p) => p.ref)), onPin: (ref, text) => setTarget({ ref, text: text.slice(0, 400) }), reported: run?.reported,
@@ -69,7 +72,7 @@ export default function PhishCase() {
   const act = (i) => call(async () => setRun((await api.post(`/phish/runs/${run.id}/act`, { index: i })).data));
   const submit = () => call(async () => { setR((await api.post(`/phish/runs/${run.id}/submit`, { verdict, pins, iocs: splitIocs(iocs), summary })).data); window.scrollTo({ top: 0, behavior: "smooth" }); });
   const retry = () => call(async () => { setRun((await api.post(`/phish/runs/${run.id}/restart`)).data); setR(null); setPins([]); setIocs(""); setVerdict(""); setSummary(""); setStep(0); setSeen({ 0: true }); });
-  const done = [seen[1], pins.length > 0 || seen[2], !!verdict, run.actions.length > 0, false];
+  const done = [pins.length > 0, !!seen[1], !!verdict, run.actions.length > 0, false];
   return <PinCtx.Provider value={r ? null : ctx}><div className="space-y-5" data-testid="phish-case">
     <Link to={`/app/phishing/${c.type}`} className="text-xs font-mono text-slate-400 hover:text-cyan-300 inline-flex items-center gap-1" data-testid="phish-case-back"><ArrowLeft className="h-3.5 w-3.5" />{c.type_name}</Link>
     <div><div className="eyebrow">{c.type_name} · {c.difficulty}</div><h1 className="text-2xl font-bold mt-1" data-testid="phish-case-title">{c.title}</h1><p className="text-sm text-slate-300 mt-2 border-l-2 border-yellow-400/60 pl-3">{c.brief}</p></div>

@@ -49,7 +49,7 @@ function Email({ p, pid }) {
     <div className="p-4 space-y-3">
       <Pin id={`${pid}subj`} text={`Subject: ${p.subject}`} block><div className="font-bold text-base">{p.subject}</div></Pin>
       <div className="flex gap-3"><span className="h-9 w-9 shrink-0 grid place-items-center bg-cyan-500/15 border border-cyan-500/30 font-bold text-cyan-200">{(p.from || "?").replace(/[^A-Za-z]/g, "").charAt(0) || "?"}</span>
-        <div className="text-xs font-mono space-y-0.5 min-w-0 flex-1">{rows.map(([k, v]) => <Pin key={k} id={`${pid}${k}`} text={`${k}: ${v}`} block><span className="text-slate-500 w-20 inline-block">{k}:</span><span className={`break-all ${k === "Reply-To" ? "text-yellow-300" : "text-slate-300"}`}>{v}</span></Pin>)}</div></div>
+        <div className="text-xs font-mono space-y-0.5 min-w-0 flex-1">{rows.map(([k, v]) => <Pin key={k} id={`${pid}${k}`} text={`${k}: ${v}`} block><span className="text-slate-500 w-20 block sm:inline-block">{k}:</span><span className={`break-words ${k === "Reply-To" ? "text-yellow-300" : "text-slate-300"}`}>{v}</span></Pin>)}</div></div>
       <div className="border-t border-white/10 pt-3"><Body text={p.body || ""} pid={pid} /></div>
       {p.attachments?.length > 0 && <div className="flex flex-wrap gap-2">{p.attachments.map((a, j) => <Pin key={a} id={`${pid}att${j}`} text={`Attachment: ${a}`}><span className="text-xs font-mono border border-white/15 px-2 py-1 inline-flex items-center gap-1"><Paperclip className="h-3 w-3" />{a}</span></Pin>)}</div>}
     </div></>;

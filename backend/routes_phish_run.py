@@ -83,7 +83,7 @@ def state(r, c):
     wrong = sum(1 for a in r["actions"] if not a["good"])
     right = sum(1 for o in c["response"] if o["correct"]) or 1
     return {"id": r["id"], "case_id": r["case_id"], "started_at": r["started_at"], "sla_minutes": r["sla_minutes"], "hints_total": len(hs), "hints": used,
-            "next_hint_cost": HINT_COST[len(r["hints"])] if len(r["hints"]) < len(hs) else None, "actions": r["actions"], "events": r["events"][-60:], "reported": r.get("reported", False),
+            "draft": r.get("draft") or {}, "next_hint_cost": HINT_COST[len(r["hints"])] if len(r["hints"]) < len(hs) else None, "actions": r["actions"], "events": r["events"][-60:], "reported": r.get("reported", False),
             "max_score": max(0, 100 - sum(u["cost"] for u in used) - round(20 * wrong / right))}
 
 
@@ -177,6 +177,20 @@ class PinIn(BaseModel):
     text: str = Field(max_length=400)
     finding: int = Field(ge=0, le=19)
     note: str = Field(default="", max_length=300)
+
+
+class DraftIn(BaseModel):
+    pins: list[PinIn] = Field(default_factory=list, max_length=30)
+    iocs: str = Field(default="", max_length=4000)
+    verdict: str = Field(default="", max_length=80)
+    summary: str = Field(default="", max_length=3000)
+
+
+@router.put("/runs/{rid}/draft")
+async def draft(rid: str, body: DraftIn, user=Depends(get_current_user)):
+    await own_run(rid, user)
+    await db.phish_runs.update_one({"id": rid}, {"$set": {"draft": body.model_dump()}})
+    return {"ok": True}
 
 
 class RunSubmitIn(BaseModel):

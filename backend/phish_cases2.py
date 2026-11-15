@@ -5,7 +5,7 @@ CO = "orbit-logistics.test"
 
 
 def hdr(frm, rp, reply, mid, spf, dkim, dmarc, hops, subject, extra=""):
-    rec = "\n".join(f"Received: from {h} ({h} [{ip}]) by {by} with ESMTPS; {t}" for h, ip, by, t in hops)
+    rec = "\n".join(f"Received: from {h} ({h} [{ip}]) by {by} with ESMTPS; {t}" for h, ip, by, t in reversed(hops))
     return (f"{rec}\nAuthentication-Results: mx.{CO}; spf={spf} smtp.mailfrom={rp.split('@')[-1]}; dkim={dkim}; dmarc={dmarc} header.from={frm.split('@')[-1].rstrip('>')}\n"
             f"Return-Path: <{rp}>\nFrom: {frm}\n" + (f"Reply-To: {reply}\n" if reply else "") + f"Message-ID: <{mid}>\nSubject: {subject}" + (f"\n{extra}" if extra else ""))
 
