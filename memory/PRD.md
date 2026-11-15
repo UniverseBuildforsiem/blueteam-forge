@@ -271,5 +271,9 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Public /bundle/:id page; bundles row + "My wishlist" tab in /app/courses; "Save with a bundle" on course landing.
 - Wishlist (db.wishlists, unique user+kind+item): courses + bundles. Emails via the existing 15-min session-reminders cron (max 5 crons used): price drop vs last_price, and 24h before sale_ends_at (once per sale). Skips owned items. Seeded @socprofessionals.academy emails are blocked by the provider (expected); delivered@resend.dev works.
 
+## Jun 2026 — Public catalog + gifting
+- /courses (public "Courses" menu) now = AcademyCatalog (Catalog.jsx): academy courses + bundles, search, level/category filters, sort (newest/rating/price), quick filters (All/On sale/Free), countdowns. Old external store list moved below.
+- Gifts (routes_gifts.py, db.gifts): "Buy as a gift" (Gift.jsx) on paid course + bundle pages; PlanIn.gift {to_name,to_email,message,send_on}; course gifts accept coupons, bundle gifts = full bundle price. activate() → create_gift (no buyer purchase), emails recipient now or at send_on (08:00 local) via session-reminders cron (send_scheduled_gifts; stale 'sending' recovered after 10 min). /gift/:code redeem page (sign in → redeem → purchases; owners told to forward link). /app/courses?tab=gifts = My gifts (copy link, send now/resend). pending_course redirect now honoured for all roles.
+
 ## Backlog
-- P2 LinkedIn sign-in. P2 public all-courses catalog page for academy courses. P2 instructor bio/headline editor for landing page.
+- P2 LinkedIn sign-in. P2 instructor bio/headline editor for landing page.

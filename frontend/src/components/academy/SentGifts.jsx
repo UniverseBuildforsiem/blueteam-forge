@@ -13,9 +13,10 @@ export function SentGifts() {
   useEffect(() => { load(); }, []);
   const copy = (g) => navigator.clipboard.writeText(g.link).then(() => toast.success("Gift link copied"));
   const send = async (g) => { try { await api.post(`/gifts/${g.id}/send-now`); toast.success(`Emailed ${g.to_email}`); load(); } catch (e) { toast.error(errMsg(e)); } };
-  if (gs && !gs.length) return <Empty text="No gifts yet — use 'Buy as a gift' on any paid course or bundle" />;
+  if (!gs) return <div className="font-mono text-xs text-cyan-400 cursor-blink" data-testid="sent-gifts-loading">loading gifts </div>;
+  if (!gs.length) return <Empty text="No gifts yet — use 'Buy as a gift' on any paid course or bundle" />;
   return (
-    <Glass className="divide-y divide-white/5" data-testid="sent-gifts">{(gs || []).map((g) => (
+    <Glass className="divide-y divide-white/5" data-testid="sent-gifts">{gs.map((g) => (
       <div key={g.id} className="p-4 flex flex-wrap items-center gap-3 text-sm" data-testid={`gift-row-${g.id}`}>
         <div className="flex-1 min-w-[220px]"><div className="font-bold">{g.title}</div>
           <div className="text-[11px] font-mono text-slate-500">to {g.to_name} · {g.to_email} · {inr(g.amount)} · bought {fmtDate(g.created_at)}{g.send_on && g.status === "scheduled" ? ` · delivers ${fmtDate(g.send_on)}` : ""}</div>

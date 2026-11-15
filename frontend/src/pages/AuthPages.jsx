@@ -29,10 +29,8 @@ const F = ({ label, ...p }) => (
 const ErrorLine = ({ e }) => e ? <div data-testid="auth-error" className="text-sm text-red-400 font-mono mb-4">! {e}</div> : null;
 
 export const takePendingCase = () => {
-  let c = null, p = null, t = null, k = null;
-  try { c = JSON.parse(localStorage.getItem("pending_case")); p = JSON.parse(localStorage.getItem("pending_path")); t = JSON.parse(localStorage.getItem("pending_intel")); k = JSON.parse(localStorage.getItem("pending_course")); } catch { c = null; }
-  localStorage.removeItem("pending_course");
-  if (k?.id && Date.now() - k.at < 3600e3) return `/${k.kind || "course"}/${k.id}`;
+  let c = null, p = null, t = null;
+  try { c = JSON.parse(localStorage.getItem("pending_case")); p = JSON.parse(localStorage.getItem("pending_path")); t = JSON.parse(localStorage.getItem("pending_intel")); } catch { c = null; }
   localStorage.removeItem("pending_case");
   localStorage.removeItem("pending_path");
   localStorage.removeItem("pending_intel");
@@ -41,7 +39,13 @@ export const takePendingCase = () => {
   return c?.id && Date.now() - c.at < 3600e3 ? `/app/challenges?case=${c.id}` : null;
 };
 
-const homeFor = (u) => u.role === "admin" ? "/admin" : u.role === "instructor" ? "/instructor" : !u.onboarded ? "/onboarding" : takePendingCase() || "/app";
+function pendingCourse() {
+  let k = null;
+  try { k = JSON.parse(localStorage.getItem("pending_course")); } catch { k = null; }
+  localStorage.removeItem("pending_course");
+  return k?.id && Date.now() - k.at < 3600e3 ? `/${k.kind || "course"}/${k.id}` : null;
+}
+const homeFor = (u) => (u.role !== "student" || u.onboarded ? pendingCourse() : null) || (u.role === "admin" ? "/admin" : u.role === "instructor" ? "/instructor" : !u.onboarded ? "/onboarding" : takePendingCase() || "/app");
 
 function GoogleButton({ label }) {
   const go = () => {

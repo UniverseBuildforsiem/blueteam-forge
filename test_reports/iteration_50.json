@@ -1,0 +1,39 @@
+{
+  "summary": "Tested Public Course Catalog (/courses) and Gift a Course end to end, backend and frontend. Backend: 18/18 pytest pass. This covered order validation for gift checkouts, activate() creating gift docs (no purchase for the buyer, sent vs scheduled), cron delivery of due scheduled gifts, public gift view (no to_email), redeem (401/400/grants for a course and for a bundle), the sent-gifts list and send-now (404 for other users' gifts). Frontend: every requested flow passes. Catalog filters, sort, quick filters, search, prices, countdown, bundles and external-courses section work. Gift box works on courses and bundles. Logged-out gift sign-in returns to the page. Redeem page states tested: logged out, redeem, redeemed, owned with copy link, and not found. My gifts tested for admin (rows, copy, Resend) and student (empty state). Seeded gift and student purchases restored afterwards.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "routes_gifts.deliver", "issue": "Status is set to 'sending' before the email call. If the process dies mid-send, the gift stays 'sending' forever. Cron only retries 'scheduled' and send-now then always returns 502."},
+      {"endpoint": "POST /api/gifts/{id}/send-now", "issue": "A failed Resend on a gift that was already 'sent' moves its status back to 'scheduled' with last_error. My gifts then shows SCHEDULED for a gift that was actually delivered."},
+      {"endpoint": "routes_gifts.owns_all / redeem", "issue": "If g.courses is empty (bundle with no course ids), all([]) is True, so the gift is reported as owned and can't be redeemed; redeem would also hit IndexError on g['courses'][0]. Edge case only."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AuthPages homeFor", "issue": "Admin and instructor logins ignore pending_course (they always go to /admin or /instructor). An admin or instructor who clicks gift-signin-to-redeem or gift-signin is not returned to /gift/{code} or /course/{id}. Students are returned correctly.", "selector": "[data-testid=gift-signin-to-redeem]", "priority": "LOW"},
+      {"component": "SentGifts", "issue": "No loading state: while the request is pending it renders an empty sent-gifts Glass, which looks like an empty bordered box.", "selector": "[data-testid=sent-gifts]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/course/{id} buy card with gift box open", "issues": ["Two coupon boxes appear (main buy card and gift box) and both use data-testid academy-coupon-input / Apply, so the test ids are duplicated. Consider gift-coupon-input."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_gifts_catalog.py", "/app/backend/tests/gift_sim.py", "/app/test_reports/pytest/pytest_iter50.xml"],
+  "action_items": [
+    "Optional: let admin and instructor logins honour a pending gift or course redirect (homeFor)",
+    "Optional: add a loading state in SentGifts; give the gift-box coupon input its own testid",
+    "Optional: recover stale 'sending' gifts; keep status 'sent' when a Resend fails"
+  ],
+  "critical_code_review_comments": [
+    "Bundle gifts use item_for(plan, None), which charges the full bundle price (₹1,499 now, as the sale price). The review request said ₹999 but the UI correctly shows ₹1,499, which matches the bundle's current public price.",
+    "Coupons on gifts check the buyer's own coupon redemptions, so a buyer who already used a coupon for themselves can't reuse it for a gift. This is probably intended.",
+    "Anyone with the link can redeem the gift; the recipient's email isn't checked. This is by design (forwarding is supported)."
+  ],
+  "updated_files": ["/app/backend/tests/test_gifts_catalog.py", "/app/backend/tests/gift_sim.py"],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100% of requested flows"},
+  "seed_data_creation": "Tests create TEST_pay_* payments, the gifts made from them, and a test_gift_<tag>@example.com user, then delete them by id in module teardown (verified 0 left). The UI redeem by the student of smLGnqqTMVsVHpih was reverted: the gift_id purchase for the student was deleted and the gift status reset to 'sent'. Cron calls insert cron_runs docs with run_id TEST_run_*. The admin's Resend on gift 791e3e3b5f1d sent one email to delivered@resend.dev.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run with: cd /app/backend && REACT_APP_BACKEND_URL=... pytest tests/test_gifts_catalog.py -n 0. Cron endpoint needs a JSON body ({run_id}), otherwise it returns 400 'Invalid body'. Student owns test-paid-course-2, so the bundle personal price is ₹374 and the gift price is ₹1,499. gift_sim.py simulates paid gifts through routes_manage.activate. The server clock is about Nov 2026.",
+  "test_credentials": "admin@socprofessionals.academy / Admin@123; student@socprofessionals.academy / Student@123"
+}

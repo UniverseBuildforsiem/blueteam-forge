@@ -1,6 +1,6 @@
 import os
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
@@ -40,15 +40,18 @@ async def safe_send(to, subject, name, lines, link, text):
         return None
 
 
-async def deliver(g):
-    if not (await db.gifts.update_one({"id": g["id"], "status": "scheduled"}, {"$set": {"status": "sending"}})).modified_count:
+async def deliver(g, resend=False):
+    stale = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    claim = {"status": "sent"} if resend else {"$or": [{"status": "scheduled"}, {"status": "sending", "claimed_at": {"$lt": stale}}]}
+    if not (await db.gifts.update_one({"id": g["id"], **claim}, {"$set": {"status": "sending", "claimed_at": now_iso()}})).modified_count:
         return False
     lines = [f"{g['from_name']} sent you a gift on SOCProfessionals Academy: {g['title']}."]
     if g.get("message"):
         lines.append(f"Their message: “{g['message']}”")
     lines.append("Open the link, sign in or create a free account, and the course unlocks on your account.")
     ok = await safe_send(g["to_email"], f"🎁 {g['from_name']} gifted you {g['title']}", g["to_name"], lines, gift_link(g), "Redeem your gift")
-    await db.gifts.update_one({"id": g["id"]}, {"$set": {"status": "sent" if ok else "scheduled", **({"sent_at": now_iso()} if ok else {}), "last_error": None if ok else "Email could not be delivered"}})
+    await db.gifts.update_one({"id": g["id"]}, {"$set": {"status": "sent" if ok or resend else "scheduled", **({"sent_at": now_iso()} if ok else {}),
+                                                         "last_error": None if ok else "Email could not be delivered"}})
     return bool(ok)
 
 
@@ -77,15 +80,15 @@ async def create_gift(p):
 async def send_scheduled_gifts():
     now = datetime.now(timezone.utc)
     sent = 0
-    for g in await db.gifts.find({"status": "scheduled", "send_on": {"$ne": None}}, NO_ID).to_list(1000):
-        if parse_dt(g["send_on"]) <= now and await deliver(g):
+    for g in await db.gifts.find({"status": {"$in": ["scheduled", "sending"]}}, NO_ID).to_list(1000):
+        if (not g.get("send_on") or parse_dt(g["send_on"]) <= now) and await deliver(g):
             sent += 1
     logger.info(f"Scheduled gifts delivered: {sent}")
 
 
 async def owns_all(user, g):
     cs = await db.academy_courses.find({"id": {"$in": g["courses"]}}, NO_ID).to_list(50)
-    return all([await owns(user, c) for c in cs])
+    return bool(cs) and all([await owns(user, c) for c in cs])
 
 
 @router.get("/public/gifts/{code}")
@@ -115,8 +118,7 @@ async def redeem_gift(code: str, user=Depends(get_current_user)):
     for pid in ([g["plan"]] if g["plan"].startswith("bundle:") else []) + [f"course:{c}" for c in g["courses"]]:
         await db.purchases.update_one({"user_id": user["id"], "product_id": pid},
                                       {"$setOnInsert": {"user_id": user["id"], "product_id": pid, "gift_id": g["id"], "at": now_iso()}}, upsert=True)
-    first = g["courses"][0]
-    return {"ok": True, "go": f"/app/courses/{first}" if len(g["courses"]) == 1 else "/app/courses"}
+    return {"ok": True, "go": f"/app/courses/{g['courses'][0]}" if len(g["courses"]) == 1 else "/app/courses"}
 
 
 @router.get("/gifts/sent")
@@ -132,8 +134,8 @@ async def send_now(gid: str, user=Depends(get_current_user)):
         raise HTTPException(404, "Gift not found")
     if g["status"] == "redeemed":
         raise HTTPException(400, "This gift has already been redeemed")
-    if g["status"] == "sent":
-        await db.gifts.update_one({"id": gid}, {"$set": {"status": "scheduled"}})
-    if not await deliver({**g, "status": "scheduled"}):
+    if g["status"] == "sending":
+        await db.gifts.update_one({"id": gid, "status": "sending"}, {"$set": {"status": "scheduled"}})
+    if not await deliver(g, resend=g["status"] == "sent"):
         raise HTTPException(502, "We couldn't email the recipient — copy the link and share it yourself")
     return {"ok": True}

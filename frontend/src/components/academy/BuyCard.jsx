@@ -20,13 +20,13 @@ function Includes({ c }) {
     <ul className="space-y-1.5">{rows.filter((r) => r[2]).map(([I, t]) => <li key={t} className="text-xs text-slate-300 flex items-center gap-2"><I className="h-3.5 w-3.5 text-cyan-400 shrink-0" />{t}</li>)}</ul></div>;
 }
 
-function Coupon({ c, deal, setDeal }) {
+function Coupon({ c, deal, setDeal, tid = "academy" }) {
   const [code, setCode] = useState("");
   const apply = async () => { try { const r = await api.post("/academy/coupons/check", { code: code.trim(), course_id: c.id }); setDeal(r.data); toast.success(`Coupon applied — you save ${inr(r.data.off)}`); } catch (e) { setDeal(null); toast.error(errMsg(e)); } };
   return <div>
-    <div className="flex gap-2"><input className="field font-mono uppercase !text-xs" placeholder="Coupon code" value={code} onChange={(e) => { setCode(e.target.value); setDeal(null); }} data-testid="academy-coupon-input" />
-      <button className="ghost-btn !text-xs shrink-0" disabled={!code.trim()} onClick={apply} data-testid="academy-coupon-apply">Apply</button></div>
-    {deal && <div className="text-[11px] font-mono text-green-400 mt-1" data-testid="academy-coupon-applied">{deal.code} applied · −{inr(deal.off)}</div>}</div>;
+    <div className="flex gap-2"><input className="field font-mono uppercase !text-xs" placeholder="Coupon code" value={code} onChange={(e) => { setCode(e.target.value); setDeal(null); }} data-testid={`${tid}-coupon-input`} />
+      <button className="ghost-btn !text-xs shrink-0" disabled={!code.trim()} onClick={apply} data-testid={`${tid}-coupon-apply`}>Apply</button></div>
+    {deal && <div className="text-[11px] font-mono text-green-400 mt-1" data-testid={`${tid}-coupon-applied`}>{deal.code} applied · −{inr(deal.off)}</div>}</div>;
 }
 
 export function Checkout({ c, onPaid, item = `course:${c.id}`, label = `Course: ${c.title}`, coupons = true, gift, giftOk = true }) {
@@ -41,7 +41,7 @@ export function Checkout({ c, onPaid, item = `course:${c.id}`, label = `Course: 
   const cf = () => ready() && (/^\d{10}$/.test(phone) ? payCashfree(item, phone, cfg.cashfree_mode, undefined, extra).catch((e) => toast.error(errMsg(e))) : toast.error("Enter a 10-digit mobile number for Cashfree"));
   return <div className="space-y-2.5">
     {deal && <div className="text-xs font-mono">Pay now: <b className="text-green-400 text-base" data-testid="academy-final-price">{inr(deal.amount)}</b></div>}
-    {coupons && <Coupon c={c} deal={deal} setDeal={setDeal} />}
+    {coupons && <Coupon c={c} deal={deal} setDeal={setDeal} tid={gift ? "gift" : "academy"} />}
     {!cfg.razorpay && !cfg.cashfree && <div className="text-xs font-mono text-yellow-300 border border-yellow-500/30 p-2" data-testid="academy-pay-not-configured">Payments open soon.</div>}
     <button className="glow-btn w-full justify-center" disabled={!cfg.razorpay} onClick={rzp} data-testid={gift ? "gift-buy-razorpay" : "academy-buy-razorpay"}>{gift ? "Buy gift" : "Buy now"}</button>
     {cfg.cashfree && <><input className="field" placeholder="Mobile number (for Cashfree)" value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="academy-phone" />
