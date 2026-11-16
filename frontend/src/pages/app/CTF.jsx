@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, Lock } from "lucide-react";
 import { api } from "../../lib/api";
 import { Glass, PageHeader, ProfileLink } from "../../components/common";
 import { RankAvatar } from "../../components/RankAvatar";
@@ -7,27 +7,32 @@ import { CtfDialog } from "../../components/CtfDialog";
 
 export const CATS = ["Log Analysis", "Forensics", "Network", "Malware", "Web", "Threat Intel"];
 
-export default function CTF() {
+export default function CTF({ only }) {
   const [board, setBoard] = useState([]);
   const [score, setScore] = useState([]);
   const [open, setOpen] = useState(null);
   const load = async () => {
     const [b, s] = await Promise.all([api.get("/ctf"), api.get("/ctf/scoreboard")]);
-    setBoard(b.data); setScore(s.data);
+    setBoard(only ? b.data.filter((c) => only.has(String(c.id))) : b.data); setScore(s.data);
     setOpen((o) => (o ? b.data.find((x) => x.id === o.id) : o));
   };
   useEffect(() => { load(); const t = setInterval(() => api.get("/ctf/scoreboard").then((r) => setScore(r.data)), 10000); return () => clearInterval(t); }, []);
-  const cats = CATS.filter((cat) => cat !== "Threat Intel" || board.some((c) => c.category === cat));
+  const cats = CATS.filter((cat) => (only ? board.some((c) => c.category === cat) : cat !== "Threat Intel" || board.some((c) => c.category === cat)));
+  const locked = (c) => only && !only.get(String(c.id))?.unlocked;
   return (
     <div>
-      <PageHeader eyebrow="// jeopardy ctf" title="CTF Arena" sub="Submit the plain answer (e.g. an IP, port or Event ID). Hints cost points from that challenge's reward." />
+      <PageHeader eyebrow="// jeopardy ctf" title="CTF Arena" sub={only ? "Challenges from this course unlock as you complete the lesson they belong to." : "Submit the plain answer (e.g. an IP, port or Event ID). Hints cost points from that challenge's reward."} />
       <div className="grid xl:grid-cols-[1fr_320px] gap-4">
-        <div className={`grid grid-cols-2 gap-3 ${cats.length > 5 ? "md:grid-cols-3 2xl:grid-cols-6" : "md:grid-cols-5"}`} data-testid="ctf-board">
+        <div className={`grid grid-cols-2 gap-3 ${only ? "md:grid-cols-3" : cats.length > 5 ? "md:grid-cols-3 2xl:grid-cols-6" : "md:grid-cols-5"}`} data-testid="ctf-board">
           {cats.map((cat) => (
             <div key={cat} className="space-y-3">
               <div className="font-mono text-xs uppercase text-cyan-400 text-center py-2 border-b border-cyan-500/30">{cat}</div>
               {board.filter((c) => c.category === cat).sort((a, b) => a.points - b.points).map((c) => (
-                <button key={c.id} onClick={() => setOpen(c)} data-testid={`ctf-tile-${c.id}`}
+                locked(c) ? <div key={c.id} className="w-full glass rounded-sm p-4 text-center opacity-60" aria-disabled="true" data-testid={`ctf-tile-${c.id}`}>
+                  <div className="text-2xl font-mono font-bold text-slate-500 flex items-center justify-center gap-1.5"><Lock className="h-4 w-4" />{c.points}</div>
+                  <div className="text-xs text-slate-400 mt-1 truncate">{c.title}</div>
+                  <div className="text-[10px] font-mono text-yellow-300/90 mt-1 line-clamp-2" data-testid={`ctf-locked-${c.id}`}>Complete “{only.get(String(c.id)).lesson}”</div></div>
+                : <button key={c.id} onClick={() => setOpen(c)} data-testid={`ctf-tile-${c.id}`}
                   className={`w-full glass rounded-sm p-4 text-center transition-colors ${c.solved ? "!border-green-400/60 bg-green-500/10" : "hover:!border-cyan-400"}`}>
                   <div className={`text-2xl font-mono font-bold ${c.solved ? "text-green-400" : "neon-text"}`}>{c.points}</div>
                   <div className="text-xs text-slate-300 mt-1 truncate">{c.title}</div>

@@ -9,8 +9,7 @@ import { LessonQuiz } from "../../components/LessonQuiz";
 import { LessonCtfButton } from "../../components/CtfDialog";
 import { VideoFrame } from "../../components/VideoField";
 import { embedSrc } from "../../lib/video";
-import { PathTabBar, PathSops } from "../../components/PathTabs";
-import { Quizzes } from "./Quizzes";
+import { PathTabBar, PathSops, PathQuizzes, pathItems } from "../../components/PathTabs";
 import CTF from "./CTF";
 import ThreatIntel from "../ThreatIntel";
 
@@ -93,9 +92,9 @@ export function PathDetail({ course }) {
   return (
     <div>
       <PathTabBar p={p} tab={tab} setTab={setTab} />
-      {tab === "quizzes" && <Quizzes inPath={new Set([p.final_quiz?.id, ...p.modules.flatMap((m) => m.lessons.flatMap((l) => (l.attachments || []).filter((a) => a.type === "quiz").map((a) => a.id)))].filter(Boolean))} />}
+      {tab === "quizzes" && <PathQuizzes p={p} />}
       {tab === "sops" && <PathSops p={p} />}
-      {tab === "ctf" && <CTF />}
+      {tab === "ctf" && <CTF key={p.completed_lessons.length} only={pathItems(p, "ctf")} />}
       {tab === "intel" && <ThreatIntel embedded />}
       {tab === "lessons" && <>
       <p className="text-sm text-slate-400 mb-6 max-w-3xl">{p.description}</p>
