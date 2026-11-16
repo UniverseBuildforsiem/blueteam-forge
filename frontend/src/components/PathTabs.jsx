@@ -51,7 +51,7 @@ export function PathTabBar({ p, tab, setTab }) {
         <span className="text-xs font-mono text-green-400">{p.level} · {p.percent}% complete</span>
         {p.video_lessons?.length > 0 && <span className="text-xs font-mono text-cyan-300 inline-flex items-center gap-1" data-testid="path-videos-watched"><Eye className="h-3.5 w-3.5" />videos watched {p.watched_lessons.length}/{p.video_lessons.length}</span>}
       </div>
-      <div className="flex gap-1 mt-3 overflow-x-auto" data-testid="path-tabs">
+      <div className="flex gap-1 mt-3 overflow-x-auto pr-8 sm:pr-0 [mask-image:linear-gradient(to_right,black_85%,transparent)] sm:[mask-image:none]" data-testid="path-tabs">
         {visibleTabs(p).map(([id, l, I]) => <button key={id} onClick={() => { setTab(id); window.scrollTo({ top: 0 }); }} data-testid={`path-tab-${id}`}
           className={`px-4 py-2 text-xs font-mono border-b-2 -mb-px inline-flex items-center gap-1.5 whitespace-nowrap transition-colors ${tab === id ? "border-cyan-400 text-cyan-300" : "border-transparent text-slate-400 hover:text-slate-200"}`}><I className="h-3.5 w-3.5" />{l}</button>)}
       </div>

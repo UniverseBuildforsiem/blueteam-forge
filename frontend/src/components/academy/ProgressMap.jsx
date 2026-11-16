@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { CheckCircle2, Circle, Lock, Unlock, ListChecks, FileText, Flag, Award, PartyPopper, ArrowRight, PlayCircle } from "lucide-react";
+import { CheckCircle2, Circle, Lock, ListChecks, FileText, Flag, Award, PartyPopper, ArrowRight, PlayCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Glass } from "../common";
 
@@ -9,7 +9,7 @@ const GATED = Object.keys(KIND);
 function Chip({ a, open }) {
   const [label, I] = KIND[a.type];
   return <span className={`inline-flex items-center gap-1 text-[10px] font-mono border px-1.5 py-0.5 ${open ? "border-green-500/40 text-green-300" : "border-white/15 text-slate-400"}`} data-testid={`map-chip-${a.type}-${a.id}`}>
-    {open ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}<I className="h-3 w-3" />{label}: <span className="truncate max-w-[180px]">{a.title}</span></span>;
+    {open ? <CheckCircle2 className="h-3 w-3" /> : <Lock className="h-3 w-3" />}<I className="h-3 w-3" />{label}: <span className="truncate max-w-[180px]">{a.title}</span></span>;
 }
 
 function Node({ l, state, open, idx }) {

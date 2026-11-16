@@ -306,3 +306,4 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 
 ## Course tab gating — 2026-06 (DONE, iteration_54 100%)
 - Course/Path Quizzes, SOPs, CTF Arena tabs show only items attached to that course's lessons; each unlocks when its lesson is completed; final exam unlocks after all lessons (sidebar too); tabs with no items are hidden; in-lesson practice links stay open. Global catalogue pages unchanged. (PathTabs.jsx pathItems/visibleTabs/PathQuizzes, CTF.jsx `only` prop)
+- Progress Map tab (lesson timeline with unlock chips, counters, final exam node) + Unlock Celebration dialog with quick links after lesson completion — 2026-06 (DONE, iteration_55 100%) (components/academy/ProgressMap.jsx)

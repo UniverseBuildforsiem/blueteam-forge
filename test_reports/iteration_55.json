@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only test of Progress Map tab + Unlock Celebration dialog (ProgressMap.jsx, PathTabs.jsx newUnlocks, Paths.jsx complete()). Setup via /app/tests/gating_setup.py: TEST Gating Path (l1/l2 each with quiz+sop+ctf, final_quiz_id=quiz-net) and siem-only paths. As student: tabs Lessons, Progress Map, Quizzes, SOPs, CTF Arena, Threat Intel (map right after Lessons). Map initial: 0/2, 0/6, l1 'up next', l2 '7 min', all 6 chips locked (slate), final exam 'Unlocks after every lesson is complete' with no open link; map-open-l2 switches to Lessons tab with Lesson Two shown. Complete Lesson One -> toast + unlock-celebration lists exactly 3 items (quiz link /app/quizzes/quiz-winlogs, sop link /sops/sop-phishing, ctf button); clicking ctf closes dialog, switches to CTF Arena tab with ctf-log-1 tile unlocked (button) and ctf-log-2 locked. Map then 1/2, 3/6, l1 completed with green chips, l2 up next with locked chips. Complete Lesson Two (at 390px mobile) -> dialog lists 4 items incl Final exam (label rendered 'FINAL EXAM' via uppercase CSS); close works; map 2/2, 6/6, map-final-exam-open -> /app/quizzes/quiz-net (navigates). Siem-only path: tabs Lessons, Progress Map, Threat Intel; map 0/0 'No unlocks in this lesson'; completing shows only toast, NO dialog. Mobile 390px: no horizontal overflow on map or dialog (scrollWidth 390). Regression: after completion Quizzes tab shows 3 cards all startable, SOPs tab 2 links. All requested checks passed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/paths/{pid}/lessons/{lid}/complete + path_view (non-course paths)", "issue": "Pre-existing: for learning paths (not _course), completion is keyed by lesson_id only (prog_q omits path_id; completed_set is global). Two paths sharing a lesson id (e.g. API-created 'l1') show each other's lesson as completed. PathBuilder generates unique `l-${uid()}` ids so UI-created paths are unaffected; only API/seed data with reused ids. Found because siem-only test path with lesson id 'l1' appeared already completed after gating path l1 was completed."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Path tab bar mobile 390px", "issues": ["Only ~3 tabs visible; remaining (SOPs, CTF Arena, Threat Intel) require horizontal scroll with no visual scroll hint (pre-existing, cosmetic)"]},
+      {"screen": "Progress Map chips", "issues": ["Unlocked vs locked chip icons (Unlock vs Lock) are nearly indistinguishable at 12px; state is conveyed mainly by green vs slate color - fine but subtle"]}
+    ]
+  },
+  "test_report_links": ["/app/tests/gating_setup.py"],
+  "action_items": ["Optional: scope non-course path lesson completion by path_id (or validate unique lesson ids in POST /api/manage/paths) to avoid cross-path completion collisions"],
+  "critical_code_review_comments": [
+    "ProgressMap receives goTab prop from Paths.jsx but doesn't use it (harmless dead prop).",
+    "newUnlocks diff relies on pre-completion `p` closure; correct today since complete() is called once per click, but rapid double-click could race (button not disabled during request)."
+  ],
+  "updated_files": ["/app/tests/gating_setup.py"],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "seed_data_creation": "Created and deleted 3 TEST paths (25d33a2ff335, d205f4e20e8a, 11b5d1f79907). Removed student's 3 lesson_progress rows for those paths, 3 activity rows and reverted 30 XP.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use /app/tests/gating_setup.py setup|teardown (ids in /tmp/gating.json; setup now sets final_quiz_id = 3rd quiz; teardown resets progress/XP via mongo). Use UNIQUE lesson ids per path for non-course paths because completion is global per lesson_id. Text with CSS uppercase is returned uppercased by inner_text."
+}
