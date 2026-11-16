@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, ListChecks, FileText, Flag, Radar, Search, Lock, Eye } from "lucide-react";
+import { BookOpen, ListChecks, FileText, Flag, Radar, Search, Lock, Eye, Map as MapIcon } from "lucide-react";
 import { api } from "../lib/api";
 import { Glass, SeverityBadge } from "./common";
 
-export const PATH_TABS = [["lessons", "Lessons", BookOpen], ["quizzes", "Quizzes", ListChecks], ["sops", "SOPs", FileText], ["ctf", "CTF Arena", Flag], ["intel", "Threat Intel", Radar]];
+export const PATH_TABS = [["lessons", "Lessons", BookOpen], ["map", "Progress Map", MapIcon], ["quizzes", "Quizzes", ListChecks], ["sops", "SOPs", FileText], ["ctf", "CTF Arena", Flag], ["intel", "Threat Intel", Radar]];
 
 export function pathItems(p, type) {
   const done = new Set(p.completed_lessons), out = new Map();
@@ -17,6 +17,11 @@ export function pathItems(p, type) {
     out.set(String(p.final_quiz.id), { id: p.final_quiz.id, title: p.final_quiz.title, final: true, lesson: "every lesson", unlocked: all });
   }
   return out;
+}
+
+export function newUnlocks(before, after) {
+  return ["quiz", "sop", "ctf"].flatMap((t) => { const b = pathItems(before, t);
+    return [...pathItems(after, t).entries()].filter(([k, it]) => it.unlocked && !b.get(k)?.unlocked).map(([, it]) => ({ ...it, type: t })); });
 }
 
 const TAB_TYPE = { quizzes: "quiz", sops: "sop", ctf: "ctf" };

@@ -9,7 +9,8 @@ import { LessonQuiz } from "../../components/LessonQuiz";
 import { LessonCtfButton } from "../../components/CtfDialog";
 import { VideoFrame } from "../../components/VideoField";
 import { embedSrc } from "../../lib/video";
-import { PathTabBar, PathSops, PathQuizzes, pathItems } from "../../components/PathTabs";
+import { PathTabBar, PathSops, PathQuizzes, pathItems, newUnlocks } from "../../components/PathTabs";
+import { ProgressMap, UnlockCelebration } from "../../components/academy/ProgressMap";
 import CTF from "./CTF";
 import ThreatIntel from "../ThreatIntel";
 
@@ -82,16 +83,24 @@ export function PathDetail({ course }) {
   const [p, setP] = useState(null);
   const [cur, setCur] = useState(null);
   const [tab, setTab] = useState("lessons");
-  const load = () => api.get(course ? `/academy/courses/${id}` : `/paths/${id}`).then((r) => { setP(r.data); setCur((c) => c || r.data.modules[0]?.lessons[0]); })
+  const [party, setParty] = useState(null);
+  const load = () => api.get(course ? `/academy/courses/${id}` : `/paths/${id}`).then((r) => { setP(r.data); setCur((c) => c || r.data.modules[0]?.lessons[0]); return r.data; })
     .catch((e) => { if (course) { toast.error(errMsg(e)); nav(`/course/${id}`, { replace: true }); } });
   useEffect(() => { load(); }, [id]); // eslint-disable-line
   if (!p) return null;
   const complete = async () => {
-    try { const { data } = await api.post(`/paths/${id}/lessons/${cur.id}/complete`); toast.success(data.certificate && !p.certificate ? "Course complete — certificate issued!" : "+10 XP · lesson complete"); load(); } catch (e) { toast.error(errMsg(e)); }
+    try {
+      const { data } = await api.post(`/paths/${id}/lessons/${cur.id}/complete`);
+      toast.success(data.certificate && !p.certificate ? "Course complete — certificate issued!" : "+10 XP · lesson complete");
+      const next = await load(), items = newUnlocks(p, next);
+      if (items.length) setParty({ lesson: cur.title, items });
+    } catch (e) { toast.error(errMsg(e)); }
   };
   return (
     <div>
       <PathTabBar p={p} tab={tab} setTab={setTab} />
+      {tab === "map" && <ProgressMap p={p} open={(l) => { setCur(l); setTab("lessons"); window.scrollTo({ top: 0 }); }} goTab={setTab} />}
+      <UnlockCelebration party={party} onClose={() => setParty(null)} goTab={(t) => { setParty(null); setTab(t); window.scrollTo({ top: 0 }); }} />
       {tab === "quizzes" && <PathQuizzes p={p} />}
       {tab === "sops" && <PathSops p={p} />}
       {tab === "ctf" && <CTF key={p.completed_lessons.length} only={pathItems(p, "ctf")} />}
