@@ -23,7 +23,7 @@ export default function CTF({ only }) {
     <div>
       <PageHeader eyebrow="// jeopardy ctf" title="CTF Arena" sub={only ? "Challenges from this course unlock as you complete the lesson they belong to." : "Submit the plain answer (e.g. an IP, port or Event ID). Hints cost points from that challenge's reward."} />
       <div className="grid xl:grid-cols-[1fr_320px] gap-4">
-        <div className={`grid grid-cols-2 gap-3 ${only ? "md:grid-cols-3" : cats.length > 5 ? "md:grid-cols-3 2xl:grid-cols-6" : "md:grid-cols-5"}`} data-testid="ctf-board">
+        <div className={`grid grid-cols-2 gap-3 ${only ? ["md:grid-cols-1", "md:grid-cols-2", "md:grid-cols-3", "md:grid-cols-4", "md:grid-cols-5", "md:grid-cols-6"][Math.max(0, cats.length - 1)] : cats.length > 5 ? "md:grid-cols-3 2xl:grid-cols-6" : "md:grid-cols-5"}`} data-testid="ctf-board">
           {cats.map((cat) => (
             <div key={cat} className="space-y-3">
               <div className="font-mono text-xs uppercase text-cyan-400 text-center py-2 border-b border-cyan-500/30">{cat}</div>

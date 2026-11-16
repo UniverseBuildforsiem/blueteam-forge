@@ -1,0 +1,25 @@
+{
+  "summary": "Frontend-only test of course-tab gating (PathTabs.jsx / CTF.jsx only prop / Paths.jsx PathDetail). Created 2 TEST paths via /api/manage/paths (gating path with quiz/sop/ctf attachments on 2 lessons + final_quiz_id set; siem-only path). As student: all 5 tabs visible on gating path; Quizzes tab shows only the 2 attached quizzes + final exam (not 12-quiz catalogue) with path-item-locked-<id> notes 'Complete lesson “Lesson One” to unlock' / 'Complete every lesson to unlock' and no quiz-start buttons; SOPs tab shows only 2 SOPs as DIVs with aria-disabled=true + lock note; CTF tab shows only 2 tiles as locked DIVs with ctf-locked-<id> notes, clicking does not open dialog, scoreboard visible. After Lesson One completed: Q1 quiz-start link -> /app/quizzes/quiz-winlogs, S1 becomes <a href=/sops/sop-phishing> and navigates, C1 becomes button and opens CTF dialog; Q2/S2/C2 remain locked. Siem-only path shows only Lessons + Threat Intel tabs; Practice SIEM card clickable before completion (navigates /app/siem). Regression: /app/quizzes shows 12 quizzes, /app/ctf shows all 9 tiles unlocked, /app/courses/test-free-course loads (Lessons + Threat Intel). All checks passed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Final exam gating", "issue": "Lessons tab sidebar 'Final exam' card (path-final-exam-button) is still an open link to the final quiz even when the Quizzes tab shows the same final exam as locked ('Complete every lesson to unlock'). Inconsistent display-level gating; consider locking/annotating the sidebar link too (or confirm intentional).", "affected_selectors": ["[data-testid='path-final-exam-button']"]}
+    ],
+    "design_issues": [
+      {"screen": "Course CTF Arena tab", "issues": ["With few categories the board uses md:grid-cols-3 so a single category column occupies only ~1/3 of the area leaving large empty space; cosmetic only"]}
+    ]
+  },
+  "test_report_links": ["/app/tests/gating_setup.py"],
+  "action_items": ["Optional: gate/annotate sidebar final exam link (path-final-exam-button) consistently with Quizzes tab lock state"],
+  "critical_code_review_comments": [
+    "PathSops filters /public/sops by attached ids: an attached SOP not returned by /public/sops (e.g. unpublished/deleted) makes the SOPs tab visible but empty (visibleTabs counts attachments, not resolvable items). Same for PathQuizzes falls back to attachment title (ok) and CTF (deleted CTF -> empty board).",
+    "Gating is client-side only: quiz/SOP/CTF endpoints remain accessible directly (intentional per request)."
+  ],
+  "updated_files": ["/app/tests/gating_setup.py"],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "seed_data_creation": "Created and deleted 2 TEST paths (770f8b4cec0a, 893de3758d1b). Removed student's lesson_progress for those paths, reverted +10 XP and the activity entry.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use /app/tests/gating_setup.py setup|teardown (writes ids to /tmp/gating.json). final_quiz is derived from path.final_quiz_id or quiz with path_id. Lesson completion awards 10 XP + activity row; revert after tests."
+}
