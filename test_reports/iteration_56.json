@@ -1,0 +1,17 @@
+{
+  "summary": "Tested the change that makes free courses need an explicit enroll, plus the new My courses tab. Backend: 10/10 pytest pass. Covered: enrolled/owned flags, 403 before enroll, enroll is idempotent, 402 on a paid course (TEST_ course inserted for the test, then deleted), 404 on an unknown id, 401 when unauthenticated, landing flags, and admin ownership. Frontend: tab order is right and the default tab is All courses when nothing is enrolled. My courses empty state and the Browse all button work. Enroll from a card stays on the page, shows a toast, switches to My courses, and shows 'Enrolled · 0%' with a progress bar. The card links to the player, which loads. After a reload the default tab is My courses. The landing page shows Enroll for free when not enrolled, then redirects to /app/courses?tab=my; it shows Go to course once enrolled and Sign in to enroll free when logged out. Paid flow was only code-reviewed because no paid course exists: BuyCard Action onPaid and the CourseLanding cf_order handler both navigate to /app/courses?tab=my.",
+  "backend_issues": {"critical": [], "minor": [
+    {"endpoint": "GET /api/public/academy/courses/{cid}", "issue": "students() counts only purchases and lesson_progress, not course_enrollments, so the landing page still shows '0 students' after a free enroll"},
+    {"endpoint": "GET /api/public/academy/courses/{cid}", "issue": "can_review is based only on lesson_progress, so a student who enrolled but hasn't started cannot review. Probably intended, just flagging."}
+  ]},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_course_enroll.py", "/app/test_reports/pytest/pytest_results_iter56.xml"],
+  "action_items": ["Optional: include db.course_enrollments user_ids in students() count"],
+  "critical_code_review_comments": ["students() in routes_academy.py ignores course_enrollments", "Old test_academy_courses_v2.py tests that assume free courses are auto-owned are now outdated and should be updated or removed"],
+  "updated_files": ["/app/backend/tests/test_course_enroll.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Temporary TEST_paid_enroll_course was inserted and deleted inside the test. Student's course_enrollments were deleted after each run, so the student is fresh again.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Student id b9cafa42b8ca. The only published course is free course 384eef11de47. Run the enroll tests with -n 0 because they depend on order. Reset with db.course_enrollments.delete_many({user_id:'b9cafa42b8ca'})."
+}

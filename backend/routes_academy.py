@@ -93,6 +93,7 @@ async def rating(cid):
 
 async def students(cid):
     a = set(await db.purchases.distinct("user_id", {"product_id": f"course:{cid}"}))
+    a |= set(await db.course_enrollments.distinct("user_id", {"course_id": cid}))
     return len(a | set(await db.lesson_progress.distinct("user_id", {"path_id": cid})))
 
 
