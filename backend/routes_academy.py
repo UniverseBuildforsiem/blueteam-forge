@@ -46,14 +46,20 @@ def pricing(c):
             "sale_ends_at": ends if on_sale and ends else None}
 
 
+async def enrolled(user, c):
+    if not user:
+        return False
+    q = {"user_id": user["id"]}
+    return bool(await db.purchases.find_one({**q, "product_id": f"course:{c['id']}"}) or await db.course_enrollments.find_one({**q, "course_id": c["id"]})
+                or await db.lesson_progress.find_one({**q, "path_id": c["id"]}))
+
+
 async def owns(user, c):
     if not user:
         return False
-    if not pricing(c)["price"] or user["role"] == "admin" or c.get("instructor_id") == user["id"]:
+    if user["role"] == "admin" or c.get("instructor_id") == user["id"]:
         return True
-    if await db.purchases.find_one({"user_id": user["id"], "product_id": f"course:{c['id']}"}):
-        return True
-    return bool(await db.lesson_progress.find_one({"user_id": user["id"], "path_id": c["id"]}))
+    return await enrolled(user, c)
 
 
 def visible(c, user):
@@ -65,7 +71,7 @@ async def course_for(cid, user):
     if not visible(c, user):
         raise HTTPException(404, "Course not found")
     if not await owns(user, c):
-        raise HTTPException(403, "Buy this course to start it")
+        raise HTTPException(403, "Enroll in this course to start it" if not pricing(c)["price"] else "Buy this course to start it")
     return {**c, "_course": True}
 
 
@@ -94,7 +100,7 @@ async def card(c, user):
     done = set(await db.lesson_progress.distinct("lesson_id", {"user_id": user["id"], "path_id": c["id"]})) if user else set()
     ids = {l["id"] for l in lessons(c)}
     return {k: c.get(k) for k in ("id", "title", "subtitle", "level", "category", "cover", "instructor_name", "updated_at")} | pricing(c) | stats(c) | await rating(c["id"]) | {
-        "owned": await owns(user, c), "percent": round(100 * len(done & ids) / len(ids)) if ids else 0}
+        "owned": await owns(user, c), "enrolled": await enrolled(user, c), "percent": round(100 * len(done & ids) / len(ids)) if ids else 0}
 
 
 @router.get("/academy/courses")
@@ -128,9 +134,20 @@ async def landing(cid: str, request: Request):
             **pricing(c), **stats(c), **await rating(cid), "students": await students(cid), "modules": outline(c), "reviews": reviews,
             "instructor": {"name": ins.get("name") or c.get("instructor_name"), "headline": ins.get("headline"), "bio": ins.get("bio"),
                            "username": ins.get("username") if ins.get("public_profile") is not False else None},
-            "signed_in": bool(user), "owned": await owns(user, c), "my_review": mine,
+            "signed_in": bool(user), "owned": await owns(user, c), "enrolled": await enrolled(user, c), "my_review": mine,
             "wishlisted": bool(user and await db.wishlists.find_one({"user_id": user["id"], "kind": "course", "item_id": cid})),
             "can_review": bool(user and await db.lesson_progress.find_one({"user_id": user["id"], "path_id": cid}))}
+
+
+@router.post("/academy/courses/{cid}/enroll")
+async def enroll(cid: str, user=Depends(get_current_user)):
+    c = await db.academy_courses.find_one({"id": cid, "status": "published"}, NO_ID)
+    if not c:
+        raise HTTPException(404, "Course not found")
+    if pricing(c)["price"]:
+        raise HTTPException(402, "This is a paid course — buy it to enroll")
+    await db.course_enrollments.update_one({"user_id": user["id"], "course_id": cid}, {"$setOnInsert": {"at": now_iso()}}, upsert=True)
+    return {"ok": True, "enrolled": True}
 
 
 @router.get("/academy/courses/{cid}")

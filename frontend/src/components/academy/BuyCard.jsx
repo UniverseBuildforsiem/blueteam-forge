@@ -52,12 +52,23 @@ export function Checkout({ c, onPaid, item = `course:${c.id}`, label = `Course: 
   </div>;
 }
 
+export function EnrollButton({ c, className = "", testId, onDone }) {
+  const nav = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const go = async (e) => {
+    e.preventDefault(); e.stopPropagation(); setBusy(true);
+    try { await api.post(`/academy/courses/${c.id}/enroll`); toast.success("Enrolled! The course is now in My courses"); onDone ? onDone() : nav("/app/courses?tab=my"); } catch (er) { toast.error(errMsg(er)); setBusy(false); }
+  };
+  return <button className={`glow-btn ${className}`} disabled={busy} onClick={go} data-testid={testId}>{busy ? "Enrolling…" : "Enroll for free"}</button>;
+}
+
 function Action({ c, reload }) {
   const nav = useNavigate();
   if (c.owned) return <Link to={`/app/courses/${c.id}`} className="glow-btn w-full justify-center" data-testid="course-go-to-course">Go to course</Link>;
   if (!c.signed_in) return <button className="glow-btn w-full justify-center" data-testid="course-signin-to-enroll"
     onClick={() => { localStorage.setItem("pending_course", JSON.stringify({ id: c.id, at: Date.now() })); nav("/login"); }}>{c.price ? "Sign in to buy" : "Sign in to enroll free"}</button>;
-  return <Checkout c={c} onPaid={() => { toast.success("Payment confirmed — course unlocked"); reload(); }} />;
+  if (!c.price) return <EnrollButton c={c} className="w-full justify-center" testId="course-enroll-free" />;
+  return <Checkout c={c} onPaid={() => { toast.success("Payment confirmed — find it in My courses"); nav("/app/courses?tab=my"); }} />;
 }
 
 export function BuyCard({ c, reload, onPreview }) {

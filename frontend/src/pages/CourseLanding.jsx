@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Check, Star, Users, Clock, BarChart3, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../lib/api";
@@ -49,11 +49,12 @@ function Hero({ c, card }) {
 export default function CourseLanding() {
   const { id } = useParams();
   const [sp, setSp] = useSearchParams();
+  const nav = useNavigate();
   const [c, setC] = useState(null);
   const [pv, setPv] = useState({ open: false, id: null });
   const load = () => api.get(`/public/academy/courses/${id}`).then((r) => setC(r.data)).catch(() => setC(false));
   useEffect(() => { load(); }, [id]); // eslint-disable-line
-  useEffect(() => { const o = sp.get("cf_order"); if (!o) return; api.get(`/payments/cashfree/${o}`).then((r) => { r.data.status === "PAID" ? toast.success("Payment confirmed — course unlocked") : toast.error(`Payment status: ${r.data.status}`); load(); }).catch(() => {}); setSp({}, { replace: true }); }, []); // eslint-disable-line
+  useEffect(() => { const o = sp.get("cf_order"); if (!o) return; api.get(`/payments/cashfree/${o}`).then((r) => { if (r.data.status === "PAID") { toast.success("Payment confirmed — find it in My courses"); nav("/app/courses?tab=my"); } else { toast.error(`Payment status: ${r.data.status}`); load(); } }).catch(() => {}); setSp({}, { replace: true }); }, []); // eslint-disable-line
   if (c === false) return <div className="min-h-screen grid-bg"><PublicNav /><div className="py-24"><Empty text="Course not found" /></div></div>;
   if (!c) return <div className="min-h-screen grid-bg"><PublicNav /></div>;
   const preview = (lid) => setPv({ open: true, id: lid });
