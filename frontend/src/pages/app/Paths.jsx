@@ -12,6 +12,7 @@ import { embedSrc } from "../../lib/video";
 import { PathTabBar, PathSops, PathQuizzes, pathItems, newUnlocks } from "../../components/PathTabs";
 import { ProgressMap, UnlockCelebration } from "../../components/academy/ProgressMap";
 import { CourseAbout } from "../../components/academy/CourseAbout";
+import { LessonNotes, NotesList } from "../../components/academy/Notes";
 import CTF from "./CTF";
 import ThreatIntel from "../ThreatIntel";
 
@@ -74,6 +75,7 @@ function LessonView({ lesson, p, onComplete, grade, onWatched, onProgress }) {
         : quizLock ? <div className="mt-8 text-xs font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="lesson-complete-locked"><Lock className="h-3.5 w-3.5" />Pass the lesson quiz above to complete this lesson (+10 XP)</div>
         : tracked && !watched ? <div className="mt-8 text-xs font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="lesson-video-locked"><Lock className="h-3.5 w-3.5" />Watch at least 90% of the video to complete this lesson (+10 XP)</div>
         : <button className="glow-btn mt-8" onClick={onComplete} data-testid="lesson-complete-button">Mark as complete (+10 XP)</button>}
+      <LessonNotes pid={p.id} lid={lesson.id} />
     </Glass>
   );
 }
@@ -102,6 +104,7 @@ export function PathDetail({ course }) {
       <PathTabBar p={p} tab={tab} setTab={setTab} />
       {tab === "map" && <ProgressMap p={p} open={(l) => { setCur(l); setTab("lessons"); window.scrollTo({ top: 0 }); }} goTab={setTab} />}
       <UnlockCelebration party={party} onClose={() => setParty(null)} goTab={(t) => { setParty(null); setTab(t); window.scrollTo({ top: 0 }); }} />
+      {tab === "notes" && <NotesList pathId={p.id} />}
       {tab === "quizzes" && <PathQuizzes p={p} />}
       {tab === "sops" && <PathSops p={p} />}
       {tab === "ctf" && <CTF key={p.completed_lessons.length} only={pathItems(p, "ctf")} />}

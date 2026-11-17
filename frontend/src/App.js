@@ -28,6 +28,7 @@ import Shift from "./pages/app/Shift";
 import Phishing from "./pages/app/Phishing";
 import PhishCase from "./pages/app/PhishCase";
 import AcademyList, { AcademyCert } from "./pages/app/Academy";
+import MyNotes from "./pages/app/MyNotes";
 import CourseLanding from "./pages/CourseLanding";
 import BundlePage from "./pages/BundlePage";
 import GiftPage from "./pages/GiftPage";
@@ -86,6 +87,7 @@ function AppRouter() {
               <Route path="progress" element={<Progress />} />
               <Route path="drill" element={<Drill />} />
               <Route path="courses" element={<AcademyList />} />
+              <Route path="notes" element={<MyNotes />} />
               <Route path="courses/certificate/:certId" element={<AcademyCert />} />
               <Route path="courses/:id" element={<PathDetail course />} />
               <Route path="badges" element={<Badges />} />

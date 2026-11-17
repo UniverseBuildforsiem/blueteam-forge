@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, ListChecks, FileText, Flag, Radar, Search, Lock, Eye, Map as MapIcon } from "lucide-react";
+import { BookOpen, ListChecks, FileText, Flag, Radar, Search, Lock, Eye, Map as MapIcon, NotebookPen } from "lucide-react";
 import { api } from "../lib/api";
 import { Glass, SeverityBadge } from "./common";
 
-export const PATH_TABS = [["lessons", "Lessons", BookOpen], ["map", "Progress Map", MapIcon], ["quizzes", "Quizzes", ListChecks], ["sops", "SOPs", FileText], ["ctf", "CTF Arena", Flag], ["intel", "Threat Intel", Radar]];
+export const PATH_TABS = [["lessons", "Lessons", BookOpen], ["map", "Progress Map", MapIcon], ["quizzes", "Quizzes", ListChecks], ["sops", "SOPs", FileText], ["ctf", "CTF Arena", Flag], ["intel", "Threat Intel", Radar], ["notes", "My Notes", NotebookPen]];
 
 export function pathItems(p, type) {
   const done = new Set(p.completed_lessons), out = new Map();
