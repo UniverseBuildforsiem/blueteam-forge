@@ -1,0 +1,37 @@
+{
+  "summary": "Lesson Notes feature tested end-to-end. Backend 10/10 pytest pass (upsert, empty-text delete, 404 unknown lesson/path, 401 unauth, per-user isolation student vs admin, path_id filter, md export with #/##/### headings, pdf export incl. HTML/script/unicode chars, 404 when none, 422 bad format, 422 >20000 chars). Frontend: enroll via academy-enroll-384eef11de47 works; lesson-notes inside lesson-view; status 'saving…' -> 'saved'; reload keeps text; path soc-fundamentals lesson switching keeps per-lesson notes and quick edit (150ms before switch) is flushed and kept; course My Notes tab lists only that course's notes, search filters, PDF/MD downloads fire with proper filenames; sidebar nav-my-notes -> /app/notes groups by course with correct notes-open links, search, downloads; empty state + disabled download buttons; mobile 390 no horizontal overflow. One real bug found: stale pending edit.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/notes/export", "issue": "format check happens after the notes lookup, so format=xyz returns 404 (not 422) for users with no notes"},
+      {"endpoint": "PUT /api/notes/{path_id}/{lesson_id}", "issue": "Doesn't check enrollment/purchase. Any logged-in user can save notes on lessons of paid or unenrolled courses, and the list then shows those lesson titles. Low risk."},
+      {"endpoint": "GET /api/notes/export", "issue": "Filename slug can contain double dashes (notes-soc-analyst-interview-preparation--100--q-a-...). Cosmetic only."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LessonNotes (Notes.jsx)", "issue": "If a user types and then undoes the change back to the saved text within 800ms, the stale pending edit is still saved when they switch lessons or unmount. The status also stays stuck on 'saving…'. Reproduced: note 'TEST_ L1 note', typed 'Z' then Backspace, switched lesson, and the server stored 'TEST_ L1 noteZ'. Cause: in the [text] effect, the early return `if (text === saved.current) return` doesn't clear pending.current or reset the status. Fix: in that branch set pending.current = null and setSt('saved' or 'idle').", "selector": "[data-testid='lesson-notes-input']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/app/notes mobile 390px", "issues": ["The 'open course →' link wraps onto 3 lines next to a long course title. Add whitespace-nowrap/shrink-0."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_lesson_notes.py", "/app/test_reports/pytest/pytest_notes.xml"],
+  "action_items": [
+    "Notes.jsx LessonNotes: when text goes back to saved.current, clear pending.current and reset the status, so a reverted edit isn't saved on lesson switch",
+    "Optional: validate the export format before the notes lookup (422 before 404)",
+    "Optional: whitespace-nowrap on the notes-open-<id> link"
+  ],
+  "critical_code_review_comments": [
+    "routes_notes.collect calls find_path once per distinct path. Fine for now; to_list(2000) caps the notes silently.",
+    "LessonNotes fetches every note for the path on each lesson switch to find one lesson. Fine for now, but a per-lesson GET would be lighter.",
+    "PDF generation runs in a threadpool and escapes user text correctly (verified with <script>, & and unicode)."
+  ],
+  "updated_files": ["/app/backend/tests/test_lesson_notes.py"],
+  "success_rate": {"backend": "100%", "frontend": "95%"},
+  "seed_data_creation": "None kept. All test notes were deleted (lesson_notes count is 0). The student's enrollment in 384eef11de47 was removed. No lesson_progress or video_progress was created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Student id b9cafa42b8ca. Course 384eef11de47 has a single lesson l-3zyafu0. Path soc-fundamentals has lessons sf-l1, sf-l2 and sf-l3, which are good for switch tests. Run tests/test_lesson_notes.py with -n 0. To repro the bug: type a char + Backspace within 800ms, then switch lesson."
+}

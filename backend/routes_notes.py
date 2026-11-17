@@ -1,4 +1,5 @@
 import io
+import re
 from html import escape
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
@@ -53,9 +54,13 @@ class NoteIn(BaseModel):
 
 @router.put("/{path_id}/{lesson_id}")
 async def save_note(path_id: str, lesson_id: str, body: NoteIn, user=Depends(get_current_user)):
-    p, _ = await find_path(path_id)
+    p, kind = await find_path(path_id)
     if not p or not locate(p, lesson_id):
         raise HTTPException(404, "Lesson not found")
+    if kind == "course":
+        from routes_academy import owns
+        if not await owns(user, p):
+            raise HTTPException(403, "Enroll in this course to take notes")
     key = {"user_id": user["id"], "path_id": path_id, "lesson_id": lesson_id}
     if not body.text.strip():
         await db.lesson_notes.delete_one(key)
@@ -99,14 +104,14 @@ def as_pdf(notes, name):
 
 @router.get("/export")
 async def export(format: str = "pdf", path_id: Optional[str] = None, user=Depends(get_current_user)):
+    if format not in ("pdf", "md"):
+        raise HTTPException(422, "format must be pdf or md")
     notes = await collect(user, path_id)
     if not notes:
         raise HTTPException(404, "No notes to download yet")
-    slug = "".join(ch if ch.isalnum() else "-" for ch in (notes[0]["path_title"] if path_id else "all-courses"))[:60].strip("-").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", (notes[0]["path_title"] if path_id else "all-courses").lower())[:60].strip("-")
     if format == "md":
         return StreamingResponse(io.BytesIO(as_text(notes, user["name"]).encode()), media_type="text/markdown; charset=utf-8",
                                  headers={"Content-Disposition": f'attachment; filename="notes-{slug}.md"'})
-    if format != "pdf":
-        raise HTTPException(422, "format must be pdf or md")
     buf = await run_in_threadpool(as_pdf, notes, user["name"])
     return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="notes-{slug}.pdf"'})
