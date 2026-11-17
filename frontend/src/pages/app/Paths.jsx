@@ -11,6 +11,7 @@ import { VideoFrame } from "../../components/VideoField";
 import { embedSrc } from "../../lib/video";
 import { PathTabBar, PathSops, PathQuizzes, pathItems, newUnlocks } from "../../components/PathTabs";
 import { ProgressMap, UnlockCelebration } from "../../components/academy/ProgressMap";
+import { CourseAbout } from "../../components/academy/CourseAbout";
 import CTF from "./CTF";
 import ThreatIntel from "../ThreatIntel";
 
@@ -106,7 +107,7 @@ export function PathDetail({ course }) {
       {tab === "ctf" && <CTF key={p.completed_lessons.length} only={pathItems(p, "ctf")} />}
       {tab === "intel" && <ThreatIntel embedded />}
       {tab === "lessons" && <>
-      <p className="text-sm text-slate-400 mb-6 max-w-3xl">{p.description}</p>
+      <CourseAbout p={p} />
       <div className="grid lg:grid-cols-[320px_1fr] gap-4">
         <div className="space-y-4">
           {p.modules.map((m, mi) => (

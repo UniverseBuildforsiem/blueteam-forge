@@ -157,7 +157,8 @@ async def get_course(cid: str, user=Depends(get_current_user)):
     c = await course_for(cid, user)
     v = await path_view(c, user)
     cert = await db.academy_certs.find_one({"user_id": user["id"], "course_id": cid}, NO_ID)
-    return {**v, **pricing(c), "kind": "course", "owned": True, "certificate": cert, "pending_changes": None}
+    extra = {k: c.get(k) for k in ("outcomes", "requirements", "audience", "instructor_name", "category")}
+    return {**v, **pricing(c), **extra, "kind": "course", "owned": True, "certificate": cert, "pending_changes": None}
 
 
 async def issue_cert(user, c, score=None):
