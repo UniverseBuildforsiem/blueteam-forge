@@ -75,12 +75,12 @@ export function TrackedVideo({ src, title, pid, lid, percent: initial = 0, spans
     const dur = server.current.dur || tr.playerDur();
     if (!dur) return;
     const s = Math.min(dur, covered([...server.current.spans, ...tr.pending()]));
-    setSecs(s); setTotal(dur); if (floor) server.current.pct = floor;
+    setSecs(s); setTotal(Math.round(dur)); if (floor) server.current.pct = floor;
     setPct(Math.max(server.current.pct || 0, Math.min(100, Math.round((100 * s) / dur))));
   };
   const tick = (time, dur) => { tr.tick(time, dur); live(); };
   const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const restart = () => { const pl = player.current; if (!pl) return; tr.jump(0); if (youtube) pl.seekTo(0, true); else pl.setCurrentTime(0); setResumed(0); };
   useEffect(() => {
     let alive = true;

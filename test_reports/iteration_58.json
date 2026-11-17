@@ -1,0 +1,29 @@
+{
+  "summary": "Tested live Vimeo watch time end to end with real headless Vimeo playback of lesson l-3zyafu0 in course 384eef11de47. Backend: 3/3 pytest pass. The video POST returns spans and duration (421). Segments [[0,10]] and then [[10,20]] merged to [[0,20]] with percent 5. A skip to [[300,400]] was clipped by the budget. The course GET returns video_spans, video_duration and video_percent, and they match what was saved. 401 without auth and 422 for duration 0. Frontend had a CRITICAL bug, which I found and fixed: watch time dropped back to 0:00 after every 5s save. After the fix, video-watch-time goes up about 1s per second ('0:15 of 7:01' ... '0:30 of 7:01'). video-percent matches round(s/421*100). POST .../video fires every 5s and on pause. The saved time stays after reload (0:14, then 0:38 of 7:01, plus 'resumed from'). Seeking to about 5:00 did not jump the watch time; only played seconds were counted.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TrackedVideo.jsx", "issue": "FIXED. The watch time reset to 0:00 after every save. Cause: `useEffect(() => () => { alive.current = false; }, [])` runs its cleanup during the React StrictMode dev double-mount, so alive.current stayed false forever. onUpdate then returned early, server.current.spans was never updated, and live() only counted the new pending segments. The server still saved correctly. Fix: `useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, [])`.", "selector": "[data-testid='video-watch-time']", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Lesson video progress row", "issues": ["On first play with no saved progress, the total shows '7:00' because the player duration 420.5 is floored. After the first save it becomes '7:01' (server duration 421). Small inconsistency."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_video_live_spans.py", "/app/test_reports/pytest/pytest_iter58.xml"],
+  "action_items": [
+    "Review and keep the alive-ref fix in TrackedVideo.jsx. Without it the feature is broken in dev/preview (StrictMode).",
+    "Optional: use Math.round, or the server duration from video_meta, so the total label doesn't switch from 7:00 to 7:01.",
+    "Optional: flush() takes segments out of pending before the request finishes, so live() leaves out in-flight seconds until the response arrives. This can cause a brief 1-2s dip in the shown time when the network is slow. Consider keeping in-flight segments in live()."
+  ],
+  "critical_code_review_comments": [
+    "TrackedVideo: the unmount-time alive guard was not StrictMode-safe (fixed).",
+    "TrackedVideo: the inner effect also declares a local variable named `alive`, which shadows the ref. Confusing; consider renaming."
+  ],
+  "updated_files": ["/app/frontend/src/components/TrackedVideo.jsx", "/app/backend/tests/test_video_live_spans.py"],
+  "success_rate": {"backend": "100%", "frontend": "100% after fix (0% before)"},
+  "seed_data_creation": "None kept. Removed the student's (b9cafa42b8ca) video_progress for 384eef11de47 and the course_enrollments row created by the UI enroll. gopi.soc12@gmail.com was not touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Headless Vimeo playback WORKS. Click fr.locator('button[data-play-button=\"true\"], [aria-label=\"Play\"]') inside frame_locator('[data-testid=\"lesson-video\"]'). The Vimeo progress bar can be found with [role=slider] etc. for clicking to seek. The student must be enrolled first (button academy-enroll-384eef11de47 on /app/courses, or POST /api/academy/courses/384eef11de47/enroll). Run the pytest with -n 0; it enrolls and then cleans up itself."
+}
