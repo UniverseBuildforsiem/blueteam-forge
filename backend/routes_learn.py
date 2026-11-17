@@ -145,7 +145,8 @@ async def path_view(p, user):
             "percent": round(100 * len([i for i in ids if i in done]) / len(ids)) if ids else 0,
             "video_lessons": vids, "watched_lessons": [i for i in vids if vp.get(i, {}).get("watched")], "unavailable_videos": unavailable,
             "video_percent": {i: vp[i]["percent"] for i in vids if i in vp}, "quiz_passed_lessons": [i for i in ids if i in passed],
-            "video_resume": {i: resume_at(vp[i]) for i in vids if i in vp and resume_at(vp[i])}}
+            "video_resume": {i: resume_at(vp[i]) for i in vids if i in vp and resume_at(vp[i])},
+            "video_spans": {i: vp[i].get("spans", []) for i in vids if i in vp}, "video_duration": {i: vp[i].get("duration") for i in vids if i in vp}}
 
 
 def resume_at(v):
@@ -209,7 +210,7 @@ async def video_progress(pid: str, lid: str, body: VideoIn, user=Depends(get_cur
         "path_id": pid, "duration": dur, "spans": spans, "percent": percent, "watched": watched, "last_at": now_iso(),
         **({"position": min(body.position, dur)} if body.position is not None else {}),
         **({"watched_at": now_iso()} if watched and not rec.get("watched") else {})}}, upsert=True)
-    return {"percent": percent, "watched": watched, "newly": watched and not rec.get("watched")}
+    return {"percent": percent, "watched": watched, "newly": watched and not rec.get("watched"), "spans": spans, "duration": dur}
 
 
 async def video_ok(uid, l, p):
