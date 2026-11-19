@@ -1,12 +1,13 @@
 """Network / scan-prep commands for the Module 2 terminal (simulated)."""
 import re
 import vm_m2
+import vm_web
 
 HELP = """
 Network / scan-prep commands (lab targets 10.50.200.243-250):
   ping <ip|name>      nslookup <ip|name>      nbtstat -A <ip>
   Test-NetConnection <ip> -Port <n>           net user qscanner /domain
-  ssh qscanner@<linux ip> "sudo -l\""""
+  ssh qscanner@<linux ip> "sudo -l\"""" + vm_web.HELP
 
 
 def ping(args):
@@ -81,6 +82,9 @@ def ssh(args):
 
 
 def network(h, args, low):
+    w = vm_web.web(h, args, low)
+    if w:
+        return w
     if h == "ping":
         return ping(args)
     if h == "nslookup":

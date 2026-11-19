@@ -46,6 +46,22 @@ EVENTS = {
     "user.email_opened": "Console: opened the registration email", "user.activated": "Console: activated a new user account",
     "remediation.policy_created": "Console: created a remediation policy (match title/action/assignee/vulns/target/due/reopen)",
     "remediation.policy_moved": "Console: moved a remediation policy (match title/position)", "remediation.tickets_viewed": "Console: opened remediation tickets",
+    "cmd.curl_head": "Terminal: curl -I on the shop", "cmd.curl_login": "Terminal: fetched the shop login form", "cmd.curl_robots": "Terminal: fetched robots.txt",
+    "cmd.rpm_check": "Terminal: rpm -q openssh on the PCI web server", "cmd.netaccounts": "Terminal: net accounts /domain",
+    "webapp.created": "WAS: created a web app (match name/url/scope/maxlinks)", "was.auth_created": "WAS: created a web auth record (match title/kind/user_field/pass_field/check)",
+    "webapp.auth_assigned": "WAS: assigned an auth record (match app/record)", "webapp.exclusion_added": "WAS: added an exclusion (match app/path)",
+    "was.profile_created": "WAS: created an option profile (match title/maxlinks/detection/forms/cc/searchlist)",
+    "was.scan_launched": "WAS: launched a scan (match app/type/auth/profile)", "was.sitemap_viewed": "WAS: viewed the sitemap", "was.findings_viewed": "WAS: opened scan findings",
+    "was.finding_viewed": "WAS: opened a finding (match qid)", "was.finding_ignored": "WAS: ignored a finding (match qid/reason)",
+    "was.searchlist_created": "WAS: created a search list (match title/kind/owasp/qids)", "was.searchlist_imported": "WAS: imported a library search list (match title)",
+    "was.scan_scheduled": "WAS: scheduled a scan (match title/app/type/frequency/auth/profile/start/tz)", "was.schedule_run_now": "WAS: ran a schedule now (match title)",
+    "was.report_generated": "WAS: generated a report (match template/app/severity)", "was.report_viewed": "WAS: viewed a report (match template)", "was.report_downloaded": "WAS: downloaded a report (match template/format)",
+    "scenario.checked": "Scenario checklist submitted (match sid, picked = sorted letters e.g. a,b,d)",
+    "pci.scope_added": "PCI: added external scope (match ipset=pci)", "pci.scan_launched": "PCI: launched a PCI scan (match profile/ipset)", "pci.results_viewed": "PCI: viewed scan results",
+    "pci.dispute_submitted": "PCI: submitted a dispute (match qid/category/reason)",
+    "pc.policy_created": "PC: created a policy (match title/template/group)", "pc.control_edited": "PC: edited a control (match cid/value)", "pc.scan_launched": "PC: launched a compliance scan (match policy/auth)",
+    "pc.posture_viewed": "PC: viewed posture", "pc.exception_created": "PC: requested an exception (match cid/host/days)", "pc.exception_approved": "PC: approved an exception (match cid)",
+    "pc.report_generated": "PC: generated a policy report (match policy)", "pc.report_viewed": "PC: viewed a policy report (match policy)",
 }
 
 T = lambda id, title, instruction, hint, solution, check: dict(id=id, title=title, instruction=instruction, hint=hint, solution=solution, check=check)  # noqa: E731
@@ -91,10 +107,12 @@ CTF1 = {
 
 from vm_labs import LABS  # noqa: E402
 from vm_labs2 import SEED2  # noqa: E402
+from vm_labs3 import SEED3  # noqa: E402
 import vm_m2  # noqa: E402
+import vm_m3  # noqa: E402
 
-SEED_VERSION = 3
-SEED = LABS[:2] + [LAB1] + LABS[2:] + [QUIZ1, CTF1] + SEED2
+SEED_VERSION = 4
+SEED = LABS[:2] + [LAB1] + LABS[2:] + [QUIZ1, CTF1] + SEED2 + SEED3
 
 VULNS = [
     (91001, "SOCP Demo: Outdated OpenSSL-like library (fictional)", 5, "Windows/Linux"), (91002, "Fictional SMBv1 enabled on host", 4, "Windows"),
@@ -133,6 +151,7 @@ def console_data():
                   {"name": "Priya Nair", "login": "socp_pn03", "role": "Reader", "status": "Active"}, {"name": "Omar Haddad", "login": "socp_oh04", "role": "Unit Manager", "status": "Inactive"},
                   {"name": "Dana Cruz", "login": "socp_dc05", "role": "Remediation User", "status": "Active"}],
         "m2": vm_m2.console(),
+        "m3": vm_m3.console(),
         "profiles": ["Initial Options (default)", "Full TCP + Auth Scan", "Light Inventory Scan", "PCI External Scan"],
         "templates": ["Technical Report", "Executive Summary", "Scan Results", "Patch Report", "PCI Compliance"],
         "new_agent": {"host": HOST, "ip": "10.20.30.41", "os": "Windows Server 2022", "status": "Active", "version": "6.2.0.41", "last_checkin": "2026-06-12 10:16", "key": "Windows Servers", "software": 412, "ports": "135, 445, 3389, 5985",

@@ -26,12 +26,14 @@ function Task({ t, i, onReveal, onAnswer }) {
       </div></div></li>;
 }
 
+const TERM_FIRST = ["vm-lab-vm-01-setup", "vm-lab-was-01-webapp", "vm-lab-was-02-auth", "vm-lab-pci-03-dispute", "vm-lab-pci-05-posture"];
+
 export default function VmLabPlayer() {
   const { id } = useParams();
   const nav = useNavigate();
   const [lab, setLab] = useState(null);
   const [tab, setTab] = useState("terminal");
-  useEffect(() => { if (lab?.module === 2 && !lab.term.length && lab.id !== "vm-lab-vm-01-setup") setTab("console"); }, [lab?.id]); // eslint-disable-line
+  useEffect(() => { if (lab?.module >= 2 && !lab.term.length && !TERM_FIRST.includes(lab.id)) setTab("console"); }, [lab?.id]); // eslint-disable-line
   const [key, setKey] = useState(0);
   useEffect(() => { api.get(`/vmlab/labs/${id}`).then((r) => setLab(r.data)).catch((e) => { toast.error(errMsg(e)); nav("/app/vmlab"); }); }, [id]); // eslint-disable-line
   if (!lab) return null;
@@ -41,7 +43,7 @@ export default function VmLabPlayer() {
     if (L.completed_at && !lab.completed_at) toast.success(L.awarded ? "Lab complete! +100 XP" : "Lab complete again. XP was already earned", { duration: 5000 });
     setLab(L);
   };
-  const emit = (event, data) => api.post(`/vmlab/labs/${id}/event`, { event, data }).then((r) => after(r.data)).catch((e) => toast.error(errMsg(e)));
+  const emit = (event, data) => api.post(`/vmlab/labs/${id}/event`, { event, data }).then((r) => { after(r.data); return r.data; }).catch((e) => toast.error(errMsg(e)));
   const reveal = (what, tid) => api.post(`/vmlab/labs/${id}/${what}/${tid}`).then((r) => setLab(r.data));
   const answer = (tid, v) => api.post(`/vmlab/labs/${id}/answer`, { task_id: tid, answer: v }).then((r) => { if (!r.data.correct) toast.error("Not quite. Check the log again"); after(r.data); });
   const reset = async () => { if (!window.confirm("Reset this lab? Progress, terminal and console changes are cleared.")) return; setLab((await api.post(`/vmlab/labs/${id}/reset`)).data); setKey((k) => k + 1); toast.success("Lab reset"); };

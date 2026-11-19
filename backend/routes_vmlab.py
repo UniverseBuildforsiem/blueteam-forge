@@ -14,7 +14,13 @@ PRODUCT = "vm-lab"
 CONSOLE = console_data()
 CONSOLE_LISTS = {"key.created": "keys", "query.saved": "queries", "tag.created": "tags", "asset_group.created": "groups", "scan.launched": "scans", "scan.scheduled": "schedules", "report.generated": "reports", "user.created": "users",
                  "hosts.added": "hosts", "option_profile.created": "oprofiles", "auth.created": "auth", "searchlist.created": "searchlists", "searchlist.imported": "searchlists",
-                 "template.created": "templates", "template.imported": "templates", "report.scheduled": "report_schedules", "remediation.policy_created": "policies"}
+                 "template.created": "templates", "template.imported": "templates", "report.scheduled": "report_schedules", "remediation.policy_created": "policies",
+                 "webapp.created": "webapps", "was.auth_created": "was_auth", "webapp.auth_assigned": "was_assign", "webapp.exclusion_added": "was_excl", "was.profile_created": "was_profiles",
+                 "was.scan_launched": "was_scans", "was.finding_ignored": "was_ignored", "was.searchlist_created": "was_lists", "was.searchlist_imported": "was_lists",
+                 "was.scan_scheduled": "was_schedules", "was.report_generated": "was_reports", "scenario.checked": "scenarios",
+                 "pci.scope_added": "pci_scope", "pci.scan_launched": "pci_scans", "pci.dispute_submitted": "pci_disputes",
+                 "pc.policy_created": "pc_policies", "pc.control_edited": "pc_edits", "pc.scan_launched": "pc_scans", "pc.exception_created": "pc_exceptions",
+                 "pc.exception_approved": "pc_approved", "pc.report_generated": "pc_reports"}
 
 
 async def seed_vm():
@@ -70,7 +76,7 @@ async def save(p):
 
 
 def lab_view(it, p):
-    return {"awarded": p.pop("_awarded", False), **{k: it.get(k) for k in ("id", "kind", "module", "title", "summary", "intro", "minutes", "difficulty", "free")},
+    return {"awarded": p.pop("_awarded", False), **{k: it.get(k) for k in ("id", "kind", "module", "title", "summary", "intro", "minutes", "difficulty", "free", "scenarios")},
             "tasks": [public_task(t, p) for t in it["tasks"]], "state": {**{k: p["state"]["shell"].get(k) for k in ("installed", "running", "cwd", "selfprot")}, "console": p["state"]["console"]},
             "term": p.get("term", [])[-120:], "completed_at": p.get("completed_at"), "score": score(it, p)}
 
@@ -191,6 +197,8 @@ async def event(iid: str, body: EventIn, user=Depends(get_current_user)):
     it = await get_item(iid, user, "lab")
     p = await progress(user, it)
     data = {k: str(v)[:200] for k, v in list(body.data.items())[:16]}
+    if body.event == "scenario.checked":
+        data["picked"] = ",".join(sorted({x.strip().lower() for x in data.get("picked", "").split(",") if x.strip()}))
     for k in ("ips", "target"):
         if k in data:
             data["ipset"] = vm_m2.ipset(data[k])

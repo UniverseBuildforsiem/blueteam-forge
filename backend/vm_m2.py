@@ -90,7 +90,8 @@ def ipset(text):
     s = set(expand(text))
     if not s:
         return "none"
-    return {frozenset(ALL): "all", frozenset(WIN): "windows", frozenset(LNX): "linux"}.get(frozenset(s), "custom")
+    pci = frozenset(f"203.0.113.{i}" for i in range(10, 14))
+    return {frozenset(ALL): "all", frozenset(WIN): "windows", frozenset(LNX): "linux", pci: "pci"}.get(frozenset(s), "custom")
 
 
 SEARCH_LISTS = [

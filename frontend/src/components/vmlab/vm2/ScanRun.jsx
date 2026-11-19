@@ -5,8 +5,8 @@ import { findings } from "./lib";
 
 const PHASES = ["Queued", "Running", "Finished", "Processed"];
 
-export function ScanRun({ d, hosts, title, onDone }) {
-  const queue = useRef(hosts.flatMap((h) => findings(d, h).filter((k) => k.type !== "Information gathered").map((k) => ({ k, h }))));
+export function ScanRun({ d, hosts, title, onDone, items }) {
+  const queue = useRef(items ? [...items] : hosts.flatMap((h) => findings(d, h).filter((k) => k.type !== "Information gathered").map((k) => ({ k, h }))));
   const total = useRef(queue.current.length || 1);
   const [phase, setPhase] = useState(0);
   const [feed, setFeed] = useState([]);
@@ -34,9 +34,9 @@ export function ScanRun({ d, hosts, title, onDone }) {
     <div className="flex items-center gap-2 text-xs"><ScanLine className="h-4 w-4 text-sky-300" /><b className="text-slate-100">{title}</b>
       <span className="ml-auto font-mono text-sky-200" data-testid="vmc-scan-run-status">{PHASES[phase]} · {pct}%</span></div>
     <div className="h-1 bg-slate-800"><div className="h-1 bg-sky-500 transition-[width] duration-300" style={{ width: `${pct}%` }} /></div>
-    {hosts.length ? <div className="grid grid-cols-4 gap-1.5">{hosts.map((h) => <div key={h.ip} className={`border text-[9px] font-mono px-1 py-1.5 text-center transition-colors duration-500 ${hit[h.ip] ? `${TILE[hit[h.ip]]} border-white/20 text-white` : "border-slate-700 text-slate-500"}`}>{h.ip.split(".").pop()} · {h.name.split(".")[0]}</div>)}</div>
+    {hosts.length ? <div className="grid grid-cols-4 gap-1.5">{hosts.map((h) => <div key={h.ip} className={`border text-[9px] font-mono px-1 py-1.5 text-center transition-colors duration-500 ${hit[h.ip] ? `${TILE[hit[h.ip]]} border-white/20 text-white` : "border-slate-700 text-slate-500"}`}>{h.label || `${h.ip.split(".").pop()} · ${h.name.split(".")[0]}`}</div>)}</div>
       : <p className="text-xs text-yellow-200">No live scannable hosts in the target. Check the target IPs are in your subscription.</p>}
     <ul className="space-y-1">{feed.map(({ k, h, key }) => { const l = LV.find((x) => x[0] === k.severity);
-      return <li key={key} className="flex items-center gap-2 text-[11px] radar-feed-in"><span className={`h-4 w-4 grid place-items-center text-[9px] font-bold text-white shrink-0 ${l[2]}`}>{k.severity}</span><span className="font-mono text-sky-200 shrink-0">{k.cve !== "-" ? k.cve : `QID ${k.qid}`}</span><span className="truncate text-slate-400">{k.title}</span><span className="ml-auto text-slate-500 font-mono shrink-0">{h.ip}</span></li>; })}</ul>
+      return <li key={key} className="flex items-center gap-2 text-[11px] radar-feed-in"><span className={`h-4 w-4 grid place-items-center text-[9px] font-bold text-white shrink-0 ${l[2]}`}>{k.severity}</span><span className="font-mono text-sky-200 shrink-0">{k.tag || (k.cve && k.cve !== "-" ? k.cve : `QID ${k.qid}`)}</span><span className="truncate text-slate-400">{k.title}</span><span className="ml-auto text-slate-500 font-mono shrink-0">{h.tag || h.ip}</span></li>; })}</ul>
   </div>;
 }

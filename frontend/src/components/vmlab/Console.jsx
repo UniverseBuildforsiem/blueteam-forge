@@ -12,6 +12,13 @@ import { Schedules2 } from "./vm2/Schedules";
 import { Reports2 } from "./vm2/Reports";
 import { KB2 } from "./vm2/KB";
 import { Users2, Remediation } from "./vm2/People";
+import { WebApps, WasAuth, WasProfiles } from "./was/Apps";
+import { WasScans, WasSchedules } from "./was/Scans";
+import { WasReports, WasLists } from "./was/Reports";
+import { Scenario } from "./pc/Scenario";
+import { Pci } from "./pc/Pci";
+import { Policies, CScans, Posture, Exceptions, PcReports } from "./pc/Policy";
+import { KeyRound, SlidersHorizontal, ListChecks, ShieldCheck, Gauge, FileWarning, CreditCard } from "lucide-react";
 
 const APPS = [
   { id: "vm", label: "VMDR", nav: [["dashboard", "Dashboard", LayoutDashboard, V.Dashboard], ["assets", "Assets", Server, V.Assets], ["tags", "Tags", Tag, V.Tags], ["groups", "Asset Groups", Boxes, V.Groups], ["scans", "Scans", Radar, V.Scans], ["schedules", "Schedules", CalendarClock, V.Schedules], ["reports", "Reports", FileBarChart, V.Reports], ["kb", "KnowledgeBase", BookOpen, V.KB], ["users", "Users", UsersIcon, V.Users]] },
@@ -26,14 +33,19 @@ const APPS2 = [
   APPS[2], APPS[3],
 ];
 
+const WAS = { id: "was", label: "Web App Scanning", nav: [["webapps", "Web Applications", Globe, WebApps], ["wauth", "Authentication", KeyRound, WasAuth], ["wprofiles", "Option Profiles", SlidersHorizontal, WasProfiles],
+  ["wscans", "Scans", Radar, WasScans], ["wschedules", "Schedules", CalendarClock, WasSchedules], ["wreports", "Reports", FileBarChart, WasReports], ["wlists", "Search Lists", ListChecks, WasLists]] };
+const PC = { id: "pc", label: "Policy Compliance", nav: [["scenario", "Scenario", ClipboardCheck, Scenario], ["pci", "PCI Merchant", CreditCard, Pci], ["policies", "Policies", ShieldCheck, Policies], ["cscans", "Compliance Scans", Radar, CScans],
+  ["posture", "Posture", Gauge, Posture], ["exceptions", "Exceptions", FileWarning, Exceptions], ["preports", "Reports", FileBarChart, PcReports]] };
+const BY_MODULE = { 1: [APPS, "ca", "agents"], 2: [APPS2, "vm", "dashboard"], 3: [[WAS], "was", "webapps"], 4: [[PC], "pc", "scenario"] };
+
 export function Console({ lab, emit }) {
-  const m2 = lab.module === 2;
+  const [apps, app0, view0] = BY_MODULE[lab.module] || BY_MODULE[1];
   const [d, setD] = useState(null);
-  const [app, setApp] = useState(m2 ? "vm" : "ca");
-  const [view, setView] = useState(m2 ? "dashboard" : "agents");
+  const [app, setApp] = useState(app0);
+  const [view, setView] = useState(view0);
   useEffect(() => { api.get("/vmlab/console-data").then((r) => setD(r.data)); }, []);
   if (!d) return <div className="h-full grid place-items-center text-xs text-slate-500">Loading console…</div>;
-  const apps = m2 ? APPS2 : APPS;
   const A = apps.find((a) => a.id === app), cur = A.nav.find((n) => n[0] === view) || A.nav[0], View = cur?.[3];
   const pick = (a) => { setApp(a.id); setView(a.nav[0]?.[0]); };
   return <div className="h-full min-w-0 overflow-hidden flex flex-col bg-[#0f1720] border border-slate-700/70 text-slate-200" data-testid="vm-console">
@@ -45,8 +57,8 @@ export function Console({ lab, emit }) {
     <div className="flex flex-1 min-h-0">
       {A.nav.length > 1 && <nav className="w-12 sm:w-44 shrink-0 border-r border-slate-700/70 py-2 overflow-y-auto" aria-label="Console navigation">{A.nav.map(([id, l, I]) => <button key={id} onClick={() => setView(id)} aria-current={cur[0] === id ? "page" : undefined}
         className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs ${cur[0] === id ? "bg-sky-500/15 text-sky-200 border-l-2 border-sky-400" : "text-slate-300 hover:bg-slate-700/40 border-l-2 border-transparent"}`} data-testid={`vmc-nav-${id}`} title={l}><I className="h-3.5 w-3.5 shrink-0" /><span className="hidden sm:inline truncate">{l}</span></button>)}</nav>}
-      <main className="relative flex-1 min-w-0 overflow-auto p-3">{View ? <View d={d} st={lab.state} emit={emit} />
-        : <div className="h-full grid place-items-center text-center text-sm text-slate-400" data-testid={`vmc-soon-${A.id}`}><div><A.soon className="h-8 w-8 mx-auto mb-2 text-slate-500" />{A.label} labs are coming soon.</div></div>}</main>
+      <main className="relative flex-1 min-w-0 overflow-auto p-3">{View ? <View d={d} st={lab.state} emit={emit} lab={lab} />
+        : <div className="h-full grid place-items-center text-center text-sm text-slate-400" data-testid={`vmc-soon-${A.id}`}><div><A.soon className="h-8 w-8 mx-auto mb-2 text-slate-500" />Open a {A.label} lab from the lab hub to use this app.</div></div>}</main>
     </div>
   </div>;
 }
