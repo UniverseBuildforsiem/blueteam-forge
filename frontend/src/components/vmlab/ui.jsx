@@ -21,7 +21,7 @@ export function Table({ cols, rows, onRow, tid, rowTid, empty = "No records" }) 
 export function Drawer({ title, onClose, children, tid }) {
   useEffect(() => { const k = (e) => e.key === "Escape" && onClose(); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
   return <div className="absolute inset-0 z-30 flex justify-end bg-black/50" onClick={onClose} data-testid={tid}>
-    <div className="w-full max-w-md h-full overflow-auto bg-[#131c27] border-l border-slate-600 p-4 space-y-3" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
+    <div className="w-full max-w-3xl h-full overflow-auto bg-[#131c27] border-l border-slate-600 p-4 space-y-3" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
       <div className="flex items-center"><h3 className="font-semibold text-slate-100 flex-1">{title}</h3><button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-white" data-testid={`${tid}-close`}><X className="h-4 w-4" /></button></div>{children}</div></div>;
 }
 

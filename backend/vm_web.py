@@ -46,7 +46,7 @@ def ssh_pci(args):
         return f"{m.group(1)}@{ip}: Permission denied (publickey).", []
     if "rpm -q openssh" not in " ".join(args[1:]).lower():
         return f"Authenticated to {ip} as pciadmin. Run: ssh pciadmin@{ip} \"rpm -q openssh\"", []
-    return ("openssh-7.4p1-23.el7_9.x86_64\n\n# changelog excerpt (rpm -q --changelog openssh | findstr 38408)\n"
+    return ("openssh-7.4p1-23.el7_9.x86_64\n\n# changelog excerpt (rpm -q --changelog openssh | grep 38408)\n"
             "* Mon Jul 24 2023 SOCP Linux Security <sec@socp.test> - 7.4p1-23\n- Fix CVE-2023-38408: ssh-agent remote code execution (backported)"), ["cmd.rpm_check"]
 
 

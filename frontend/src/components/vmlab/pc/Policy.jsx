@@ -49,8 +49,8 @@ export function CScans({ d, st, emit }) {
 }
 
 export function Posture({ d, st, emit }) {
-  useEffect(() => { emit("pc.posture_viewed", {}); }, []); // eslint-disable-line
   const scan = (st.console.pc_scans || []).slice(-1)[0];
+  useEffect(() => { if (scan) emit("pc.posture_viewed", {}); }, [!!scan]); // eslint-disable-line
   if (!scan) return <Panel title="Posture" tid="pcc-posture"><p className="text-xs text-slate-500">No compliance scan yet. Launch one from Compliance Scans.</p></Panel>;
   const pol = policies(st).find((p) => p.title === scan.policy), g = grid(d, st, pol), cells = g.flatMap((c) => c.res), rate = Math.round((100 * cells.filter(Boolean).length) / cells.length);
   return <Panel title={`Posture · ${scan.policy}`} tid="pcc-posture"><div className="text-sm mb-2">Pass rate <b className="text-sky-200" data-testid="pcc-pass-rate">{rate}%</b> <span className="text-[11px] text-slate-400">({cells.filter(Boolean).length}/{cells.length} control checks)</span></div>

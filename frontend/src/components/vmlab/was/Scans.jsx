@@ -19,7 +19,7 @@ function FindingsDrawer({ d, st, scan, emit, onClose }) {
   const rows = findings(d, st, scan).sort((a, b) => b.severity - a.severity);
   if (open) return <FindingDrawer k={rows.find((r) => r.qid === open) || {}} emit={emit} onClose={() => setOpen(null)} />;
   return <Drawer title={`Findings · ${scan.title}`} onClose={onClose} tid="wasc-findings"><div className="text-[11px] text-slate-400">{rows.length} findings · auth {scan.auth || "None"} · profile {scan.profile}</div>
-    <Table rowTid="wasc-finding-row" cols={["Sev", "QID", "Title", "OWASP", "URL", "Status"]} rows={rows.map((k) => [<Sev n={k.severity} />, k.qid, k.title, k.owasp.split(" ")[0], <span className="font-mono">{k.path}</span>, k.ignored ? "Ignored" : "Active"])}
+    <Table rowTid="wasc-finding-row" cols={["Sev", "QID", "Status", "Title", "OWASP", "URL"]} rows={rows.map((k) => [<Sev n={k.severity} />, k.qid, k.ignored ? <span className="text-yellow-200">Ignored</span> : "Active", <span className="whitespace-normal">{k.title}</span>, k.owasp.split(" ")[0], <span className="font-mono">{k.path}</span>])}
       onRow={(i) => { setOpen(rows[i].qid); emit("was.finding_viewed", { qid: String(rows[i].qid) }); }} /></Drawer>;
 }
 

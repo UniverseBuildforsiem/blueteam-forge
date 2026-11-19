@@ -1,0 +1,46 @@
+{
+  "summary": "VM Lab Module 3 (Web App Scanning: 8 labs + quiz + CTF) and Module 4 (PCI DSS & Policy Compliance: 6 scenario labs + quiz) tested end to end. Backend: the new test_vm_module34_labs.py passes 24/24. It covers the hub, free/locked access, console-data, every lab completed through the API with negative checks, both quizzes, the CTF, hint/solution scoring, persistence and XP awarded once. The Module 2 regression suite passes 23/23. Frontend at 1920x800: all 14 labs were completed through the real UI by following each task's instructions (terminal and console), and all tasks ticked. Checked: the M3 console shows only Web App Scanning with 7 nav items; the M4 console shows only Policy Compliance with 7 nav items; M1/M2 consoles are unchanged; scan animations run; the sitemap shows 9 URLs/3 forms without auth (with a note) and 15/5 with auth; the Exclude action shows Excluded; there are 12 findings; 150003 shows CWE-89 and the payload; ignoring 150202 sets it to Ignored; the Shop Injection search list has 3 QIDs; saving without a time zone shows an error; the dev report has 6 rows; the OWASP grouped table and the simulated PDF download work; a wrong scenario set shows the info toast and does not tick; the correct set ticks; the PCI result is FAIL; a short dispute justification shows an error and a valid one shows 'Pending ASV review'; a compliance scan with auth None shows an error; the pass rate is 42%; an approved exception shows 'Exception' in Posture; the policy report opens. Both quizzes score 100% in the UI and all 4 CTF flags are accepted. For the student, Lab 1 of each module is open and the rest are locked in the UI and return 403 from the API. No page errors. The only issues found are layout clipping in drawers and minor polish items.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/vmlab/labs/{id}/event (pc.exception_created)", "issue": "The 20+ character justification rule is only checked in the client. The task check (cid/host/days) does not validate the reason, so an API call with an empty reason completes M4 Lab 6 t2."},
+      {"endpoint": "POST /api/vmlab/labs/vm-lab-pci-03-dispute/exec", "issue": "The Linux (rpm) ssh output says 'rpm -q --changelog openssh | findstr 38408'. findstr is a Windows command; on this Linux host it should be grep."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Posture (pc/Policy.jsx)", "issue": "useEffect emits pc.posture_viewed on mount even when no compliance scan exists yet. M4 Lab 5 t3 'Open the posture' ticks before any scan has run. Emit only when a scan exists.", "selector": "[data-testid='pcc-posture']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Console Drawer (ui.jsx Drawer) at 1920x800", "issues": [
+        "WAS Findings drawer: the table's scrollWidth is 796px but its clientWidth is only 415px. The OWASP, URL and Status columns (Status is where 'Ignored' shows) are hidden unless the learner scrolls sideways.",
+        "Sitemap drawer: the URL + Type + Auth + Status + Exclude columns overflow. With the Exclude buttons in view, the URL column is cut off on the left (e.g. '...ucts?id=12').",
+        "Policy Report drawer: the 'Exceptions' column is cut off at the right edge.",
+        "Suggestion: widen the Drawer (e.g. w-[min(720px,90%)]) or let long cells wrap."
+      ]},
+      {"screen": "M4 labs without scenarios (Lab 2 asv, Lab 5 posture)", "issues": ["The console defaults to the Scenario view, which only shows 'This lab has no scenario checklist'. Consider defaulting to PCI Merchant or Compliance Scans when lab.scenarios is empty."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_vm_module34_labs.py", "/app/test_reports/pytest/pytest_m34.xml"],
+  "action_items": [
+    "Widen the console Drawer component (or wrap cells) so the WAS Findings, Sitemap and Policy Report tables fit at 1920x800 without horizontal scrolling",
+    "Posture: emit pc.posture_viewed only when a compliance scan exists",
+    "Optional: check the exception reason length server-side, e.g. add reason='(?s).{20,}' to the M4 Lab 6 t2 check",
+    "Optional: replace 'findstr' with 'grep' in the vm_web.ssh_pci changelog text",
+    "Optional: in M4 labs without scenarios, default the console view to something other than Scenario",
+    "Optional: the testid prefix 'wasc-report-row-' collides with 'wasc-report-row-list-'; rename the report rows to e.g. 'wasc-report-finding-row'"
+  ],
+  "critical_code_review_comments": [
+    "Lab content was verified as consistent with the data: forms = 5, URLs = 15, sev5 = 2, sev4+ = 6, A03 = 3, pass rate 10/24 = 42%, TRN-WIN2012 fails 5 controls, 1072 fails on all hosts.",
+    "All frontend emit() event names exist in vm_data.EVENTS, and every M3/M4 task event is registered.",
+    "Several validations exist only in the frontend (schedule time zone, compliance scan auth, exception reason). The time zone and auth rules are enforced by the task regex; the exception reason rule is not."
+  ],
+  "updated_files": ["/app/backend/tests/test_vm_module34_labs.py"],
+  "success_rate": {"backend": "100% (24/24 new + 23/23 M2 regression)", "frontend": "100% functional (14/14 labs completed via UI, quizzes, CTF, locks); 3 drawer layout clipping issues"},
+  "test_credentials": "admin@socprofessionals.academy / Admin@123, student@socprofessionals.academy / Student@123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. Only the admin's own lab progress was reset and replayed. Admin progress, quiz attempts and CTF solves for M3/M4 now exist.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: export REACT_APP_BACKEND_URL=...; pytest backend/tests/test_vm_module34_labs.py -n0. UI flow: lab player at /app/vmlab/lab/<id>, tabs vm-tab-terminal/vm-tab-console, nav vmc-nav-<view>. Closing the FindingDrawer (detail) returns to the Findings list drawer, which is intended. Scan animations take about 10-11s."
+}

@@ -43,7 +43,7 @@ export function Console({ lab, emit }) {
   const [apps, app0, view0] = BY_MODULE[lab.module] || BY_MODULE[1];
   const [d, setD] = useState(null);
   const [app, setApp] = useState(app0);
-  const [view, setView] = useState(view0);
+  const [view, setView] = useState(lab.module === 4 && !lab.scenarios?.length ? (/posture/.test(lab.id) ? "cscans" : "pci") : view0);
   useEffect(() => { api.get("/vmlab/console-data").then((r) => setD(r.data)); }, []);
   if (!d) return <div className="h-full grid place-items-center text-xs text-slate-500">Loading console…</div>;
   const A = apps.find((a) => a.id === app), cur = A.nav.find((n) => n[0] === view) || A.nav[0], View = cur?.[3];

@@ -144,7 +144,7 @@ LABS4 = [
     lab(4, 6, "exceptions", "Exceptions & Policy Report", 15, "Intermediate", "Handle a justified exception with an expiry, then report compliance.",
         "TRN-WIN2012 runs a legacy app that needs SMBv1 until it's migrated. An exception documents the risk, the compensating controls, an owner and an expiry date. A Manager approves it. Reports show posture with exceptions marked.",
         [T("t1", "Exception checklist", "Console → Scenario: tick what a valid exception needs.", "Think audit-ready.", "Compensating controls, expiry date, business owner approval", CHK("s6", "a,b,c")),
-         T("t2", "Request the exception", "Exceptions → New: control 2105 on TRN-WIN2012, 90 days, with a justification.", "Exception form.", "2105 · TRN-WIN2012 · 90 days · justification", E("pc.exception_created", cid="2105", host="TRN-WIN2012", days="90")),
+         T("t2", "Request the exception", "Exceptions → New: control 2105 on TRN-WIN2012, 90 days, with a justification.", "Exception form.", "2105 · TRN-WIN2012 · 90 days · justification", E("pc.exception_created", cid="2105", host="TRN-WIN2012", days="90", reason=r"(?s)\s*\S.{18,}")),
          T("t3", "Approve it", "As Manager, approve the exception.", "Approve button on the row.", "Approve", E("pc.exception_approved", cid="2105")),
          T("t4", "Run the policy report", "Reports → Policy Report for SOCP Windows Hardening → View.", "Run then View.", "Policy Report → View", E("pc.report_viewed", policy="SOCP Windows Hardening")),
          T("t5", "Knowledge check", "Should an exception be permanent? (yes/no)", "It needs review.", "No", A("no"))], preset=C2,
