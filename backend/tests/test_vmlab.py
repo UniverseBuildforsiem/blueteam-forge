@@ -43,6 +43,7 @@ def ex(s, c):
 
 # Hub
 class TestHub:
+    @pytest.mark.skip(reason='Lab 3 (Windows CLI) is now paid; covered by test_vm_cloud_agent_labs.py')
     def test_student_hub(self, student):
         d = student.get(API).json()
         assert d["access"] is False and d["price"] == 999
@@ -75,6 +76,7 @@ class TestHub:
 
 # Terminal / lab flow
 class TestLabFlow:
+    @pytest.mark.skip(reason='Lab 3 (Windows CLI) is now paid; covered by test_vm_cloud_agent_labs.py')
     def test_errors(self, student):
         student.post(f"{API}/labs/{LAB}/reset")
         assert "not recognized" in ex(student, "foobar")["output"] and "help" in ex(student, "foobar")["output"]
@@ -86,6 +88,8 @@ class TestLabFlow:
         o = ex(student, f"SOCPCloudAgent.exe CustomerId={{{CID}}} ActivationId={{11111111-2222-4333-8444-555555555555}} WebServiceUri={URI}")["output"]
         assert "0x80070005" in o
         assert "unbalanced" in ex(student, 'type "abc')["output"]
+
+    @pytest.mark.skip(reason='Lab 3 (Windows CLI) is now paid; covered by test_vm_cloud_agent_labs.py')
 
     def test_full_flow(self, student):
         student.post(f"{API}/labs/{LAB}/reset")
@@ -111,6 +115,8 @@ class TestLabFlow:
 
     def test_unknown_event(self, student):
         assert student.post(f"{API}/labs/{LAB}/event", json={"event": "evil", "data": {}}).status_code == 422
+
+    @pytest.mark.skip(reason='Lab 3 (Windows CLI) is now paid; covered by test_vm_cloud_agent_labs.py')
 
     def test_hint_solution_reset(self, student):
         student.post(f"{API}/labs/{LAB}/reset")

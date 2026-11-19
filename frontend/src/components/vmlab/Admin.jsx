@@ -48,7 +48,7 @@ function Editor({ init, events, onDone }) {
   const set = (k) => (e) => setD({ ...d, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.type === "number" ? Number(e.target.value) : e.target.value });
   const setRow = (i, v) => setD({ ...d, [list]: d[list].map((x, j) => (j === i ? v : x)) });
   const save = async () => {
-    const body = { ...d, tasks: d.kind === "lab" ? d.tasks : [], questions: d.kind === "quiz" ? d.questions : [], challenges: d.kind === "ctf" ? d.challenges : [] };
+    const body = { ...d, agent_preinstalled: d.agent_preinstalled ?? !!d.preset?.installed, tasks: d.kind === "lab" ? d.tasks : [], questions: d.kind === "quiz" ? d.questions : [], challenges: d.kind === "ctf" ? d.challenges : [] };
     try { await (d.id ? api.put(`/vmlab/admin/items/${d.id}`, body) : api.post("/vmlab/admin/items", body)); toast.success("Saved"); onDone(); } catch (e) { toast.error(errMsg(e)); }
   };
   return <Glass className="p-5 space-y-4" data-testid="vma-editor">
@@ -64,6 +64,7 @@ function Editor({ init, events, onDone }) {
       <F l="Summary" className="sm:col-span-4"><input className="field !py-1.5 !text-xs" value={d.summary} onChange={set("summary")} /></F>
       {d.kind === "lab" && <F l="Scenario / intro" className="sm:col-span-4"><textarea className="field h-20 !text-xs" value={d.intro} onChange={set("intro")} /></F>}
       <label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={d.free} onChange={set("free")} data-testid="vma-free" />Free preview</label>
+      {d.kind === "lab" && <label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={d.agent_preinstalled ?? !!d.preset?.installed} onChange={set("agent_preinstalled")} data-testid="vma-preinstalled" />Agent pre-installed on the lab host</label>}
     </div>
     <div className="space-y-3"><div className="eyebrow">{list}</div>
       {d[list].map((x, i) => <div key={i} className="border border-white/10 p-3 relative" data-testid={`vma-row-${i}`}><button onClick={() => setD({ ...d, [list]: d[list].filter((_, j) => j !== i) })} className="absolute top-2 right-2 text-slate-500 hover:text-red-400" aria-label="Remove"><Trash2 className="h-3.5 w-3.5" /></button>

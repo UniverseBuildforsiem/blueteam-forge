@@ -1,0 +1,43 @@
+{
+  "summary": "Tested the 10 Cloud Agent labs in Module 1, end to end through the backend and the UI. Backend: new pytest file, 15/15 pass. It covers hub order and locks, 403 on paid labs, every task check for Labs 1-10 including the negative paths (key missing fields, msiexec without /qn), reset restoring the preset state, and XP awarded only once. UI as student: the hub scan animation works (host grid, scan bar, CVE feed with real CVE IDs about every 1.1s, severity counters going up, label, progress %). Module 1 lists Lab 1..10, then the quiz and the CTF, and only Lab 1 is unlocked. Lab 1 completes 5/5 with the Finance Servers key showing in the table. With a temporary vmlab grant, Labs 2, 3 (existing), 4, 5, 6, 7 (prompt dialog), 8, 9 and 10 all reached vm-lab-complete through the real UI. Lab 5 reset restores the installed, running agent. Quiz and CTF pages load. Admin Manage lists all 12 items. Re-completing all labs gave no extra XP. No page errors. Only minor realism and copy issues found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "vm_shell.log_lines (Lab 9)", "issue": "Every on-demand scan writes the log line 'On-demand VM scan requested', even for Type=PC and Type=Inventory. In Lab 9 t4 the learner runs Get-Content -Tail 5 and sees three 'VM scan' lines, which undercuts the lesson. Store the scan types in a list (e.g. st['scans']=['VM','PC','Inventory']) and print the matching type."},
+      {"endpoint": "Profiles / selfprot", "issue": "There is no event to turn self-protection off. Unticking the box and saving leaves shell.selfprot true. This is only a problem in free practice, since reset clears it."},
+      {"endpoint": "Admin items", "issue": "ItemIn has no 'preset' field, so admin-created labs can't start with a pre-installed agent. Also, bumping SEED_VERSION overwrites any admin edits to the seeded labs."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "VmLabPlayer completion banner", "issue": "The text 'Lab complete. Your agent is deployed and validated.' is hardcoded for every lab. It is wrong for Lab 1 (only a key was created), Lab 7 and Lab 10 (the agent was just uninstalled). Use a per-lab completion message or a generic one.", "selector": "[data-testid=vm-lab-complete]", "priority": "LOW"},
+      {"component": "VmLabPlayer toast", "issue": "The 'Lab complete! +100 XP' toast shows every time a lab is completed, even after a reset when no XP is awarded (vm_awards). The API should return awarded:true/false and the toast should follow it.", "selector": "toast", "priority": "LOW"},
+      {"component": "AgentDrawer (Lab 10)", "issue": "After the terminal uninstall, WIN-LAB-01 leaves the agents table, but the open drawer still shows it as Active with working Deactivate/Uninstall buttons. Close the drawer, or show 'Uninstalled', once state.installed is false.", "selector": "[data-testid=vmc-agent-drawer]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Agent drawer severity row", "issues": ["Severity counts are listed 1→5 (Info first). VMDR tools usually list Critical (5) first, as the hub counters do."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_vm_cloud_agent_labs.py", "/app/test_reports/pytest/vm_cloud_agent.xml"],
+  "action_items": [
+    "Lab 9: make the on-demand scan log lines reflect the scan type (VM/PC/Inventory)",
+    "Completion banner: per-lab text instead of 'agent is deployed and validated'",
+    "Show the '+100 XP' toast only when XP was actually awarded",
+    "Lab 10: close or update the agent drawer after the host uninstall",
+    "Optional: event to disable self-protection; preset support in the admin editor"
+  ],
+  "critical_code_review_comments": [
+    "vm_shell.log_lines: scans is only a counter, so the scan type is lost.",
+    "routes_vmlab.finish: award result isn't exposed in the response, so the frontend can't tell a repeat completion from a first one.",
+    "routes_vmlab.event: modules on/off is stored for any host value. That's fine for now, but it isn't keyed per host.",
+    "/app/backend/tests/test_vmlab.py (old) assumes vm-lab-agent-win-cli is the free lab. It is now Lab 3 and paid, so TestHub.test_student_hub will fail. Update it or rely on the new test_vm_cloud_agent_labs.py."
+  ],
+  "updated_files": ["/app/backend/tests/test_vm_cloud_agent_labs.py"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% of requested flows (minor copy/realism issues only)"},
+  "seed_data_creation": "No records kept. Temporarily granted the student vmlab access, then revoked it. Reset every lab I touched for the student (0 vm_progress docs left). Reverted student XP to 1182 by deleting my 9 activity rows and 9 vm_awards (Labs 2-10). The pre-existing Lab 1 award was left in place. Admin data was not touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: pytest /app/backend/tests/test_vm_cloud_agent_labs.py -n0 (serial). It grants the student vmlab access through PATCH /api/admin/users/{id}/access, then resets the labs and revokes the grant in fixture teardown. The first run awards 100 XP per lab without an existing vm_awards row, so revert db.activity, db.vm_awards and users.xp afterwards. Student id b9cafa42b8ca already had a vm_awards row for vm-lab-ca-01-deploy before my run. Admin login redirects to /admin, not /app.",
+  "test_credentials": "student@socprofessionals.academy / Student@123, admin@socprofessionals.academy / Admin@123"
+}

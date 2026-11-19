@@ -56,7 +56,8 @@ def log_lines(st):
         "2026-06-12 10:16:02.011 [Info] Vulnerability scan delta uploaded (snapshot 1)",
         "2026-06-12 10:16:02.013 [Info] Agent status: Active",
     ]
-    out += [f"2026-06-12 10:{20 + i:02d}:00.000 [Info] On-demand VM scan requested; snapshot uploaded" for i in range(st.get("scans", 0))]
+    types = st.get("scan_types") or ["VM"] * st.get("scans", 0)
+    out += [f"2026-06-12 10:{20 + i:02d}:00.000 [Info] On-demand {t} scan requested; snapshot uploaded" for i, t in enumerate(types)]
     if not st["running"]:
         out.append("2026-06-12 10:30:00.000 [Info] Service stop requested by administrator")
     return out
@@ -281,6 +282,7 @@ def run(raw, st):
                 return "Error: the agent service is stopped. Start it with: net start SOCPCloudAgent", []
             st["scans"] = st.get("scans", 0) + 1
             t = m.group(1)
+            st["scan_types"] = st.get("scan_types", []) + [{"vm": "VM", "pc": "PC", "inventory": "Inventory", "sca": "SCA"}[t]]
             return f"On-demand {t.upper()} scan queued (job {4400 + st['scans']}). Results upload with the next snapshot.", ["agent.scan_on_demand", f"agent.scan_{t}"]
         return "Usage: SOCPAgentCtl.exe ScanOnDemand Type=VM|PC|Inventory  |  SOCPAgentCtl.exe SelfProtection Status", []
     if h == "uninstall.exe":
@@ -288,7 +290,7 @@ def run(raw, st):
             return f"'{head}' is not recognized as an internal or external command.", []
         if "uninstall=true" not in low:
             return "Usage: Uninstall.exe Uninstall=True", []
-        st.update(installed=False, running=False, scans=0)
+        st.update(installed=False, running=False, scans=0, scan_types=[])
         if st["cwd"].lower().startswith(INSTALL_DIR.lower()):
             st["cwd"] = HOME
         return "Stopping service... done\nDeregistering agent from platform... done\nSOCP Cloud Agent was uninstalled.", ["agent.uninstalled"]

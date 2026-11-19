@@ -29,7 +29,7 @@ EVENTS = {
     "agent.scan_vm": "Terminal: on-demand VM scan", "agent.scan_pc": "Terminal: on-demand PC scan", "agent.scan_inventory": "Terminal: on-demand inventory scan",
     "key.created": "Console: created an activation key (match title/tag/modules/limit)", "install_instructions.viewed": "Console: opened install instructions (match os)",
     "installer.downloaded": "Console: downloaded an installer (match os)", "agent.searched": "Console: searched agents (match q)",
-    "query.saved": "Console: saved an agent search query (match name)", "selfprot.enabled": "Console: enabled self-protection in a profile",
+    "query.saved": "Console: saved an agent search query (match name)", "selfprot.enabled": "Console: enabled self-protection in a profile", "selfprot.disabled": "Console: disabled self-protection in a profile",
     "profile.saved": "Console: saved a configuration profile", "console.module_deactivated": "Console: deactivated a module on an agent (match module)",
     "console.module_activated": "Console: activated a module on an agent (match module)", "console.agent_uninstall_requested": "Console: requested agent uninstall (match host)",
 }

@@ -37,7 +37,7 @@ export default function VmLabPlayer() {
   const after = (d) => {
     const L = d.lab || d;
     (d.new || []).forEach((tid) => toast.success(`Task complete: ${L.tasks.find((t) => t.id === tid)?.title}`));
-    if (L.completed_at && !lab.completed_at) toast.success("Lab complete! +100 XP", { duration: 5000 });
+    if (L.completed_at && !lab.completed_at) toast.success(L.awarded ? "Lab complete! +100 XP" : "Lab complete again. XP was already earned", { duration: 5000 });
     setLab(L);
   };
   const emit = (event, data) => api.post(`/vmlab/labs/${id}/event`, { event, data }).then((r) => after(r.data)).catch((e) => toast.error(errMsg(e)));
@@ -53,7 +53,7 @@ export default function VmLabPlayer() {
       <Glass className="p-4 space-y-4 max-h-[45vh] overflow-y-auto lg:max-h-[calc(100vh-140px)]" data-testid="vm-instructions">
         <div><div className="eyebrow">module {lab.module} · lab · {lab.difficulty}</div><h1 className="text-xl font-bold mt-1" data-testid="vm-lab-title">{lab.title}</h1><p className="text-xs text-slate-400 mt-2 whitespace-pre-line">{lab.intro}</p></div>
         <div><div className="flex justify-between text-[11px] font-mono text-slate-500 mb-1"><span>tasks</span><span data-testid="vm-task-count">{done}/{lab.tasks.length}</span></div><div className="h-1.5 bg-white/5"><div className="h-1.5 bg-green-400 transition-[width] duration-500" style={{ width: `${(100 * done) / lab.tasks.length}%` }} /></div></div>
-        {lab.completed_at && <div className="border border-green-500/40 bg-green-500/10 p-3 text-sm flex gap-2 items-center" data-testid="vm-lab-complete"><Award className="h-5 w-5 text-green-400" />Lab complete. Your agent is deployed and validated.</div>}
+        {lab.completed_at && <div className="border border-green-500/40 bg-green-500/10 p-3 text-sm flex gap-2 items-center" data-testid="vm-lab-complete"><Award className="h-5 w-5 text-green-400" />Lab complete. Every task verified.</div>}
         <ol className="space-y-2">{lab.tasks.map((t, i) => <Task key={t.id} t={t} i={i} onReveal={reveal} onAnswer={answer} />)}</ol>
       </Glass>
       <div className="space-y-2 min-w-0">

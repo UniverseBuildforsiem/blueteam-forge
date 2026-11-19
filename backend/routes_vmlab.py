@@ -66,7 +66,7 @@ async def save(p):
 
 
 def lab_view(it, p):
-    return {**{k: it.get(k) for k in ("id", "kind", "module", "title", "summary", "intro", "minutes", "difficulty", "free")},
+    return {"awarded": p.pop("_awarded", False), **{k: it.get(k) for k in ("id", "kind", "module", "title", "summary", "intro", "minutes", "difficulty", "free")},
             "tasks": [public_task(t, p) for t in it["tasks"]], "state": {**{k: p["state"]["shell"].get(k) for k in ("installed", "running", "cwd", "selfprot")}, "console": p["state"]["console"]},
             "term": p.get("term", [])[-120:], "completed_at": p.get("completed_at"), "score": score(it, p)}
 
@@ -100,6 +100,7 @@ async def finish(it, p, user):
         r = await db.vm_awards.update_one({"user_id": user["id"], "lab_id": it["id"]}, {"$setOnInsert": {"at": p["completed_at"]}}, upsert=True)
         if r.upserted_id:
             await award(user["id"], 100, f"Completed VM lab: {it['title']}")
+            p["_awarded"] = True
 
 
 @router.get("")
@@ -187,8 +188,8 @@ async def event(iid: str, body: EventIn, user=Depends(get_current_user)):
     p = await progress(user, it)
     data = {k: str(v)[:200] for k, v in list(body.data.items())[:12]}
     con, sh = p["state"]["console"], p["state"]["shell"]
-    if body.event == "selfprot.enabled":
-        sh["selfprot"] = True
+    if body.event in ("selfprot.enabled", "selfprot.disabled"):
+        sh["selfprot"] = body.event == "selfprot.enabled"
     if body.event in ("console.module_deactivated", "console.module_activated"):
         con.setdefault("modules", {})[data.get("module", "")] = body.event.endswith("activated") and not body.event.endswith("deactivated")
     if body.event == "console.agent_uninstall_requested":
@@ -336,6 +337,7 @@ class ItemIn(BaseModel):
     minutes: int = Field(default=15, ge=1, le=600)
     difficulty: str = Field(default="Beginner", max_length=20)
     free: bool = False
+    agent_preinstalled: bool = False
     status: str = Field(default="draft", pattern="^(draft|published)$")
     tasks: list[TaskIn] = Field(default_factory=list, max_length=40)
     questions: list[QIn] = Field(default_factory=list, max_length=60)
@@ -363,6 +365,12 @@ def validate(b):
             raise HTTPException(422, f"Question '{q.q[:40]}': correct option out of range")
 
 
+def item_doc(b):
+    d = b.model_dump()
+    d["preset"] = {"installed": True, "running": True, "cwd": vm_shell.DL} if d.pop("agent_preinstalled") else None
+    return d
+
+
 @router.get("/admin/items")
 async def admin_items(user=Depends(get_current_user)):
     admin_only(user)
@@ -373,7 +381,7 @@ async def admin_items(user=Depends(get_current_user)):
 async def admin_create(body: ItemIn, user=Depends(get_current_user)):
     admin_only(user)
     validate(body)
-    doc = {**body.model_dump(), "id": f"vm-{new_id()}", "created_at": now_iso()}
+    doc = {**item_doc(body), "id": f"vm-{new_id()}", "created_at": now_iso()}
     await db.vm_items.insert_one(dict(doc))
     doc.pop("_id", None)
     return doc
@@ -383,7 +391,7 @@ async def admin_create(body: ItemIn, user=Depends(get_current_user)):
 async def admin_update(iid: str, body: ItemIn, user=Depends(get_current_user)):
     admin_only(user)
     validate(body)
-    r = await db.vm_items.update_one({"id": iid}, {"$set": {**body.model_dump(), "updated_at": now_iso()}})
+    r = await db.vm_items.update_one({"id": iid}, {"$set": {**item_doc(body), "updated_at": now_iso()}})
     if not r.matched_count:
         raise HTTPException(404, "Not found")
     return await db.vm_items.find_one({"id": iid}, NO_ID)

@@ -50,17 +50,18 @@ function NewKey({ emit, onClose }) {
 
 function AgentDrawer({ a, st, emit, onClose }) {
   const mods = st.console.modules || {};
+  const gone = a.host === "WIN-LAB-01" && !st.installed;
   const on = (m) => mods[m] !== false;
-  const rows = [["Status", st.console.uninstall_requested && a.host === "WIN-LAB-01" ? "Uninstall pending (next check-in)" : a.status], ["IP", a.ip], ["OS", a.os], ["Version", a.version], ["Activation key", a.key], ["Last check-in", a.last_checkin],
+  const rows = [["Status", gone ? "Uninstalled" : st.console.uninstall_requested && a.host === "WIN-LAB-01" ? "Uninstall pending (next check-in)" : a.status], ["IP", a.ip], ["OS", a.os], ["Version", a.version], ["Activation key", a.key], ["Last check-in", a.last_checkin],
     ...(a.software ? [["Software inventory", `${a.software} items`], ["Open ports", a.ports], ["Tags", a.tags.join(", ")], ["Config profile", a.profile]] : []), ["Host ID", "see the host registry"]];
   return <Drawer title={`Asset details · ${a.host}`} onClose={onClose} tid="vmc-agent-drawer">
     {rows.map(([k, v]) => <div key={k} className="flex text-xs border-b border-slate-700/60 py-1.5"><span className="w-36 text-slate-400 shrink-0">{k}</span><span className="text-slate-100 break-all" data-testid={`vmc-agent-${k.toLowerCase().replace(/\s/g, "-")}`}>{v}</span></div>)}
-    {a.vulns && <div className="flex gap-2 items-center text-xs">{a.vulns.map((n, i) => <span key={i} className="flex items-center gap-1"><Sev n={i + 1} />{n}</span>)}</div>}
-    <div className="border-t border-slate-700 pt-3 space-y-2"><div className="text-xs font-semibold text-slate-100">Quick actions</div>
+    {a.vulns && <div className="flex gap-2 items-center text-xs">{[...a.vulns].map((n, i) => [n, i + 1]).reverse().map(([n, s]) => <span key={s} className="flex items-center gap-1"><Sev n={s} />{n}</span>)}</div>}
+    {!gone && <div className="border-t border-slate-700 pt-3 space-y-2"><div className="text-xs font-semibold text-slate-100">Quick actions</div>
       {["VM", "PC"].map((m) => <div key={m} className="flex items-center gap-2 text-xs"><span className="w-40">{m === "VM" ? "Vulnerability Mgmt" : "Policy Compliance"}: <b className={on(m) ? "text-green-400" : "text-slate-500"}>{on(m) ? "Active" : "Inactive"}</b></span>
         <Btn onClick={() => emit(on(m) ? "console.module_deactivated" : "console.module_activated", { module: m, host: a.host })} data-testid={`vmc-agent-${on(m) ? "deactivate" : "activate"}-${m}`}>{on(m) ? "Deactivate" : "Activate"} {m}</Btn></div>)}
       <Btn className="!border-red-500/60 !text-red-300" onClick={() => { emit("console.agent_uninstall_requested", { host: a.host }); toast.success("Uninstall queued for next check-in"); }} data-testid="vmc-agent-uninstall">Uninstall agent</Btn>
-    </div>
+    </div>}
   </Drawer>;
 }
 
@@ -68,7 +69,7 @@ function Profiles({ st, emit }) {
   const [open, setOpen] = useState(null);
   const [sp, setSp] = useState(!!st.selfprot);
   const [cpu, setCpu] = useState("Normal (CPU limit 20%)");
-  const save = () => { emit("profile.saved", { name: open }); if (sp) emit("selfprot.enabled", { name: open }); toast.success("Profile saved · agents pick it up at next check-in"); setOpen(null); };
+  const save = () => { emit("profile.saved", { name: open }); if (open.startsWith("Default")) emit(sp ? "selfprot.enabled" : "selfprot.disabled", { name: open }); toast.success("Profile saved · agents pick it up at next check-in"); setOpen(null); };
   return <><Panel title="Configuration Profiles"><Table rowTid="vmc-profile-row" cols={["Profile", "Default", "Assigned", "Self protection"]} rows={[["Default Windows Profile", "Yes", "Tag: Windows Servers", st.selfprot ? "On" : "Off"], ["Linux Low Impact", "No", "Tag: Linux Servers", "n/a"]]} onRow={(i) => setOpen(["Default Windows Profile", "Linux Low Impact"][i])} /></Panel>
     {open && <Drawer title={`Profile · ${open}`} onClose={() => setOpen(null)} tid="vmc-profile-drawer">
       <Lbl t="Performance"><Sel options={["Low (CPU limit 5%)", "Normal (CPU limit 20%)", "High (CPU limit 40%)"]} value={cpu} onChange={(e) => setCpu(e.target.value)} /></Lbl>
