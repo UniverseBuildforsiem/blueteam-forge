@@ -1,0 +1,44 @@
+{
+  "summary": "Full backend + UI test of the new SOCProfessionals Vulnerability Management Lab (SOCP Sentinel VMDR simulator). Backend: 10/10 pytest pass (hub, gating, admin access grant, course-bundle access, terminal flow + errors, hint/solution/reset scoring, admin CRUD/validation, settings, payments item_for). UI: Lab 1 completed end-to-end as student (t1-t8, toasts, green checks, 8/8, vm-lab-complete, score 100). Terminal errors, cls, ArrowUp history, reload persistence, hints/solutions/reset, every VMDR console view, create tag/scan/schedule/report/user with persistence after reload, KB/asset search, WAS/PC coming soon, hub and progress/badges, admin Manage (zero-task publish error, quiz + answer-lab create, hub Module 2 listing, edit, delete), quiz 80%/100% and CTF 3/3 as admin, mobile 390px all pass. One real bug: XP can be farmed through reset. Plus minor UX issues.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/vmlab/labs/{id}/reset + exec/answer/event", "issue": "XP farming. reset deletes the vm_progress doc, including completed_at, so redoing the lab calls award(+100 XP) again every time. Reproduced: two runs gave 2x100 XP for Lab 1 and for an admin-created lab. Fix: record awarded lab completions somewhere that reset does not clear (e.g. a vm_awards collection or a check on the activity log) and only award once. Quiz and CTF already award once.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "DELETE /api/vmlab/admin/items/{id}", "issue": "Returns 200 for ids that don't exist. It also leaves orphaned vm_quiz_attempts and vm_ctf_solves, so quiz history shows the raw item id as the title after a delete."},
+      {"endpoint": "lab score", "issue": "Revealing a hint or solution on an unfinished task takes points off the whole lab score. The score is clamped at 0, so early in the lab it shows 0 (12-5-10). Acceptable, but consider a per-task penalty."},
+      {"endpoint": "Agent drawer (console data new_agent)", "issue": "The WIN-LAB-01 agent drawer shows the Agent ID, which is the t7 answer. The learner can skip reading the log. Opening the drawer is t8, which comes after t7, but the agent shows up as soon as t4 is done."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Hub unlock box when price=0", "issue": "With price 0 it shows 'Unlock ... for ₹0' and a disabled 'Unlock for ₹0' button. It should say the lab isn't for sale yet (backend already returns 'The lab isn't for sale yet').", "selector": "[data-testid=phish-unlock]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Manage > Access & pricing", "issues": ["'Courses that include the full lab' shows nothing when there are no published courses (the only course in the DB is a draft). Add an empty-state line such as 'No published courses yet'."]},
+      {"screen": "Lab player mobile 390px", "issues": ["Instructions panel is about 1300px tall above the terminal, so learners keep scrolling between tasks and terminal. Consider collapsing the instructions on mobile or adding a sticky Tasks/Terminal switch.", "Console app tabs (Web App Scanning / Policy Compliance) are cut off and only reachable by horizontal scroll."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_vmlab.py", "/app/test_reports/pytest/vmlab.xml"],
+  "action_items": [
+    "Fix XP farming: award lab completion XP only once per user per lab, even after reset",
+    "Unlock box: when price is 0, show 'not for sale yet' instead of ₹0",
+    "Admin settings: empty state when there are no published courses",
+    "Optional: 404 on deleting a missing admin item; clean up quiz attempts and CTF solves on delete"
+  ],
+  "critical_code_review_comments": [
+    "routes_vmlab.reset: delete_one wipes completed_at, so award() runs again. Root cause of the XP farming bug.",
+    "VmQuiz submit and Challenge submit have no try/catch, so an API error rejects silently with no toast.",
+    "VmLabPlayer reveal() has no .catch.",
+    "has_access with course_ids works. Verified: setting course_ids to a course and enrolling the student gives access; un-enrolled gives no access.",
+    "Scoring uses Python round() (banker's rounding): 1/8 = 12, not 13. Fine, just noting."
+  ],
+  "updated_files": ["/app/backend/tests/test_vmlab.py"],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "97% (all flows pass; minor UX issues only)"},
+  "seed_data_creation": "None kept. Temporarily: vm-lab grant for the student (revoked), settings course_ids and price 0 (reverted to 999/[]), one TEST course_enrollment (deleted), TEST quiz and lab items (deleted). XP and activity awarded by my runs were reverted for student (-100 and -500 earlier) and admin (-170). Admin quiz attempts and CTF solves from today were deleted. NOTE: cleanup also deleted one pre-existing admin vm_progress doc for Lab 1 that I didn't create (probably from main-agent testing).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: pytest /app/backend/tests/test_vmlab.py -n0. Run it serially; it shares the student's Lab 1 state. It completes Lab 1 as the student, which awards XP until the farming bug is fixed, so revert db.activity rows matching 'VM' and the user's xp afterwards. Razorpay is not configured (503 'Razorpay is not configured yet'). No published academy courses exist (only draft 384eef11de47).",
+  "test_credentials": "student@socprofessionals.academy / Student@123, admin@socprofessionals.academy / Admin@123"
+}

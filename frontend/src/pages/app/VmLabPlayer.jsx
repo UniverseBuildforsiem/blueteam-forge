@@ -50,7 +50,7 @@ export default function VmLabPlayer() {
       <span className="ml-auto text-xs font-mono text-slate-400">score <b className="text-green-300" data-testid="vm-score">{lab.score}</b></span>
       <button className="ghost-btn !text-xs !py-1.5" onClick={reset} data-testid="vm-reset"><RotateCcw className="h-3.5 w-3.5" />Reset lab</button></div>
     <div className="grid lg:grid-cols-[minmax(300px,380px)_1fr] gap-4 items-start">
-      <Glass className="p-4 space-y-4 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto" data-testid="vm-instructions">
+      <Glass className="p-4 space-y-4 max-h-[45vh] overflow-y-auto lg:max-h-[calc(100vh-140px)]" data-testid="vm-instructions">
         <div><div className="eyebrow">module {lab.module} · lab · {lab.difficulty}</div><h1 className="text-xl font-bold mt-1" data-testid="vm-lab-title">{lab.title}</h1><p className="text-xs text-slate-400 mt-2 whitespace-pre-line">{lab.intro}</p></div>
         <div><div className="flex justify-between text-[11px] font-mono text-slate-500 mb-1"><span>tasks</span><span data-testid="vm-task-count">{done}/{lab.tasks.length}</span></div><div className="h-1.5 bg-white/5"><div className="h-1.5 bg-green-400 transition-[width] duration-500" style={{ width: `${(100 * done) / lab.tasks.length}%` }} /></div></div>
         {lab.completed_at && <div className="border border-green-500/40 bg-green-500/10 p-3 text-sm flex gap-2 items-center" data-testid="vm-lab-complete"><Award className="h-5 w-5 text-green-400" />Lab complete. Your agent is deployed and validated.</div>}

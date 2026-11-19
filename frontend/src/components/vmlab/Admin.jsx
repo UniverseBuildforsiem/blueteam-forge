@@ -81,7 +81,7 @@ function Settings({ s, onSaved }) {
   const save = () => api.put("/vmlab/admin/settings", { price: Number(price), course_ids: ids }).then(() => { toast.success("Access settings saved"); onSaved(); }).catch((e) => toast.error(errMsg(e)));
   return <Glass className="p-5 space-y-3" data-testid="vma-settings"><div className="font-bold">Access & pricing</div>
     <F l="One-time price (₹), 0 = not for sale"><input type="number" className="field !py-1.5 !text-xs max-w-[160px]" value={price} onChange={(e) => setPrice(e.target.value)} data-testid="vma-price" /></F>
-    <div><div className="text-[11px] text-slate-400 mb-1.5">Courses that include the full lab for free</div><div className="flex flex-wrap gap-2">{cs.map((c) => <label key={c.id} className="flex items-center gap-1.5 text-xs border border-white/10 px-2 py-1"><input type="checkbox" checked={ids.includes(c.id)} onChange={(e) => setIds(e.target.checked ? [...ids, c.id] : ids.filter((x) => x !== c.id))} data-testid={`vma-course-${c.id}`} />{c.title}</label>)}</div></div>
+    <div><div className="text-[11px] text-slate-400 mb-1.5">Courses that include the full lab for free</div><div className="flex flex-wrap gap-2">{!cs.length && <span className="text-xs text-slate-500">No published courses yet.</span>}{cs.map((c) => <label key={c.id} className="flex items-center gap-1.5 text-xs border border-white/10 px-2 py-1"><input type="checkbox" checked={ids.includes(c.id)} onChange={(e) => setIds(e.target.checked ? [...ids, c.id] : ids.filter((x) => x !== c.id))} data-testid={`vma-course-${c.id}`} />{c.title}</label>)}</div></div>
     <button className="glow-btn !text-xs" onClick={save} data-testid="vma-settings-save">Save access settings</button></Glass>;
 }
 

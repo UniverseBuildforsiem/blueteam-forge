@@ -87,10 +87,17 @@ async def apply(it, p, events, data, user):
             if t["id"] not in p.get("solutions", []):
                 p.setdefault("done_clean", []).append(t["id"])
             new.append(t["id"])
-    if new and len(p["done"]) == len(it["tasks"]) and not p.get("completed_at"):
-        p["completed_at"] = now_iso()
-        await award(user["id"], 100, f"Completed VM lab: {it['title']}")
+    if new:
+        await finish(it, p, user)
     return new
+
+
+async def finish(it, p, user):
+    if len(p["done"]) == len(it["tasks"]) and not p.get("completed_at"):
+        p["completed_at"] = now_iso()
+        r = await db.vm_awards.update_one({"user_id": user["id"], "lab_id": it["id"]}, {"$setOnInsert": {"at": p["completed_at"]}}, upsert=True)
+        if r.upserted_id:
+            await award(user["id"], 100, f"Completed VM lab: {it['title']}")
 
 
 @router.get("")
@@ -202,9 +209,7 @@ async def answer(iid: str, body: AnswerIn, user=Depends(get_current_user)):
         if t["id"] not in p.get("solutions", []):
             p.setdefault("done_clean", []).append(t["id"])
         new = [t["id"]]
-        if len(p["done"]) == len(it["tasks"]) and not p.get("completed_at"):
-            p["completed_at"] = now_iso()
-            await award(user["id"], 100, f"Completed VM lab: {it['title']}")
+        await finish(it, p, user)
         await save(p)
     return {"correct": ok, "new": new, "lab": lab_view(it, p)}
 
@@ -374,8 +379,11 @@ async def admin_update(iid: str, body: ItemIn, user=Depends(get_current_user)):
 @router.delete("/admin/items/{iid}")
 async def admin_delete(iid: str, user=Depends(get_current_user)):
     admin_only(user)
-    await db.vm_items.delete_one({"id": iid})
+    if not (await db.vm_items.delete_one({"id": iid})).deleted_count:
+        raise HTTPException(404, "Not found")
     await db.vm_progress.delete_many({"lab_id": iid})
+    await db.vm_quiz_attempts.delete_many({"item_id": iid})
+    await db.vm_ctf_solves.delete_many({"item_id": iid})
     return {"ok": True}
 
 

@@ -48,7 +48,8 @@ export default function VmLab() {
   return <div data-testid="vm-hub">
     <PageHeader eyebrow="// simulated vmdr training" title="Vulnerability Management Lab" sub="Hands-on, fully simulated practice for agent deployment, vulnerability management, web app scanning and compliance. Original branding, fake data, safe to break." />
     <div className="flex gap-1 mb-5 border-b border-white/10">{tabs.map(([k, l, I]) => <button key={k} onClick={() => setSp(k === "labs" ? {} : { tab: k })} className={`px-4 py-2 text-sm inline-flex items-center gap-1.5 border-b-2 -mb-px ${tab === k ? "border-cyan-400 text-cyan-200" : "border-transparent text-slate-400 hover:text-slate-200"}`} data-testid={`vm-tab-${k}`}><I className="h-4 w-4" />{l}</button>)}</div>
-    {tab === "labs" && <>{!d.access && <PhishUnlock item="vm-lab" name="Vulnerability Management Lab - Full Access" price={d.price} heading="Unlock every lab, quiz and CTF for" note="Lab 1 is a free preview. One-time payment · lifetime access · also included with selected courses." onPaid={load} />}<Modules d={d} /></>}
+    {tab === "labs" && <>{!d.access && !d.price && <Glass className="p-4 mb-6 text-sm text-slate-400" data-testid="vm-not-for-sale">Lab 1 is a free preview. Full access isn't on sale yet. Check back soon or ask your instructor.</Glass>}
+      {!d.access && d.price > 0 && <PhishUnlock item="vm-lab" name="Vulnerability Management Lab - Full Access" price={d.price} heading="Unlock every lab, quiz and CTF for" note="Lab 1 is a free preview. One-time payment · lifetime access · also included with selected courses." onPaid={load} />}<Modules d={d} /></>}
     {tab === "progress" && <Progress d={d} />}
     {tab === "manage" && me?.role === "admin" && <VmAdmin onChange={load} />}
   </div>;

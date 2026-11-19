@@ -102,5 +102,5 @@ def console_data():
                   {"name": "Priya Nair", "login": "socp_pn03", "role": "Reader", "status": "Active"}, {"name": "Omar Haddad", "login": "socp_oh04", "role": "Unit Manager", "status": "Inactive"}],
         "profiles": ["Initial Options (default)", "Full TCP + Auth Scan", "Light Inventory Scan", "PCI External Scan"],
         "templates": ["Technical Report", "Executive Summary", "Scan Results", "Patch Report", "PCI Compliance"],
-        "new_agent": {"host": HOST, "ip": "10.20.30.41", "os": "Windows Server 2022", "status": "Active", "version": "6.2.0.41", "last_checkin": "2026-06-12 10:16", "key": "Windows Servers", "agent_id": AGENT_UUID},
+        "new_agent": {"host": HOST, "ip": "10.20.30.41", "os": "Windows Server 2022", "status": "Active", "version": "6.2.0.41", "last_checkin": "2026-06-12 10:16", "key": "Windows Servers"},
     }
