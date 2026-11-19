@@ -288,6 +288,11 @@ async def item_for(key, user=None):
         if not c or not pricing(c)["price"]:
             raise HTTPException(400, "This course isn't for sale")
         return {"name": f"Course: {c['title']}"[:100], "amount": pricing(c)["price"], "return": f"/course/{c['id']}"}
+    if key == "vm-lab":
+        s = await db.vm_settings.find_one({"id": "main"}) or {}
+        if not s.get("price"):
+            raise HTTPException(400, "The lab isn't for sale yet")
+        return {"name": "Vulnerability Management Lab - Full Access", "amount": s["price"], "return": "/app/vmlab"}
     item = PLANS.get(key) or PRODUCTS.get(key)
     if not item:
         raise HTTPException(400, "Invalid plan")
@@ -349,7 +354,7 @@ async def activate(user_id, pid):
             await redeem(p)
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
-        elif p["plan"] in PRODUCTS:
+        elif p["plan"] in PRODUCTS or p["plan"] == "vm-lab":
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},
                                           {"$setOnInsert": {"user_id": user_id, "product_id": p["plan"], "payment_id": pid, "at": now_iso()}}, upsert=True)
             from routes_book import send_book_receipt

@@ -29,6 +29,9 @@ import Phishing from "./pages/app/Phishing";
 import PhishCase from "./pages/app/PhishCase";
 import AcademyList, { AcademyCert } from "./pages/app/Academy";
 import MyNotes from "./pages/app/MyNotes";
+import VmLab from "./pages/app/VmLab";
+import VmLabPlayer from "./pages/app/VmLabPlayer";
+import { VmQuiz, VmCtf } from "./pages/app/VmLabItem";
 import CourseLanding from "./pages/CourseLanding";
 import BundlePage from "./pages/BundlePage";
 import GiftPage from "./pages/GiftPage";
@@ -88,6 +91,10 @@ function AppRouter() {
               <Route path="drill" element={<Drill />} />
               <Route path="courses" element={<AcademyList />} />
               <Route path="notes" element={<MyNotes />} />
+              <Route path="vmlab" element={<VmLab />} />
+              <Route path="vmlab/lab/:id" element={<VmLabPlayer />} />
+              <Route path="vmlab/quiz/:id" element={<VmQuiz />} />
+              <Route path="vmlab/ctf/:id" element={<VmCtf />} />
               <Route path="courses/certificate/:certId" element={<AcademyCert />} />
               <Route path="courses/:id" element={<PathDetail course />} />
               <Route path="badges" element={<Badges />} />

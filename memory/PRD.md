@@ -311,3 +311,12 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Course page 'About' redesign: Course Description + What you'll learn / Requirements / Who it's for, collapsed after ~7 lines with Keep Reading/Show less, creator facts card (components/academy/CourseAbout.jsx) — 2026-06 (DONE, screenshot-verified desktop+mobile)
 - Lesson Notes: autosaving notes under each lesson, 'My Notes' course tab + /app/notes page with search, PDF & Markdown download (routes_notes.py, components/academy/Notes.jsx) — 2026-06 (DONE, iteration_57)
 - Live video watch time (m:ss of m:ss + %), counts only played seconds, saves every 5s, re-queues on failure — 2026-06 (DONE, iteration_58)
+
+## Vulnerability Management Lab (SOCP Sentinel VMDR simulator) — 2026-06 (Phase 1)
+- Route /app/vmlab (sidebar "Vuln Mgmt Lab"). 4 modules (Cloud Agent, VM, WAS, PCI/Policy). Items: lab | quiz | ctf in db.vm_items (seeded via seed_vm in server startup).
+- Lab player /app/vmlab/lab/:id: left instructions + task checklist (hint −5, show solution −10, answer tasks), right Terminal (server-side simulated Windows shell: backend/vm_shell.py) + mock Console (Dashboard, Assets, Tags, Asset Groups, Scan wizard, Schedules, Reports, KB, Users, Cloud Agent agents & activation keys). Tasks auto-complete via server-side event matching (routes_vmlab.py apply()). Reset lab.
+- Lab 1 "Windows Command-line Agent Installation" (8 tasks) free preview; Module 1 quiz + CTF (paid).
+- Progress tab: stats, module progress, badges, quiz score history. Admin Manage tab: price + courses that include lab, CRUD labs/tasks (event/answer checks), quiz questions, CTF challenges.
+- Access: admin/instructor, purchase product "vm-lab" (price from db.vm_settings, Razorpay/Cashfree via item_for), or owning a linked course; admin grant "vmlab".
+- Fake data only (backend/vm_data.py), original branding.
+- Pending/backlog: Labs for modules 1 (deploy/uninstall/scan-on-demand — shell already supports), 2, 3, 4; video skip-progress request was declined by user ("leave as is").
