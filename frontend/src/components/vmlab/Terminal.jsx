@@ -34,7 +34,7 @@ export function Terminal({ lab, onResult, active }) {
     if (e.key === "ArrowDown" && hi.current >= 0) { e.preventDefault(); hi.current += 1; if (hi.current >= h.length) { hi.current = -1; setCmd(""); } else setCmd(h[hi.current]); }
   };
   return <div className="h-full flex flex-col bg-[#0C0C0C] border border-white/10" data-testid="vm-terminal">
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1F1F1F] text-[11px] text-slate-300 border-b border-white/10"><span className="h-2.5 w-2.5 bg-sky-500" />Administrator: Command Prompt <span className="ml-auto text-slate-500 font-mono">{lab.state.installed ? "agent: installed" : "agent: not installed"}</span></div>
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1F1F1F] text-[11px] text-slate-300 border-b border-white/10"><span className="h-2.5 w-2.5 bg-sky-500" />Administrator: Command Prompt <span className="ml-auto text-slate-500 font-mono">{lab.module === 2 ? "scan jump host · 10.20.30.41" : lab.state.installed ? "agent: installed" : "agent: not installed"}</span></div>
     <div ref={box} onClick={() => inp.current?.focus()} className="flex-1 overflow-auto p-3 font-mono text-[12.5px] leading-5 text-slate-200 min-h-[320px]" data-testid="vm-terminal-output">
       <div className="text-slate-500">Microsoft-style Windows [Version 10.0.20348] (simulated)<br />(c) SOCProfessionals training lab. Type 'help' for supported commands.</div>
       {lines.map((l, i) => l.out != null ? <pre key={i} className="whitespace-pre-wrap break-words text-slate-300">{l.out}</pre> : <div key={i} className="break-all"><span className="text-slate-400">{l.p}&gt;</span>{l.cmd}</div>)}

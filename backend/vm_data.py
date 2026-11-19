@@ -32,6 +32,20 @@ EVENTS = {
     "query.saved": "Console: saved an agent search query (match name)", "selfprot.enabled": "Console: enabled self-protection in a profile", "selfprot.disabled": "Console: disabled self-protection in a profile",
     "profile.saved": "Console: saved a configuration profile", "console.module_deactivated": "Console: deactivated a module on an agent (match module)",
     "console.module_activated": "Console: activated a module on an agent (match module)", "console.agent_uninstall_requested": "Console: requested agent uninstall (match host)",
+    "cmd.ping": "Terminal: pinged a lab target", "cmd.nslookup": "Terminal: nslookup on a lab target", "cmd.nbtstat": "Terminal: nbtstat -A on a lab target",
+    "cmd.portcheck": "Terminal: Test-NetConnection port check (match command)", "cmd.netuser": "Terminal: net user qscanner /domain", "cmd.sudo_check": "Terminal: ssh sudo -l on a Linux target",
+    "hosts.added": "Console: added host IPs (match ipset all/windows/linux/custom, tracking)", "tag.rule_tested": "Console: tested a tag rule (match engine/query)",
+    "inventory.queried": "Console: ran an inventory query (match q)", "auth.created": "Console: created an authentication record (match kind/type/user/domain/delegation/ipset)",
+    "option_profile.created": "Console: created an option profile (match title/ports/performance/detection/windows/unix/global)", "profile.ports_viewed": "Console: viewed the standard port list",
+    "scan.results_viewed": "Console: viewed scan results", "storage.saved": "Console: saved scan storage (match months)", "schedule.run_now": "Console: ran a schedule now (match title)",
+    "kb.viewed": "Console: opened a QID (match qid)", "kb.filtered": "Console: filtered the KnowledgeBase (match severity/type)",
+    "searchlist.created": "Console: created a search list (match title/kind/severity/category/qids/global)", "searchlist.imported": "Console: imported a library search list (match title)",
+    "template.created": "Console: created a report template (match title/findings/trending/filter/searchlist)", "template.imported": "Console: imported a library template (match title)",
+    "report.viewed": "Console: opened a report (match template)", "report.downloaded": "Console: downloaded a report (match format)",
+    "report.scheduled": "Console: scheduled a report (match frequency/email/start)", "report.schedules_viewed": "Console: opened report schedules",
+    "user.email_opened": "Console: opened the registration email", "user.activated": "Console: activated a new user account",
+    "remediation.policy_created": "Console: created a remediation policy (match title/action/assignee/vulns/target/due/reopen)",
+    "remediation.policy_moved": "Console: moved a remediation policy (match title/position)", "remediation.tickets_viewed": "Console: opened remediation tickets",
 }
 
 T = lambda id, title, instruction, hint, solution, check: dict(id=id, title=title, instruction=instruction, hint=hint, solution=solution, check=check)  # noqa: E731
@@ -76,9 +90,11 @@ CTF1 = {
 }
 
 from vm_labs import LABS  # noqa: E402
+from vm_labs2 import SEED2  # noqa: E402
+import vm_m2  # noqa: E402
 
-SEED_VERSION = 2
-SEED = LABS[:2] + [LAB1] + LABS[2:] + [QUIZ1, CTF1]
+SEED_VERSION = 3
+SEED = LABS[:2] + [LAB1] + LABS[2:] + [QUIZ1, CTF1] + SEED2
 
 VULNS = [
     (91001, "SOCP Demo: Outdated OpenSSL-like library (fictional)", 5, "Windows/Linux"), (91002, "Fictional SMBv1 enabled on host", 4, "Windows"),
@@ -114,7 +130,9 @@ def console_data():
                  {"name": "Linux Fleet", "customer_id": CUSTOMER_ID, "activation_id": "9b8a7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d", "uri": URI, "sha256": SHA256, "used": 3, "limit": 25, "status": "Active", "modules": ["VM"]},
                  {"name": "Old Pilot (revoked)", "customer_id": CUSTOMER_ID, "activation_id": "11111111-2222-4333-8444-555555555555", "uri": URI, "sha256": SHA256, "used": 12, "limit": 12, "status": "Revoked", "modules": ["VM"]}],
         "users": [{"name": "Asha Rao", "login": "socp_ar01", "role": "Manager", "status": "Active"}, {"name": "Leo Mendes", "login": "socp_lm02", "role": "Scanner", "status": "Active"},
-                  {"name": "Priya Nair", "login": "socp_pn03", "role": "Reader", "status": "Active"}, {"name": "Omar Haddad", "login": "socp_oh04", "role": "Unit Manager", "status": "Inactive"}],
+                  {"name": "Priya Nair", "login": "socp_pn03", "role": "Reader", "status": "Active"}, {"name": "Omar Haddad", "login": "socp_oh04", "role": "Unit Manager", "status": "Inactive"},
+                  {"name": "Dana Cruz", "login": "socp_dc05", "role": "Remediation User", "status": "Active"}],
+        "m2": vm_m2.console(),
         "profiles": ["Initial Options (default)", "Full TCP + Auth Scan", "Light Inventory Scan", "PCI External Scan"],
         "templates": ["Technical Report", "Executive Summary", "Scan Results", "Patch Report", "PCI Compliance"],
         "new_agent": {"host": HOST, "ip": "10.20.30.41", "os": "Windows Server 2022", "status": "Active", "version": "6.2.0.41", "last_checkin": "2026-06-12 10:16", "key": "Windows Servers", "software": 412, "ports": "135, 445, 3389, 5985",

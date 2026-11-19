@@ -30,6 +30,10 @@ export function CopyField({ label, value, tid }) {
     <button onClick={copy} className="px-2 border border-slate-600 text-slate-300 hover:bg-slate-700" aria-label={`Copy ${label}`}><Copy className="h-3.5 w-3.5" /></button></div></div>;
 }
 
+export const SubTabs = ({ tabs, cur, set, tid }) => <div className="flex gap-1 flex-wrap">{tabs.map(([k, l]) => <Btn key={k} primary={cur === k} onClick={() => set(k)} data-testid={`${tid}-${k}`}>{l}</Btn>)}</div>;
+export const Check = ({ label, checked, onChange, tid, disabled }) => <label className={`flex items-center gap-2 text-xs ${disabled ? "opacity-40" : ""}`}><input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} data-testid={tid} />{label}</label>;
+export const Radio = ({ options, value, onChange, tid }) => <div className="flex gap-3 flex-wrap">{options.map((o) => <label key={o} className="flex items-center gap-1.5 text-xs text-slate-200"><input type="radio" checked={value === o} onChange={() => onChange(o)} data-testid={`${tid}-${o.replace(/\W+/g, "-").toLowerCase()}`} />{o}</label>)}</div>;
+
 export function useForm(init) {
   const [f, setF] = useState(init);
   return [f, (k) => (e) => setF({ ...f, [k]: e.target.value }), () => setF(init)];

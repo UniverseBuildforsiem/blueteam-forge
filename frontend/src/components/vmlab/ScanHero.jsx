@@ -6,8 +6,8 @@ const CVES = [["CVE-2021-44228", "Apache Log4j RCE (Log4Shell)", 5], ["CVE-2021-
   ["CVE-2020-1472", "Netlogon elevation (Zerologon)", 5], ["CVE-2021-26855", "Exchange SSRF (ProxyLogon)", 5], ["CVE-2023-4966", "NetScaler info disclosure (Citrix Bleed)", 4], ["CVE-2014-0160", "OpenSSL Heartbleed", 4],
   ["CVE-2022-0847", "Linux kernel Dirty Pipe", 4], ["CVE-2016-2183", "3DES birthday attack (SWEET32)", 3], ["CVE-2015-4000", "TLS DHE downgrade (Logjam)", 3], ["CVE-2013-2566", "RC4 cipher weaknesses", 3],
   ["CVE-2008-5161", "SSH CBC mode plaintext recovery", 2], ["CVE-1999-0524", "ICMP timestamp disclosure", 1], ["CVE-2004-2761", "MD5-signed certificate", 2], ["CVE-2023-48795", "SSH prefix truncation (Terrapin)", 3]];
-const LV = [[5, "Critical", "bg-red-600", "text-red-300"], [4, "High", "bg-orange-500", "text-orange-300"], [3, "Medium", "bg-yellow-500", "text-yellow-200"], [2, "Low", "bg-sky-500", "text-sky-300"], [1, "Info", "bg-slate-500", "text-slate-300"]];
-const TILE = { 5: "bg-red-600/30", 4: "bg-orange-500/30", 3: "bg-yellow-500/25", 2: "bg-sky-500/25", 1: "bg-slate-500/25" };
+export const LV = [[5, "Critical", "bg-red-600", "text-red-300"], [4, "High", "bg-orange-500", "text-orange-300"], [3, "Medium", "bg-yellow-500", "text-yellow-200"], [2, "Low", "bg-sky-500", "text-sky-300"], [1, "Info", "bg-slate-500", "text-slate-300"]];
+export const TILE = { 5: "bg-red-600/30", 4: "bg-orange-500/30", 3: "bg-yellow-500/25", 2: "bg-sky-500/25", 1: "bg-slate-500/25" };
 const HOSTS = Array.from({ length: 24 }, (_, i) => `${["SRV", "WS", "LNX", "FIN"][i % 4]}-${110 + i}`);
 
 export function ScanHero() {

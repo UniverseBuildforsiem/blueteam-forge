@@ -3,14 +3,18 @@ from typing import Optional, Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from core import db, get_current_user, now_iso, new_id, award
+import copy
 import vm_shell
+import vm_m2
 from vm_data import SEED, SEED_VERSION, MODULES, EVENTS, console_data
 
 router = APIRouter(prefix="/api/vmlab")
 NO_ID = {"_id": 0}
 PRODUCT = "vm-lab"
 CONSOLE = console_data()
-CONSOLE_LISTS = {"key.created": "keys", "query.saved": "queries", "tag.created": "tags", "asset_group.created": "groups", "scan.launched": "scans", "scan.scheduled": "schedules", "report.generated": "reports", "user.created": "users"}
+CONSOLE_LISTS = {"key.created": "keys", "query.saved": "queries", "tag.created": "tags", "asset_group.created": "groups", "scan.launched": "scans", "scan.scheduled": "schedules", "report.generated": "reports", "user.created": "users",
+                 "hosts.added": "hosts", "option_profile.created": "oprofiles", "auth.created": "auth", "searchlist.created": "searchlists", "searchlist.imported": "searchlists",
+                 "template.created": "templates", "template.imported": "templates", "report.scheduled": "report_schedules", "remediation.policy_created": "policies"}
 
 
 async def seed_vm():
@@ -58,7 +62,7 @@ def public_task(t, prog):
 
 async def progress(user, it):
     p = await db.vm_progress.find_one({"user_id": user["id"], "lab_id": it["id"]}, NO_ID)
-    return p or {"user_id": user["id"], "lab_id": it["id"], "done": [], "hints": [], "solutions": [], "state": {"shell": vm_shell.fresh(it.get("preset")), "console": {}}, "term": [], "started_at": now_iso()}
+    return p or {"user_id": user["id"], "lab_id": it["id"], "done": [], "hints": [], "solutions": [], "state": {"shell": vm_shell.fresh(it.get("preset")), "console": copy.deepcopy(it.get("console_preset") or {})}, "term": [], "started_at": now_iso()}
 
 
 async def save(p):
@@ -186,8 +190,26 @@ async def event(iid: str, body: EventIn, user=Depends(get_current_user)):
         raise HTTPException(422, "Unknown event")
     it = await get_item(iid, user, "lab")
     p = await progress(user, it)
-    data = {k: str(v)[:200] for k, v in list(body.data.items())[:12]}
+    data = {k: str(v)[:200] for k, v in list(body.data.items())[:16]}
+    for k in ("ips", "target"):
+        if k in data:
+            data["ipset"] = vm_m2.ipset(data[k])
     con, sh = p["state"]["console"], p["state"]["shell"]
+    if body.event == "user.activated":
+        mine = [f"socp_new{i + 1}" for i in range(len(con.get("users", [])))]
+        if data.get("login", "").strip().lower() not in mine or data.get("password", "") != vm_m2.PASSWORD:
+            raise HTTPException(422, "Login failed: check the login and password in the registration email")
+        con["activated"] = sorted(set(con.get("activated", [])) | {data["login"].strip().lower()})
+        data.pop("password")
+    if body.event == "storage.saved":
+        con["storage"] = data.get("months", "6")
+    if body.event == "remediation.policy_moved":
+        pol = con.get("policies", [])
+        i = next((n for n, x in enumerate(pol) if x.get("title", "").lower() == data.get("title", "").lower()), None)
+        pos = int(data.get("position", "0")) if str(data.get("position", "")).isdigit() else 0
+        if i is None or not 1 <= pos <= len(pol):
+            raise HTTPException(422, "Policy not found")
+        pol.insert(pos - 1, pol.pop(i))
     if body.event in ("selfprot.enabled", "selfprot.disabled"):
         sh["selfprot"] = body.event == "selfprot.enabled"
     if body.event in ("console.module_deactivated", "console.module_activated"):

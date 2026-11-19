@@ -31,6 +31,7 @@ export default function VmLabPlayer() {
   const nav = useNavigate();
   const [lab, setLab] = useState(null);
   const [tab, setTab] = useState("terminal");
+  useEffect(() => { if (lab?.module === 2 && !lab.term.length && lab.id !== "vm-lab-vm-01-setup") setTab("console"); }, [lab?.id]); // eslint-disable-line
   const [key, setKey] = useState(0);
   useEffect(() => { api.get(`/vmlab/labs/${id}`).then((r) => setLab(r.data)).catch((e) => { toast.error(errMsg(e)); nav("/app/vmlab"); }); }, [id]); // eslint-disable-line
   if (!lab) return null;

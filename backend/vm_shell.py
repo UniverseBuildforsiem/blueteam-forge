@@ -1,6 +1,7 @@
 """Simulated Windows shell for the SOCP Cloud Agent labs. Fake data only."""
 import re
 import shlex
+import vm_net
 
 DL = r"C:\Users\student\Downloads"
 HOME = r"C:\Users\student"
@@ -184,7 +185,7 @@ def run(raw, st):
     head, args, low = parts[0], parts[1:], cmd.lower()
     h = head.lower().replace(".\\", "").rsplit("\\", 1)[-1]
     if h in ("help", "?", "/?"):
-        return HELP, []
+        return HELP + vm_net.HELP, []
     if h in ("whoami",):
         if args and args[0].lower() == "/groups":
             return "GROUP INFORMATION\n-----------------\nBUILTIN\\Administrators     Alias  S-1-5-32-544  Mandatory group, Enabled by default, Enabled group, Group owner\nMandatory Label\\High Mandatory Level  Label  S-1-16-12288", ["cmd.whoami"]
@@ -296,4 +297,7 @@ def run(raw, st):
         return "Stopping service... done\nDeregistering agent from platform... done\nSOCP Cloud Agent was uninstalled.", ["agent.uninstalled"]
     if h in ("cls", "clear"):
         return "\x0c", []
+    net = vm_net.network(h, args, low)
+    if net:
+        return net
     return f"'{head}' is not recognized as an internal or external command,\noperable program or batch file.\nType 'help' to see the commands this lab supports.", []
