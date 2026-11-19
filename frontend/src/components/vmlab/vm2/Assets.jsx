@@ -16,7 +16,7 @@ function Address({ d, st, emit }) {
     emit("hosts.added", { ips: f.ips.trim(), tracking: f.tracking }); toast.success(`${ips.length} IP(s) added to the subscription`); reset();
   };
   const rows = [...sub].map((ip) => { const h = d.m2.hosts.find((x) => x.ip === ip); return [ip, h ? h.name : "no response", track[ip], h ? "Scannable" : "Scannable (no host)"]; });
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(290px,1fr))] items-start gap-3"><Panel title={`Address Management · ${sub.size} IPs`} tid="vmc-address"><Table rowTid="vmc-address-row" cols={["IP", "Name", "Tracking", "Status"]} rows={rows} empty="No hosts in the subscription yet" /></Panel>
+  return <div className="grid grid-cols-1 gap-3"><Panel title={`Address Management · ${sub.size} IPs`} tid="vmc-address"><Table rowTid="vmc-address-row" cols={["IP", "Name", "Tracking", "Status"]} rows={rows} empty="No hosts in the subscription yet" /></Panel>
     <Panel title="Add IPs"><form onSubmit={add} className="space-y-2"><Lbl t="IPs / ranges"><In value={f.ips} onChange={on("ips")} placeholder="10.50.200.247-10.50.200.250" data-testid="vmc-address-ips" /></Lbl>
       <Lbl t="Tracking method"><Sel options={["IP", "DNS", "NetBIOS"]} value={f.tracking} onChange={on("tracking")} data-testid="vmc-address-tracking" /></Lbl><Btn primary type="submit" data-testid="vmc-address-add">Add</Btn></form></Panel></div>;
 }
@@ -32,7 +32,7 @@ function AssetSearch({ d, st, emit }) {
     emit("asset.searched", { os: f.os.trim(), port: f.port.trim(), ips: f.ips.trim(), qid: f.qid.trim() });
   };
   const mk = () => { if (!tag.trim()) return toast.error("Name the tag"); emit("tag.created", { name: tag.trim(), parent: "", engine: "Static", query: "from asset search", evaluate: "no" }); toast.success(`Tag '${tag.trim()}' applied to ${res.length} hosts`); setTag(""); };
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(290px,1fr))] items-start gap-3"><Panel title="Asset Search"><form onSubmit={go} className="space-y-2">
+  return <div className="grid grid-cols-1 gap-3"><Panel title="Asset Search"><form onSubmit={go} className="space-y-2">
     <Lbl t="Operating system contains"><In value={f.os} onChange={on("os")} data-testid="vmc-asearch-os" /></Lbl><Lbl t="Open port"><In value={f.port} onChange={on("port")} data-testid="vmc-asearch-port" /></Lbl>
     <Lbl t="IPs / ranges"><In value={f.ips} onChange={on("ips")} data-testid="vmc-asearch-ips" /></Lbl><Lbl t="Vulnerability (QID)"><In value={f.qid} onChange={on("qid")} data-testid="vmc-asearch-qid" /></Lbl>
     <Btn primary type="submit" data-testid="vmc-asearch-go">Search</Btn></form></Panel>
@@ -73,7 +73,7 @@ export function Groups2({ d, st, emit }) {
   const rows = (st.console.groups || []).map((g) => { const ips = new Set(expand(g.ips)); const hs = subHosts(d, st).filter((h) => ips.has(h.ip));
     const risk = hs.length ? hs.reduce((n, h) => n + Math.max(...findings(d, h).map((k) => k.severity)), 0) / hs.length : 0;
     return [g.name, g.ips, hs.length, g.impact, (risk * W[g.impact] * 4).toFixed(0)]; });
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(290px,1fr))] items-start gap-3"><Panel title="Asset Groups" tid="vmc-groups"><Table rowTid="vmc-group-row" cols={["Title", "IPs", "Hosts", "Business impact", "Business risk"]} rows={rows} empty="No asset groups" /></Panel>
+  return <div className="grid grid-cols-1 gap-3"><Panel title="Asset Groups" tid="vmc-groups"><Table rowTid="vmc-group-row" cols={["Title", "IPs", "Hosts", "Business impact", "Business risk"]} rows={rows} empty="No asset groups" /></Panel>
     <Panel title="New asset group"><form onSubmit={add} className="space-y-2"><Lbl t="Title (prefix with AG:)"><In value={f.name} onChange={on("name")} placeholder="AG: San Jose" data-testid="vmc-group-name" /></Lbl>
       <Lbl t="IPs / ranges"><In value={f.ips} onChange={on("ips")} data-testid="vmc-group-ips" /></Lbl><Lbl t="Domains (optional)"><In value={f.domains} onChange={on("domains")} /></Lbl>
       <Lbl t="Business impact"><Sel options={Object.keys(W)} value={f.impact} onChange={on("impact")} data-testid="vmc-group-impact" /></Lbl><Btn primary type="submit" data-testid="vmc-group-create">Save</Btn></form></Panel></div>;

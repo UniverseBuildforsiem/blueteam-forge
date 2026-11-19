@@ -29,7 +29,7 @@ function ScanList({ d, st, emit }) {
   const [view, setView] = useState(null);
   const scans = st.console.scans || [];
   const launch = (e) => { e.preventDefault(); if (!f.title.trim() || !f.target.trim()) return toast.error("Title and target are required"); emit("scan.launched", { ...f, title: f.title.trim() }); setRun({ ...f, hosts: targetHosts(d, st, f.target) }); reset(); };
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(290px,1fr))] items-start gap-3">
+  return <div className="grid grid-cols-1 gap-3">
     <Panel title="Scans" tid="vmc-scans"><div className="space-y-3">{run && <ScanRun d={d} hosts={run.hosts} title={run.title} onDone={() => { setRun(null); toast.success("Scan processed · results ready"); }} />}
       <Table rowTid="vmc-scan-row" cols={["Title", "Profile", "Target", "Status", ""]} empty="No scans yet" rows={scans.map((s, i) => { const busy = run && i === scans.length - 1;
         return [s.title, s.profile, s.target, busy ? "Running" : <span className="text-green-400">Finished · Processed</span>, <Btn disabled={busy} onClick={() => { setView(s); emit("scan.results_viewed", { title: s.title }); }} data-testid={`vmc-scan-view-${i}`}>View results</Btn>]; })} /></div></Panel>
@@ -51,7 +51,7 @@ function Profiles({ d, st, emit }) {
   const [ports, setPorts] = useState(false);
   const save = (e) => { e.preventDefault(); if (!f.title.trim()) return toast.error("Title is required"); emit("option_profile.created", { ...f, title: f.title.trim(), windows: yes(c.windows), unix: yes(c.unix), global: yes(c.global) }); toast.success("Option profile saved"); reset(); setC({ windows: false, unix: false, global: false }); };
   const mine = st.console.oprofiles || [];
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(290px,1fr))] items-start gap-3"><Panel title="Option Profiles" tid="vmc-oprofiles"><Table cols={["Title", "Ports", "Performance", "Detection", "Auth", "Global"]} rows={[...d.profiles.map((p) => [p, "Standard Scan", "Normal", "Complete", "-", "Yes"]), ...mine.map((p) => [p.title, p.ports, p.performance, p.detection, [p.windows === "yes" && "Windows", p.unix === "yes" && "Unix"].filter(Boolean).join(", ") || "-", p.global === "yes" ? "Yes" : "No"])]} /></Panel>
+  return <div className="grid grid-cols-1 gap-3"><Panel title="Option Profiles" tid="vmc-oprofiles"><Table cols={["Title", "Ports", "Performance", "Detection", "Auth", "Global"]} rows={[...d.profiles.map((p) => [p, "Standard Scan", "Normal", "Complete", "-", "Yes"]), ...mine.map((p) => [p.title, p.ports, p.performance, p.detection, [p.windows === "yes" && "Windows", p.unix === "yes" && "Unix"].filter(Boolean).join(", ") || "-", p.global === "yes" ? "Yes" : "No"])]} /></Panel>
     <Panel title="New option profile"><form onSubmit={save} className="space-y-2"><Lbl t="Title"><In value={f.title} onChange={on("title")} data-testid="vmc-op-title" /></Lbl>
       <Lbl t="TCP/UDP ports"><Sel options={["Standard Scan", "Light Scan", "Full", "Custom"]} value={f.ports} onChange={on("ports")} data-testid="vmc-op-ports" /></Lbl>
       <button type="button" className="text-[11px] text-sky-300 underline" onClick={() => { setPorts(!ports); if (!ports) emit("profile.ports_viewed", {}); }} data-testid="vmc-op-viewlist">View list</button>{ports && <p className="text-[10px] font-mono text-slate-400" data-testid="vmc-op-portlist">{PORTS}</p>}

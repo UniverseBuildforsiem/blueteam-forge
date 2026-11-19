@@ -218,8 +218,9 @@ async def event(iid: str, body: EventIn, user=Depends(get_current_user)):
         con["uninstall_requested"] = True
     if body.event in CONSOLE_LISTS:
         lst = p["state"]["console"].setdefault(CONSOLE_LISTS[body.event], [])
-        if len(lst) < 50:
-            lst.append({**data, "at": now_iso()})
+        if len(lst) >= 50:
+            raise HTTPException(422, "This lab's console is full (50 items). Reset the lab to start fresh.")
+        lst.append({**data, "at": now_iso()})
     new = await apply(it, p, [body.event], data, user)
     await save(p)
     return {"new": new, "lab": lab_view(it, p)}

@@ -1,0 +1,41 @@
+{
+  "summary": "VM Lab Module 2 (Vulnerability Management): 17 labs, quiz and CTF tested end to end through the backend API (new pytest file, 23/23 passing) and the UI with Playwright at 1920x800 and 390x844. Every one of the 17 labs can be completed in the UI by following its own instructions. The hub lists 17 labs + quiz + CTF in order. Lab 1 is a free preview. Locks for a student who has not bought the lab work (403 on lab 2/quiz/ctf, 200 on lab 1). Module 2 opens the VMDR app with 10 nav items, and Module 1 still opens Cloud Agent. These all work: scan animation Running→Finished·Processed with real CVE names, results drawer showing 2 confirmed sev-5 findings on TRN-DC01, user activation with wrong and correct password, the root-user rejection toast, the missing time-zone error, policy reorder that persists after reload, hints (-5) and solutions (-10) giving a score of 85, reset, quiz scoring (90% with one wrong answer) and all 4 CTF flags. No functional blockers. Only minor UX/layout issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/vmlab/labs/vm-lab-vm-01-setup/exec", "issue": "Lab 1 t1 ticks on any ping (event cmd.ping has no match), including pings that time out to non-lab IPs. Consider matching a lab IP."},
+      {"endpoint": "/api/vmlab/labs/{id}/event", "issue": "Console lists stop growing after 50 entries (len(lst) < 50) but the event still runs and can tick tasks. The UI then shows no new row with no feedback. Edge case only."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Reports/Scans/Tags/SearchLists tables (vm2)", "issue": "At 1920x800 the two-column grid (repeat(auto-fit,minmax(290px,1fr))) gives the table panel only ~337px. The right-hand columns are clipped behind horizontal scroll: in Reports, Status plus the View/Schedule buttons; in Scans, Status plus 'View results'; the Assets column in Tags; the Global column in Search Lists. These buttons are needed for Labs 10/12/13/15 and users must side-scroll a small table to find them.", "selector": "[data-testid=vmc-reports], [data-testid=vmc-scans], [data-testid=vmc-tags], [data-testid=vmc-searchlists]", "priority": "MEDIUM"},
+      {"component": "Report view Download PDF/CSV/HTML", "issue": "Only shows a success toast and emits the event. No file is downloaded (Playwright expect_download timed out). Fine for a simulation, but either the toast should say 'simulated' or a small mock file should be produced.", "selector": "[data-testid=vmc-report-dl-pdf]", "priority": "LOW"},
+      {"component": "Drawer (ui.jsx)", "issue": "Drawers (results, KB, inbox, report view, template) do not close on Escape. Only the X button or a backdrop click closes them.", "selector": "[data-testid$=-close]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Lab player console on mobile 390x844", "issues": ["The console pane is clipped at the right edge: the panel right borders and the last table column touch or cut at the viewport edge, and there is no right padding."]},
+      {"screen": "Tags table", "issues": ["The static parent 'Operating Systems' shows 0 assets. It does not roll up its children, which may confuse learners."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_vm_module2_labs.py", "/app/test_reports/pytest/vm_module2.xml"],
+  "action_items": [
+    "Make the table panels in vm2 views (Reports, Scans, Tags, Search Lists) wider. For example, give the form column a fixed width (grid-cols-[1fr_320px] on xl), or pin the action column, so View / View results / Schedule are visible at 1920x800 without horizontal scroll.",
+    "Add right padding / fix overflow of the console pane on mobile (390px).",
+    "Optional: close Drawer on Escape; make the simulated download produce a small file or say 'simulated'; make Lab 1 t1 match a lab IP; add a data-testid to the Windows auth Protocol select."
+  ],
+  "critical_code_review_comments": [
+    "routes_vmlab.event(): user.activated derives valid logins from the count of console users. This is fine, but if more than 50 users are created the list cap stops new users while the login numbering would drift.",
+    "ScanRun goes from start to Running immediately. The 'Queued' state was not observed in polling at 2s intervals (it is either very brief or skipped).",
+    "Windows auth 'Protocol' Sel has no data-testid (Scans.jsx line 77)."
+  ],
+  "updated_files": ["/app/backend/tests/test_vm_module2_labs.py"],
+  "success_rate": {"backend": "100% (23/23 new + 21 passed/4 skipped regression in test_vmlab.py & test_vm_cloud_agent_labs.py)", "frontend": "100% functional (17/17 labs completable via UI, quiz, CTF, locks, hints/solution/reset, module 1 regression); minor layout issues"},
+  "test_credentials": "admin@socprofessionals.academy / Admin@123; student@socprofessionals.academy / Student@123 (no VM lab purchase, access=false)",
+  "seed_data_creation": "None. Only per-user lab progress for admin (labs reset by the tests), quiz attempts and CTF solves for admin.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: export REACT_APP_BACKEND_URL=...; pytest backend/tests/test_vm_module2_labs.py -n0. UI rows use testid `${rowTid}-${i}` (use ^= selectors). Drawer close testid `${tid}-close`. Radios: `${tid}-${option-kebab}`, e.g. vmc-tpl-findings-host-based, vmc-sl-kind-dynamic. Admin already completed all M2 labs and solved the CTF, so XP-once shows 'Lab complete again'.",
+  "rca of the issue": "Table clipping: in Assets.jsx, People.jsx, Reports.jsx, KB.jsx and Scans.jsx, grid-cols-[repeat(auto-fit,minmax(290px,1fr))] splits the console main area (~690px at 1920 wide, because of the left task panel and the nav) into 2 equal columns. The Table wrapper uses overflow-x-auto with whitespace-nowrap cells, so the trailing action columns overflow out of view."
+}

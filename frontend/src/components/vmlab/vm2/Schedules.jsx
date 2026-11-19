@@ -17,7 +17,7 @@ export function Schedules2({ d, st, emit }) {
     emit("scan.scheduled", { ...f, title: f.title.trim() }); toast.success("Schedule saved"); reset();
   };
   const now = (s) => { emit("schedule.run_now", { title: s.title }); setRun({ title: `${s.title} (run now)`, hosts: targetHosts(d, st, s.target) }); };
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(290px,1fr))] items-start gap-3"><Panel title="Scheduled scans" tid="vmc-schedules"><div className="space-y-3">{run && <ScanRun d={d} hosts={run.hosts} title={run.title} onDone={() => { setRun(null); toast.success("Scheduled scan test processed"); }} />}
+  return <div className="grid grid-cols-1 gap-3"><Panel title="Scheduled scans" tid="vmc-schedules"><div className="space-y-3">{run && <ScanRun d={d} hosts={run.hosts} title={run.title} onDone={() => { setRun(null); toast.success("Scheduled scan test processed"); }} />}
     <Table rowTid="vmc-sched-row" empty="No schedules" cols={["Title", "Occurs", "Next run", "Time zone", "Target", ""]} rows={(st.console.schedules || []).map((s, i) => [s.title, s.frequency, (s.start || "").replace("T", " "), s.tz || "-", s.target, <Btn disabled={!!run} onClick={() => now(s)} data-testid={`vmc-sched-runnow-${i}`}>Run now</Btn>])} /></div></Panel>
     <Panel title="New schedule"><form onSubmit={add} className="space-y-2"><Lbl t="Title"><In value={f.title} onChange={on("title")} data-testid="vmc-sched-title" /></Lbl>
       <Lbl t="Option profile"><Sel options={profilesOf(d, st)} value={f.profile} onChange={on("profile")} data-testid="vmc-sched-profile" /></Lbl>

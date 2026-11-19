@@ -14,7 +14,7 @@ def ping(args):
     x = vm_m2.find_host(tgt)
     if not x:
         if tgt.startswith(vm_m2.NET):
-            return f"Pinging {tgt} with 32 bytes of data:\nRequest timed out.\nRequest timed out.\n\nPing statistics for {tgt}:\n    Packets: Sent = 2, Received = 0, Lost = 2 (100% loss)", ["cmd.ping"]
+            return f"Pinging {tgt} with 32 bytes of data:\nRequest timed out.\nRequest timed out.\n\nPing statistics for {tgt}:\n    Packets: Sent = 2, Received = 0, Lost = 2 (100% loss)", []
         return f"Ping request could not find host {tgt}. Please check the name and try again.", []
     ttl = 128 if x["tracking"] == "NetBIOS" else 64
     rep = "\n".join(f"Reply from {x['ip']}: bytes=32 time={3 + i}ms TTL={ttl}" for i in range(4))

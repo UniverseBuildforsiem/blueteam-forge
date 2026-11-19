@@ -20,13 +20,15 @@ export function Tags2({ d, st, emit }) {
   const [ev, setEv] = useState(false);
   const [test, setTest] = useState(null);
   const hosts = subHosts(d, st), mine = st.console.tags || [];
-  const count = (t) => { try { return t.evaluate === "yes" ? evalRule(t.engine, t.query, hosts).filter(Boolean).length : 0; } catch { return 0; } };
+  const own = (t) => { try { return t.evaluate === "yes" ? hosts.filter((h, i) => evalRule(t.engine, t.query, hosts)[i]).map((h) => h.ip) : []; } catch { return []; } };
+  const reach = (t, depth = 0) => new Set([...own(t), ...(depth < 6 ? mine.filter((c) => c.parent === t.name).flatMap((c) => [...reach(c, depth + 1)]) : [])]);
+  const count = (t) => reach(t).size;
   const run = () => { try { const r = evalRule(f.engine, f.query, hosts); setTest(r); emit("tag.rule_tested", { engine: f.engine, query: f.query.trim(), passed: String(r.filter(Boolean).length) }); } catch (e) { toast.error(e.message); } };
   const add = (e) => { e.preventDefault(); if (!f.name.trim()) return toast.error("Tag name is required"); emit("tag.created", { name: f.name.trim(), parent: f.parent === "(none)" ? "" : f.parent, engine: f.engine, query: f.engine === "Static" ? "" : f.query.trim(), evaluate: f.engine === "Static" ? "no" : ev ? "yes" : "no" }); toast.success(`Tag '${f.name.trim()}' created`); reset(); setEv(false); setTest(null); };
   const tree = [];
   const walk = (parent, depth) => mine.filter((t) => (t.parent || "") === parent).forEach((t) => { tree.push([depth, t]); if (depth < 5) walk(t.name, depth + 1); });
   walk("", 0);
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(290px,1fr))] items-start gap-3"><Panel title="Asset Tags" tid="vmc-tags"><Table rowTid="vmc-tag-row" empty="No tags yet" cols={["Tag", "Rule engine", "Rule", "Assets"]} rows={tree.map(([dp, t]) => [<span style={{ paddingLeft: dp * 16 }}>{dp ? "└ " : ""}{t.name}</span>, t.engine, t.query || "-", count(t)])} /></Panel>
+  return <div className="grid grid-cols-1 gap-3"><Panel title="Asset Tags" tid="vmc-tags"><Table rowTid="vmc-tag-row" empty="No tags yet" cols={["Tag", "Rule engine", "Rule", "Assets"]} rows={tree.map(([dp, t]) => [<span style={{ paddingLeft: dp * 16 }}>{dp ? "└ " : ""}{t.name}</span>, t.engine, t.query || "-", count(t)])} /></Panel>
     <Panel title="Create tag"><form onSubmit={add} className="space-y-2"><Lbl t="Tag name"><In value={f.name} onChange={on("name")} data-testid="vmc-tag-name" /></Lbl>
       <Lbl t="Parent tag"><Sel options={["(none)", ...mine.map((t) => t.name)]} value={f.parent} onChange={on("parent")} data-testid="vmc-tag-parent" /></Lbl>
       <Lbl t="Rule engine"><Sel options={ENGINES} value={f.engine} onChange={(e) => { on("engine")(e); setTest(null); }} data-testid="vmc-tag-engine" /></Lbl>

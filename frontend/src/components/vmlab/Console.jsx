@@ -36,7 +36,7 @@ export function Console({ lab, emit }) {
   const apps = m2 ? APPS2 : APPS;
   const A = apps.find((a) => a.id === app), cur = A.nav.find((n) => n[0] === view) || A.nav[0], View = cur?.[3];
   const pick = (a) => { setApp(a.id); setView(a.nav[0]?.[0]); };
-  return <div className="h-full flex flex-col bg-[#0f1720] border border-slate-700/70 text-slate-200" data-testid="vm-console">
+  return <div className="h-full min-w-0 overflow-hidden flex flex-col bg-[#0f1720] border border-slate-700/70 text-slate-200" data-testid="vm-console">
     <div className="flex items-center gap-3 px-3 py-2 bg-[#0b2238] border-b border-sky-900">
       <span className="flex items-center gap-1.5 font-semibold text-[13px] text-white shrink-0"><Shield className="h-4 w-4 text-sky-400" /><span className="hidden md:inline">{d.brand}</span></span>
       <div className="flex gap-1 overflow-x-auto" role="tablist">{apps.map((a) => <button key={a.id} role="tab" aria-selected={app === a.id} onClick={() => pick(a)} className={`px-2.5 py-1 text-[11px] whitespace-nowrap ${app === a.id ? "bg-sky-600 text-white" : "text-sky-100/80 hover:bg-white/10"}`} data-testid={`vmc-app-${a.id}`}>{a.label}</button>)}</div>

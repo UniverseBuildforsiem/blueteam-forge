@@ -12,7 +12,17 @@ function ReportView({ d, st, r, emit, onClose }) {
   const tpl = (st.console.templates || []).find((t) => t.title === r.template);
   const pred = /high severity/i.test(r.template) ? (k) => k.severity >= 4 : tpl?.filter === "Custom" ? listMatch(d, st, tpl.searchlist) : () => true;
   const rows = targetHosts(d, st, r.target).flatMap((h) => findings(d, h).filter((k) => k.type !== "Information gathered" && pred(k)).map((k) => [h.ip, h.name.split(".")[0], <Sev n={k.severity} />, k.qid, k.title, k.cve, "Active"]));
-  const dl = (format) => { emit("report.downloaded", { title: r.title, format }); toast.success(`${r.title}.${format.toLowerCase()} downloaded`); };
+  const dl = (format) => {
+    const head = rem ? ["User", "Login", "Open", "Overdue", "Closed", "Ignored"] : ["IP", "Host", "Severity", "QID", "Title", "CVE", "Status"];
+    const data = rem ? d.m2.remediation.map((x) => [x.name, x.login, x.open, x.overdue, x.closed, x.ignored]) : rows.map((x) => [x[0], x[1], x[2].props.n, x[3], x[4], x[5], x[6]]);
+    const body = format === "HTML" ? `<h1>${r.title} (simulated training report)</h1><table border=1><tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr>${data.map((x) => `<tr>${x.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</table>`
+      : [`# ${r.title} - SIMULATED training report (${format}) - template ${r.template}`, head.join(","), ...data.map((x) => x.map((c) => `"${c}"`).join(","))].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([body], { type: format === "HTML" ? "text/html" : "text/plain" }));
+    a.download = `${r.title.replace(/[^\w-]+/g, "_")}.${format === "HTML" ? "html" : format === "CSV" ? "csv" : "pdf.txt"}`;
+    a.click(); URL.revokeObjectURL(a.href);
+    emit("report.downloaded", { title: r.title, format }); toast.success(`Simulated ${format} downloaded`);
+  };
   return <Drawer title={`Report · ${r.title}`} onClose={onClose} tid="vmc-report-view">
     <div className="text-[11px] text-slate-400">Template {r.template} · Target {r.target} · Generated just now · Active for 7 days</div>
     <div className="flex gap-1">{["PDF", "CSV", "HTML"].map((f) => <Btn key={f} onClick={() => dl(f)} data-testid={`vmc-report-dl-${f.toLowerCase()}`}><Download className="inline h-3 w-3 mr-1" />{f}</Btn>)}</div>
@@ -34,7 +44,7 @@ function ReportList({ d, st, emit }) {
   const [open, setOpen] = useState(null);
   const reports = st.console.reports || [];
   const run = (e) => { e.preventDefault(); emit("report.generated", { ...f, title: f.title.trim() || f.template }); toast.success("Report generated"); reset(); };
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(290px,1fr))] items-start gap-3"><Panel title="Reports" tid="vmc-reports"><Table rowTid="vmc-report-row" empty="No reports" cols={["Title", "Template", "Format", "Status", ""]} rows={reports.map((r, i) => [r.title, r.template, r.format, "Finished", <span className="flex gap-1">
+  return <div className="grid grid-cols-1 gap-3"><Panel title="Reports" tid="vmc-reports"><Table rowTid="vmc-report-row" empty="No reports" cols={["Title", "Template", "Format", "Status", ""]} rows={reports.map((r, i) => [r.title, r.template, r.format, "Finished", <span className="flex gap-1">
     <Btn onClick={() => { setOpen({ t: "view", r }); emit("report.viewed", { title: r.title, template: r.template }); }} data-testid={`vmc-report-view-${i}`}>View</Btn><Btn onClick={() => setOpen({ t: "sched", r })} data-testid={`vmc-report-schedule-${i}`}><CalendarClock className="inline h-3 w-3" /> Schedule</Btn></span>])} /></Panel>
     <Panel title="Report builder"><form onSubmit={run} className="space-y-2"><Lbl t="Title"><In value={f.title} onChange={on("title")} data-testid="vmc-report-title" /></Lbl><Lbl t="Template"><Sel options={tplsOf(d, st)} value={f.template} onChange={on("template")} data-testid="vmc-report-template" /></Lbl>
       <Lbl t="Format"><Sel options={["PDF", "CSV", "HTML"]} value={f.format} onChange={on("format")} data-testid="vmc-report-format" /></Lbl><Lbl t="Asset target"><Sel options={targetsOf(st)} value={f.target} onChange={on("target")} data-testid="vmc-report-target" /></Lbl><Btn primary type="submit" data-testid="vmc-report-run">Run report</Btn></form></Panel>
