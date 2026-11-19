@@ -4,18 +4,20 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from core import db, get_current_user, now_iso, new_id, award
 import vm_shell
-from vm_data import SEED, MODULES, EVENTS, console_data
+from vm_data import SEED, SEED_VERSION, MODULES, EVENTS, console_data
 
 router = APIRouter(prefix="/api/vmlab")
 NO_ID = {"_id": 0}
 PRODUCT = "vm-lab"
 CONSOLE = console_data()
-CONSOLE_LISTS = {"tag.created": "tags", "asset_group.created": "groups", "scan.launched": "scans", "scan.scheduled": "schedules", "report.generated": "reports", "user.created": "users"}
+CONSOLE_LISTS = {"key.created": "keys", "query.saved": "queries", "tag.created": "tags", "asset_group.created": "groups", "scan.launched": "scans", "scan.scheduled": "schedules", "report.generated": "reports", "user.created": "users"}
 
 
 async def seed_vm():
     for it in SEED:
-        await db.vm_items.update_one({"id": it["id"]}, {"$setOnInsert": {**it, "created_at": now_iso()}}, upsert=True)
+        cur = await db.vm_items.find_one({"id": it["id"]}, {"seed_version": 1})
+        if not cur or cur.get("seed_version", 1) < SEED_VERSION:
+            await db.vm_items.update_one({"id": it["id"]}, {"$set": {**it, "seed_version": SEED_VERSION}, "$setOnInsert": {"created_at": now_iso()}}, upsert=True)
     await db.vm_settings.update_one({"id": "main"}, {"$setOnInsert": {"id": "main", "price": 999, "course_ids": []}}, upsert=True)
 
 
@@ -54,9 +56,9 @@ def public_task(t, prog):
             "hint": t["hint"] if t["id"] in prog.get("hints", []) else None, "solution": t["solution"] if shown or done else None}
 
 
-async def progress(user, iid):
-    p = await db.vm_progress.find_one({"user_id": user["id"], "lab_id": iid}, NO_ID)
-    return p or {"user_id": user["id"], "lab_id": iid, "done": [], "hints": [], "solutions": [], "state": {"shell": vm_shell.fresh(), "console": {}}, "term": [], "started_at": now_iso()}
+async def progress(user, it):
+    p = await db.vm_progress.find_one({"user_id": user["id"], "lab_id": it["id"]}, NO_ID)
+    return p or {"user_id": user["id"], "lab_id": it["id"], "done": [], "hints": [], "solutions": [], "state": {"shell": vm_shell.fresh(it.get("preset")), "console": {}}, "term": [], "started_at": now_iso()}
 
 
 async def save(p):
@@ -65,7 +67,7 @@ async def save(p):
 
 def lab_view(it, p):
     return {**{k: it.get(k) for k in ("id", "kind", "module", "title", "summary", "intro", "minutes", "difficulty", "free")},
-            "tasks": [public_task(t, p) for t in it["tasks"]], "state": {"installed": p["state"]["shell"]["installed"], "running": p["state"]["shell"]["running"], "cwd": p["state"]["shell"]["cwd"], "console": p["state"]["console"]},
+            "tasks": [public_task(t, p) for t in it["tasks"]], "state": {**{k: p["state"]["shell"].get(k) for k in ("installed", "running", "cwd", "selfprot")}, "console": p["state"]["console"]},
             "term": p.get("term", [])[-120:], "completed_at": p.get("completed_at"), "score": score(it, p)}
 
 
@@ -150,7 +152,7 @@ async def console(user=Depends(get_current_user)):
 @router.get("/labs/{iid}")
 async def lab(iid: str, user=Depends(get_current_user)):
     it = await get_item(iid, user, "lab")
-    return lab_view(it, await progress(user, iid))
+    return lab_view(it, await progress(user, it))
 
 
 class ExecIn(BaseModel):
@@ -159,7 +161,8 @@ class ExecIn(BaseModel):
 
 @router.post("/labs/{iid}/exec")
 async def exec_cmd(iid: str, body: ExecIn, user=Depends(get_current_user)):
-    it, p = await get_item(iid, user, "lab"), await progress(user, iid)
+    it = await get_item(iid, user, "lab")
+    p = await progress(user, it)
     out, events = vm_shell.run(body.command, p["state"]["shell"])
     prompt = p["state"]["shell"]["cwd"]
     if out == "\x0c":
@@ -180,8 +183,16 @@ class EventIn(BaseModel):
 async def event(iid: str, body: EventIn, user=Depends(get_current_user)):
     if body.event not in EVENTS:
         raise HTTPException(422, "Unknown event")
-    it, p = await get_item(iid, user, "lab"), await progress(user, iid)
+    it = await get_item(iid, user, "lab")
+    p = await progress(user, it)
     data = {k: str(v)[:200] for k, v in list(body.data.items())[:12]}
+    con, sh = p["state"]["console"], p["state"]["shell"]
+    if body.event == "selfprot.enabled":
+        sh["selfprot"] = True
+    if body.event in ("console.module_deactivated", "console.module_activated"):
+        con.setdefault("modules", {})[data.get("module", "")] = body.event.endswith("activated") and not body.event.endswith("deactivated")
+    if body.event == "console.agent_uninstall_requested":
+        con["uninstall_requested"] = True
     if body.event in CONSOLE_LISTS:
         lst = p["state"]["console"].setdefault(CONSOLE_LISTS[body.event], [])
         if len(lst) < 50:
@@ -198,11 +209,12 @@ class AnswerIn(BaseModel):
 
 @router.post("/labs/{iid}/answer")
 async def answer(iid: str, body: AnswerIn, user=Depends(get_current_user)):
-    it, p = await get_item(iid, user, "lab"), await progress(user, iid)
+    it = await get_item(iid, user, "lab")
+    p = await progress(user, it)
     t = next((t for t in it["tasks"] if t["id"] == body.task_id and t["check"]["type"] == "answer"), None)
     if not t:
         raise HTTPException(404, "Task not found")
-    ok = body.answer.strip().strip("{}").lower() == str(t["check"]["answer"]).strip().lower()
+    ok = body.answer.strip().strip("{}").lower() in [a.strip().lower() for a in str(t["check"]["answer"]).split("|")]
     new = []
     if ok and t["id"] not in p["done"]:
         p["done"].append(t["id"])
@@ -218,7 +230,8 @@ async def answer(iid: str, body: AnswerIn, user=Depends(get_current_user)):
 async def reveal(iid: str, what: str, tid: str, user=Depends(get_current_user)):
     if what not in ("hint", "solution"):
         raise HTTPException(404, "Not found")
-    it, p = await get_item(iid, user, "lab"), await progress(user, iid)
+    it = await get_item(iid, user, "lab")
+    p = await progress(user, it)
     if not any(t["id"] == tid for t in it["tasks"]):
         raise HTTPException(404, "Task not found")
     key = "hints" if what == "hint" else "solutions"
@@ -232,7 +245,7 @@ async def reveal(iid: str, what: str, tid: str, user=Depends(get_current_user)):
 async def reset(iid: str, user=Depends(get_current_user)):
     it = await get_item(iid, user, "lab")
     await db.vm_progress.delete_one({"user_id": user["id"], "lab_id": iid})
-    return lab_view(it, await progress(user, iid))
+    return lab_view(it, await progress(user, it))
 
 
 @router.get("/quizzes/{iid}")

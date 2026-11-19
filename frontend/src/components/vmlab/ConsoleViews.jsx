@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Sev, Panel, Btn, In, Sel, Lbl, Table, Drawer, CopyField, useForm } from "./ui";
+import { Sev, Panel, Btn, In, Sel, Lbl, Table, useForm } from "./ui";
 
 const vulnSum = (a) => a.vulns.reduce((n, x) => n + x, 0);
 
@@ -84,22 +84,3 @@ export function KB({ d, emit }) {
   </Panel>;
 }
 
-export function Agents({ d, st, emit }) {
-  const [view, setView] = useState("agents");
-  const [open, setOpen] = useState(null);
-  const agents = [...(st.installed ? [d.new_agent] : []), ...d.agents];
-  const openAgent = (a) => { setOpen({ t: "agent", a }); emit("console.agent_viewed", { host: a.host }); };
-  const openKey = (k) => { setOpen({ t: "key", k }); emit("console.activation_key_viewed", { name: k.name }); };
-  return <div className="relative min-h-[420px]" data-testid="vmc-agents">
-    <div className="flex gap-1 mb-3">{[["agents", "Agents"], ["keys", "Activation Keys"]].map(([k, l]) => <Btn key={k} primary={view === k} onClick={() => setView(k)} data-testid={`vmc-agent-tab-${k}`}>{l}</Btn>)}</div>
-    {view === "agents" ? <Panel title={`Agents (${agents.length})`}><Table tid="vmc-agent-table" rowTid="vmc-agent-row" cols={["Host", "IP", "OS", "Status", "Version", "Last check-in"]} rows={agents.map((a) => [a.host, a.ip, a.os, <span className="text-green-400">{a.status}</span>, a.version, a.last_checkin])} onRow={(i) => openAgent(agents[i])} /></Panel>
-      : <Panel title="Activation Keys"><Table tid="vmc-key-table" rowTid="vmc-key-row" cols={["Title", "Status", "Used / Limit", "Modules"]} rows={d.keys.map((k) => [<span className="text-sky-300 underline">{k.name}</span>, <span className={k.status === "Active" ? "text-green-400" : "text-red-400"}>{k.status}</span>, `${k.used} / ${k.limit}`, k.modules.join(", ")])} onRow={(i) => openKey(d.keys[i])} /></Panel>}
-    {open?.t === "agent" && <Drawer title={`Agent · ${open.a.host}`} onClose={() => setOpen(null)} tid="vmc-agent-drawer">
-      {[["Status", open.a.status], ["IP", open.a.ip], ["OS", open.a.os], ["Version", open.a.version], ["Activation key", open.a.key], ["Last check-in", open.a.last_checkin], ["Agent ID", "see the agent log on the host"]].map(([k, v]) => <div key={k} className="flex text-xs border-b border-slate-700/60 py-1.5"><span className="w-32 text-slate-400">{k}</span><span className="text-slate-100 break-all">{v}</span></div>)}</Drawer>}
-    {open?.t === "key" && <Drawer title={`Activation key · ${open.k.name}`} onClose={() => setOpen(null)} tid="vmc-key-drawer">
-      {open.k.status !== "Active" && <div className="text-xs text-red-300 border border-red-500/40 p-2">This key is revoked. Agents can't activate with it.</div>}
-      <CopyField label="CustomerId" value={open.k.customer_id} tid="vmc-key-customer" /><CopyField label="ActivationId" value={open.k.activation_id} tid="vmc-key-activation" /><CopyField label="WebServiceUri" value={open.k.uri} tid="vmc-key-uri" />
-      <CopyField label="Installer SHA256 (SOCPCloudAgent.exe)" value={open.k.sha256} tid="vmc-key-sha" />
-      <CopyField label="Install command" value={`SOCPCloudAgent.exe CustomerId={${open.k.customer_id}} ActivationId={${open.k.activation_id}} WebServiceUri=${open.k.uri}`} tid="vmc-key-command" /></Drawer>}
-  </div>;
-}

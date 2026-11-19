@@ -20,13 +20,25 @@ EVENTS = {
     "scan.launched": "Console: launched a scan (match title/target/profile)", "scan.scheduled": "Console: scheduled a scan (match frequency)",
     "report.generated": "Console: generated a report (match template/format)", "user.created": "Console: added a user (match role)",
     "kb.searched": "Console: searched the knowledge base (match q)", "asset.searched": "Console: searched the asset inventory (match q)",
+    "cmd.whoami": "Terminal: checked user/privileges (whoami)", "cmd.dir_logdir": "Terminal: listed the agent data folder",
+    "agent.installed_msi": "Terminal: installed via msiexec /qn", "agent.process_checked": "Terminal: listed processes (tasklist)",
+    "agent.registry_checked": "Terminal: queried HKLM\\SOFTWARE\\SOCP", "agent.logs_zipped": "Terminal: zipped agent folder for support",
+    "agent.selfprot_checked": "Terminal: checked self-protection status", "agent.stop_blocked": "Terminal: service stop blocked by self-protection",
+    "agent.kill_blocked": "Terminal: taskkill blocked by self-protection", "agent.killed": "Terminal: agent process killed",
+    "agent.service_missing": "Terminal: service query shows not installed (1060)",
+    "agent.scan_vm": "Terminal: on-demand VM scan", "agent.scan_pc": "Terminal: on-demand PC scan", "agent.scan_inventory": "Terminal: on-demand inventory scan",
+    "key.created": "Console: created an activation key (match title/tag/modules/limit)", "install_instructions.viewed": "Console: opened install instructions (match os)",
+    "installer.downloaded": "Console: downloaded an installer (match os)", "agent.searched": "Console: searched agents (match q)",
+    "query.saved": "Console: saved an agent search query (match name)", "selfprot.enabled": "Console: enabled self-protection in a profile",
+    "profile.saved": "Console: saved a configuration profile", "console.module_deactivated": "Console: deactivated a module on an agent (match module)",
+    "console.module_activated": "Console: activated a module on an agent (match module)", "console.agent_uninstall_requested": "Console: requested agent uninstall (match host)",
 }
 
 T = lambda id, title, instruction, hint, solution, check: dict(id=id, title=title, instruction=instruction, hint=hint, solution=solution, check=check)  # noqa: E731
 
 LAB1 = {
-    "id": "vm-lab-agent-win-cli", "kind": "lab", "module": 1, "order": 1, "free": True, "minutes": 25, "difficulty": "Beginner", "status": "published",
-    "title": "Windows Command-line Agent Installation",
+    "id": "vm-lab-agent-win-cli", "kind": "lab", "module": 1, "order": 3, "free": False, "minutes": 25, "difficulty": "Beginner", "status": "published",
+    "title": "Lab 3 · Windows Command-line Installation",
     "summary": "Install the SOCP Cloud Agent on a Windows server from an elevated prompt, validate the service and review the agent log.",
     "intro": "You are a Tier-1 analyst onboarding the new server WIN-LAB-01 into vulnerability management.\n\nThe installer has been downloaded for you. Get the activation keys from the console, verify the installer, install it from the command line, then prove it works: service running, log healthy, agent visible in the console.\n\nThe terminal on the right is an elevated (Administrator) Command Prompt. Type 'help' for supported commands.",
     "tasks": [
@@ -42,7 +54,7 @@ LAB1 = {
 }
 
 QUIZ1 = {
-    "id": "vm-quiz-agent-basics", "kind": "quiz", "module": 1, "order": 2, "free": False, "minutes": 8, "difficulty": "Beginner", "status": "published",
+    "id": "vm-quiz-agent-basics", "kind": "quiz", "module": 1, "order": 11, "free": False, "minutes": 8, "difficulty": "Beginner", "status": "published",
     "title": "Cloud Agent Fundamentals Quiz", "summary": "Check your understanding of agent deployment and troubleshooting.",
     "questions": [
         {"q": "Which two values identify your subscription and the key used to activate an agent?", "options": ["CustomerId and ActivationId", "Hostname and IP", "AgentId and Manifest", "Username and password"], "answer": 0, "explain": "The CustomerId identifies the subscription; the ActivationId is the deployment key."},
@@ -54,7 +66,7 @@ QUIZ1 = {
 }
 
 CTF1 = {
-    "id": "vm-ctf-agent-logs", "kind": "ctf", "module": 1, "order": 3, "free": False, "minutes": 10, "difficulty": "Beginner", "status": "published",
+    "id": "vm-ctf-agent-logs", "kind": "ctf", "module": 1, "order": 12, "free": False, "minutes": 10, "difficulty": "Beginner", "status": "published",
     "title": "Agent Log Hunt CTF", "summary": "Pull answers out of the agent you installed in Lab 1.",
     "challenges": [
         {"q": "What manifest version did the agent download? (format VULNSIGS-x.y.z)", "answer": "VULNSIGS-2.6.81", "points": 100, "hint": "Search the log for 'Manifest'."},
@@ -63,7 +75,10 @@ CTF1 = {
     ],
 }
 
-SEED = [LAB1, QUIZ1, CTF1]
+from vm_labs import LABS  # noqa: E402
+
+SEED_VERSION = 2
+SEED = LABS[:2] + [LAB1] + LABS[2:] + [QUIZ1, CTF1]
 
 VULNS = [
     (91001, "SOCP Demo: Outdated OpenSSL-like library (fictional)", 5, "Windows/Linux"), (91002, "Fictional SMBv1 enabled on host", 4, "Windows"),
@@ -102,5 +117,6 @@ def console_data():
                   {"name": "Priya Nair", "login": "socp_pn03", "role": "Reader", "status": "Active"}, {"name": "Omar Haddad", "login": "socp_oh04", "role": "Unit Manager", "status": "Inactive"}],
         "profiles": ["Initial Options (default)", "Full TCP + Auth Scan", "Light Inventory Scan", "PCI External Scan"],
         "templates": ["Technical Report", "Executive Summary", "Scan Results", "Patch Report", "PCI Compliance"],
-        "new_agent": {"host": HOST, "ip": "10.20.30.41", "os": "Windows Server 2022", "status": "Active", "version": "6.2.0.41", "last_checkin": "2026-06-12 10:16", "key": "Windows Servers"},
+        "new_agent": {"host": HOST, "ip": "10.20.30.41", "os": "Windows Server 2022", "status": "Active", "version": "6.2.0.41", "last_checkin": "2026-06-12 10:16", "key": "Windows Servers", "software": 412, "ports": "135, 445, 3389, 5985",
+                  "tags": ["Cloud Agent", "Windows Servers", "Production"], "vulns": [2, 5, 7, 3, 1], "profile": "Default Windows Profile"},
     }

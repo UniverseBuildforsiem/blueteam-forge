@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Shield, LayoutDashboard, Server, Tag, Boxes, Radar, CalendarClock, FileBarChart, Users as UsersIcon, BookOpen, Cpu, Globe, ClipboardCheck } from "lucide-react";
 import { api } from "../../lib/api";
 import * as V from "./ConsoleViews";
+import { Agents } from "./AgentViews";
 
 const APPS = [
   { id: "vm", label: "VMDR", nav: [["dashboard", "Dashboard", LayoutDashboard, V.Dashboard], ["assets", "Assets", Server, V.Assets], ["tags", "Tags", Tag, V.Tags], ["groups", "Asset Groups", Boxes, V.Groups], ["scans", "Scans", Radar, V.Scans], ["schedules", "Schedules", CalendarClock, V.Schedules], ["reports", "Reports", FileBarChart, V.Reports], ["kb", "KnowledgeBase", BookOpen, V.KB], ["users", "Users", UsersIcon, V.Users]] },
-  { id: "ca", label: "Cloud Agent", nav: [["agents", "Agents & Keys", Cpu, V.Agents]] },
+  { id: "ca", label: "Cloud Agent", nav: [["agents", "Agents & Keys", Cpu, Agents]] },
   { id: "was", label: "Web App Scanning", nav: [], soon: Globe },
   { id: "pc", label: "Policy Compliance", nav: [], soon: ClipboardCheck },
 ];

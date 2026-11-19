@@ -194,3 +194,6 @@
 .detonate-bar { animation: promo-timer 1.8s linear forwards; }
 @media (prefers-reduced-motion: reduce) { .radar-sweep, .radar-ping, .detonate-bar { animation: none; } .radar-blip { animation: radar-blip-still 8s steps(1, end) forwards; } }
 @keyframes radar-blip-still { 0% { opacity: 1; transform: translate(-50%, -50%); } 100% { opacity: 0; transform: translate(-50%, -50%); } }
+.vm-scanbar { animation: vm-scan 3.2s linear infinite; }
+@keyframes vm-scan { from { left: -40px; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { .vm-scanbar { animation: none; display: none; } }
