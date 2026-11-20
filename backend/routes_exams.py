@@ -75,7 +75,7 @@ async def landing(eid: str, request: Request):
     mine = await db.exam_reviews.find_one({"exam_id": eid, "user_id": user["id"]}, {"_id": 0, "user_id": 0}) if user else None
     students = len(set(await db.exam_attempts.distinct("user_id", {"exam_id": eid})) | set(await db.purchases.distinct("user_id", {"product_id": f"test:{eid}"})))
     keys = ("id", "title", "subtitle", "description", "vendor", "topic", "level", "cover", "code", "kind", "duration_min", "pass_mark", "attempts_max", "cooldown_hours", "identity",
-            "practice_enabled", "outcomes", "requirements", "audience", "faqs", "domains", "related", "status", "updated_at", "published_at")
+            "practice_enabled", "strict_mode", "outcomes", "requirements", "audience", "faqs", "domains", "related", "status", "updated_at", "published_at")
     return {**{k: e.get(k) for k in keys}, **pricing(e), **await rating(eid), "questions": await q_count(e), "samples": samples, "sample_scenarios": sc, "reviews": reviews,
             "my_review": mine, "students": students, "signed_in": bool(user), "owned": await owns(user, e), "me": await status_for(e, user),
             "can_review": bool(user and await db.exam_attempts.find_one({"exam_id": eid, "user_id": user["id"], "status": "submitted"}))}
@@ -185,7 +185,7 @@ def view(a, e):
             pq["is_correct"] = E.is_right(q, a["answers"].get(q["qid"]))
         qs.append(pq)
     return {k: a.get(k) for k in ("id", "exam_id", "exam_title", "mode", "domain", "status", "number", "started_at", "deadline", "answers", "flags", "checked", "hints", "last_index",
-                                  "score", "total", "percent", "passed", "pass_mark", "time_taken", "submitted_at", "certificate_id")} | {
+                                  "score", "total", "percent", "passed", "pass_mark", "time_taken", "submitted_at", "certificate_id", "strict", "focus_count")} | {
         "questions": qs, "scenarios": a.get("scenarios") or {}, "server_now": E.now().isoformat(), "hints_allowed": practice, "kind": e.get("kind") if e else None}
 
 
@@ -229,6 +229,22 @@ async def answer(aid: str, body: AnswerIn, user=Depends(get_current_user)):
     if body.check:
         out["question"] = {**E.public_q(q, True), "is_correct": E.is_right(q, ans)}
     return out
+
+
+class FocusIn(BaseModel):
+    event: str = Field(pattern="^(hidden|blur|fullscreen_exit)$")
+    away_seconds: int = Field(default=0, ge=0, le=86400)
+    question: int = Field(default=0, ge=0, le=1000)
+
+
+@router.post("/exam-attempts/{aid}/focus")
+async def focus(aid: str, body: FocusIn, user=Depends(get_current_user)):
+    a = await mine(aid, user)
+    if a["status"] != "in_progress" or not a.get("strict"):
+        return {"ok": False, "focus_count": a.get("focus_count", 0)}
+    ev = {**body.model_dump(), "at": now_iso()}
+    await db.exam_attempts.update_one({"id": aid}, {"$push": {"focus_events": {"$each": [ev], "$slice": -300}}, "$inc": {"focus_count": 1, "away_seconds": body.away_seconds}})
+    return {"ok": True, "focus_count": a.get("focus_count", 0) + 1}
 
 
 @router.post("/exam-attempts/{aid}/hint/{qid}")

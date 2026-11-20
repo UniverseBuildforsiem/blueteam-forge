@@ -352,7 +352,7 @@ async def activate(user_id, pid):
         await create_gift(p)
     elif p:
         if p["plan"].startswith("bundle:"):
-            for cid in [p["plan"]] + [f"course:{c}" for c in p.get("courses") or []]:
+            for cid in [p["plan"]] + [c if ":" in c else f"course:{c}" for c in p.get("courses") or []]:
                 await db.purchases.update_one({"user_id": user_id, "product_id": cid},
                                               {"$setOnInsert": {"user_id": user_id, "product_id": cid, "payment_id": pid, "at": now_iso()}}, upsert=True)
         elif p["plan"].startswith(("course:", "test:")):

@@ -87,8 +87,10 @@ async def send_scheduled_gifts():
 
 
 async def owns_all(user, g):
+    from routes_exams import owns as owns_test
     cs = await db.academy_courses.find({"id": {"$in": g["courses"]}}, NO_ID).to_list(50)
-    return bool(cs) and all([await owns(user, c) for c in cs])
+    ts = await db.exams.find({"id": {"$in": [c[5:] for c in g["courses"] if c.startswith("test:")]}}, NO_ID).to_list(50)
+    return bool(cs or ts) and all([await owns(user, c) for c in cs] + [await owns_test(user, t) for t in ts])
 
 
 @router.get("/public/gifts/{code}")
@@ -98,6 +100,7 @@ async def view_gift(code: str, request: Request):
     if not g:
         raise HTTPException(404, "Gift not found")
     titles = [c["title"] for c in await db.academy_courses.find({"id": {"$in": g["courses"]}}, {"_id": 0, "title": 1}).to_list(50)]
+    titles += [t["title"] for t in await db.exams.find({"id": {"$in": [c[5:] for c in g["courses"] if c.startswith("test:")]}}, {"_id": 0, "title": 1}).to_list(50)]
     kind, iid = g["plan"].split(":", 1)
     return {"title": g["title"], "kind": kind, "item_id": iid, "from_name": g["from_name"], "to_name": g["to_name"], "message": g["message"],
             "courses": titles, "redeemed": g["status"] == "redeemed", "signed_in": bool(user),
@@ -115,10 +118,11 @@ async def redeem_gift(code: str, user=Depends(get_current_user)):
         raise HTTPException(400, "You already own everything in this gift — forward the link to a friend instead")
     if not (await db.gifts.update_one({"code": code, "status": {"$ne": "redeemed"}}, {"$set": {"status": "redeemed", "redeemed_by": user["id"], "redeemed_at": now_iso()}})).modified_count:
         raise HTTPException(400, "This gift has already been redeemed")
-    for pid in ([g["plan"]] if g["plan"].startswith("bundle:") else []) + [f"course:{c}" for c in g["courses"]]:
+    for pid in ([g["plan"]] if g["plan"].startswith("bundle:") else []) + [c if ":" in c else f"course:{c}" for c in g["courses"]]:
         await db.purchases.update_one({"user_id": user["id"], "product_id": pid},
                                       {"$setOnInsert": {"user_id": user["id"], "product_id": pid, "gift_id": g["id"], "at": now_iso()}}, upsert=True)
-    return {"ok": True, "go": f"/app/courses/{g['courses'][0]}" if len(g["courses"]) == 1 else "/app/courses"}
+    one = g["courses"][0] if len(g["courses"]) == 1 else None
+    return {"ok": True, "go": (f"/app/tests/{one[5:]}" if one.startswith("test:") else f"/app/courses/{one}") if one else "/app/courses"}
 
 
 @router.get("/gifts/sent")

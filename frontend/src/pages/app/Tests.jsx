@@ -49,13 +49,13 @@ function StartPanel({ t, d, reload }) {
       </Glass>}
       {main && <Glass className={`p-5 space-y-3 ${main === "certification" ? "border-green-500/30" : ""}`} data-testid={`start-${main}`}>
         <div className="flex items-center gap-2 font-bold">{main === "certification" ? <ShieldCheck className="h-4 w-4 text-green-400" /> : <Timer className="h-4 w-4 text-cyan-400" />}{main === "certification" ? "Certification exam" : "Exam mode"}</div>
-        <p className="text-xs text-slate-400">{t.duration_min ? `${t.duration_min}-minute countdown` : "Untimed"}, shuffled questions, no hints, results after submit. {main === "certification" && `Pass ${t.pass_mark}% to earn a certificate.`}</p>
+        <p className="text-xs text-slate-400">{t.duration_min ? `${t.duration_min}-minute countdown` : "Untimed"}, shuffled questions, no hints, results after submit. {main === "certification" && `Pass ${t.pass_mark}% to earn a certificate.`}{t.strict_mode && <span className="text-red-300" data-testid="start-strict-note"> Strict mode: tab switches are logged.</span>}</p>
         {main === "certification" && <div className="text-xs font-mono text-slate-300" data-testid="cert-attempts-left">Attempts left: <b className="text-cyan-300">{st.cert_attempts_left}</b> / {t.attempts_max} · cooldown {t.cooldown_hours}h</div>}
         {certBlock === "passed" ? <Link to={`/verify/${st.certificate.id}`} className="glow-btn !text-xs" data-testid="cert-view"><Award className="h-3.5 w-3.5" />Passed — view certificate</Link>
           : certBlock && !prog(main) ? <div className="text-xs font-mono text-yellow-300 inline-flex items-center gap-1" data-testid="cert-blocked"><Lock className="h-3.5 w-3.5" />{certBlock}</div>
           : <button className="glow-btn !text-xs" onClick={() => (prog(main) ? start({ mode: main }) : main === "certification" ? setGate(true) : start({ mode: main }))} data-testid="exam-start"><PlayCircle className="h-3.5 w-3.5" />{prog(main) ? "Resume exam" : `Start ${main === "certification" ? "certification" : "exam"}`}</button>}
       </Glass>}
-      {gate && <IdentityGate open={gate} setOpen={setGate} method={t.identity} user={user} meta={`${t.code} · attempt ${(st.cert_attempts_used || 0) + 1} of ${t.attempts_max} · ${t.duration_min} min · pass ${t.pass_mark}%`} onStart={(x) => start({ mode: "certification", ...x })} />}
+      {gate && <IdentityGate strict={t.strict_mode} open={gate} setOpen={setGate} method={t.identity} user={user} meta={`${t.code} · attempt ${(st.cert_attempts_used || 0) + 1} of ${t.attempts_max} · ${t.duration_min} min · pass ${t.pass_mark}%`} onStart={(x) => start({ mode: "certification", ...x })} />}
     </div>);
 }
 

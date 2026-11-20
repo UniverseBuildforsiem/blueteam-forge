@@ -4,6 +4,39 @@ import { Flag, ChevronLeft, ChevronRight, Lightbulb, LayoutGrid, Send, Timer, Cl
 import { toast } from "sonner";
 import { api, errMsg } from "../../lib/api";
 import { Options, ScenarioPanel, typeLabel } from "./Question";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
+
+function useStrict(a, idx) {
+  const [count, setCount] = useState(0);
+  const [warn, setWarn] = useState(false);
+  const away = useRef(null), qi = useRef(idx);
+  qi.current = idx;
+  useEffect(() => { if (a) setCount(a.focus_count || 0); }, [a?.id]); // eslint-disable-line
+  useEffect(() => {
+    if (!a?.strict || a.status !== "in_progress") return undefined;
+    const leave = (event) => { if (!away.current) away.current = { event, t: Date.now() }; };
+    const back = () => {
+      const w = away.current; if (!w) return; away.current = null;
+      const secs = Math.round((Date.now() - w.t) / 1000);
+      api.post(`/exam-attempts/${a.id}/focus`, { event: w.event, away_seconds: secs, question: qi.current + 1 }).then((r) => setCount(r.data.focus_count)).catch(() => {});
+      setWarn(true);
+    };
+    const vis = () => (document.hidden ? leave("hidden") : back());
+    const blur = () => leave("blur");
+    document.addEventListener("visibilitychange", vis); window.addEventListener("blur", blur); window.addEventListener("focus", back);
+    return () => { document.removeEventListener("visibilitychange", vis); window.removeEventListener("blur", blur); window.removeEventListener("focus", back); };
+  }, [a?.id, a?.strict]); // eslint-disable-line
+  return { count, warn, setWarn };
+}
+
+function StrictWarning({ open, setOpen, count }) {
+  return <Dialog open={open} onOpenChange={setOpen}><DialogContent className="bg-[#0B0F1A] border-red-500/50 max-w-md" data-testid="strict-warning">
+    <DialogHeader><DialogTitle className="text-red-300 font-mono tracking-wider">// FOCUS VIOLATION DETECTED</DialogTitle>
+      <DialogDescription className="text-slate-300">You left the exam window. This exam runs in strict mode, so every tab or window switch is logged and visible to the exam administrator.</DialogDescription></DialogHeader>
+    <div className="font-mono text-sm border border-red-500/30 bg-red-500/5 p-3" data-testid="strict-warning-count">Recorded switches this attempt: <b className="text-red-300">{count}</b></div>
+    <button className="glow-btn w-full justify-center" onClick={() => setOpen(false)} data-testid="strict-warning-dismiss">Return to exam</button>
+  </DialogContent></Dialog>;
+}
 
 const pad = (n) => String(n).padStart(2, "0");
 const clock = (s) => `${Math.floor(s / 3600)}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
@@ -67,6 +100,7 @@ export default function Player() {
     try { await api.post(`/exam-attempts/${aid}/submit`); if (auto) toast.warning("Time is up — your exam was submitted automatically"); nav(`/app/tests/result/${aid}`); } catch (e) { toast.error(errMsg(e)); setBusy(false); }
   }, [aid, nav]);
   const left = useCountdown(a, () => submit(true));
+  const strict = useStrict(a, idx);
   if (!a) return <div className="font-mono text-cyan-400 cursor-blink py-20 text-center">loading secure exam environment </div>;
   const q = a.questions[idx], practice = a.mode === "practice", rev = revealed[q.qid];
   const persist = async (body) => { setSave("saving"); try { const r = await api.put(`/exam-attempts/${aid}/answer`, { qid: q.qid, index: idx, answer: answers[q.qid] || [], ...body }); setSave("saved"); return r.data; } catch (e) { setSave("error"); toast.error(errMsg(e)); return null; } };
@@ -84,6 +118,7 @@ export default function Player() {
         <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-mono text-slate-400" data-testid="autosave-status">{save === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CloudCheck className={`h-3.5 w-3.5 ${save === "error" ? "text-red-400" : "text-green-400"}`} />}{save === "error" ? "not saved" : save}</span>
         {left != null ? <span className={`font-mono text-lg px-3 py-1 border inline-flex items-center gap-2 ${low ? "border-red-500/60 text-red-300 animate-pulse" : "border-cyan-500/30 text-cyan-200"}`} data-testid="exam-timer"><Timer className="h-4 w-4" />{clock(left)}</span>
           : <span className="font-mono text-xs text-slate-500 border border-white/10 px-2 py-1" data-testid="exam-timer">untimed</span>}
+        {a.strict && <span className={`hidden md:inline text-[10px] font-mono border px-2 py-1 ${strict.count ? "border-red-500/50 text-red-300" : "border-white/15 text-slate-400"}`} data-testid="strict-badge">STRICT · {strict.count} switch{strict.count === 1 ? "" : "es"}</span>}
         <button className="ghost-btn !text-xs" onClick={() => setReview(true)} data-testid="exam-open-review"><LayoutGrid className="h-3.5 w-3.5" />Review</button>
       </div>
       <div className="grid lg:grid-cols-[1fr_260px] gap-6 p-4 sm:p-6 max-w-[1400px] mx-auto">
@@ -113,7 +148,9 @@ export default function Player() {
             </div>
           </div>)}
         <aside className="glass p-3 h-fit lg:sticky lg:top-20 space-y-3"><div className="eyebrow">navigator</div><Navigator a={a} idx={idx} go={go} answers={answers} flags={flags} />
+          {a.strict && <p className="text-[10px] font-mono text-red-300/80 border border-red-500/20 p-2" data-testid="strict-note">Strict mode: leaving this tab or window is recorded.</p>}
           <div className="text-[10px] font-mono text-slate-500 space-y-0.5"><div><span className="inline-block h-2 w-2 bg-green-500/60 mr-1" />answered</div><div><span className="inline-block h-2 w-2 bg-yellow-400 mr-1" />flagged</div>{!practice && <div className="text-slate-400 pt-1">No feedback until you submit.</div>}</div></aside>
       </div>
+      <StrictWarning open={strict.warn} setOpen={strict.setWarn} count={strict.count} />
     </div>);
 }

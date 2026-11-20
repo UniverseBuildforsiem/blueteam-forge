@@ -22,7 +22,7 @@ function Webcam({ photo, setPhoto }) {
     </div>);
 }
 
-export function IdentityGate({ open, setOpen, method, user, onStart, meta }) {
+export function IdentityGate({ open, setOpen, method, user, onStart, meta, strict }) {
   const [name, setName] = useState(user?.name || "");
   const [agree, setAgree] = useState(false);
   const [photo, setPhoto] = useState(null);
@@ -39,7 +39,7 @@ export function IdentityGate({ open, setOpen, method, user, onStart, meta }) {
           {needName && <label className="block"><span className="text-[11px] font-mono uppercase text-slate-500">Full legal name (printed on your certificate)</span>
             <input className="field mt-1" value={name} onChange={(e) => setName(e.target.value)} data-testid="identity-name" /></label>}
           {method === "webcam" && <Webcam photo={photo} setPhoto={setPhoto} />}
-          <ul className="text-xs text-slate-300 space-y-1 border border-white/10 p-3">{RULES.map((r) => <li key={r}>· {r}</li>)}</ul>
+          <ul className="text-xs text-slate-300 space-y-1 border border-white/10 p-3">{RULES.map((r) => <li key={r}>· {r}</li>)}{strict && <li className="text-red-300" data-testid="identity-strict-rule">· Strict mode is on: every switch to another tab or window is logged and reported.</li>}</ul>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} data-testid="identity-agree" />I confirm my identity and accept the exam rules</label>
           <button className="glow-btn w-full justify-center" disabled={!ok || busy} onClick={go} data-testid="identity-start">{busy ? "Starting…" : "Start certification exam"}</button>
         </div>

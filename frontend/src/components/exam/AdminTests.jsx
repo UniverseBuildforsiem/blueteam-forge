@@ -66,7 +66,8 @@ function Editor({ t, back }) {
         <div className="border border-cyan-500/20 p-3 grid sm:grid-cols-4 gap-3" data-testid="test-format">
           {sel("kind", "Format", Object.entries(KIND_LABEL))}{f("duration_min", "Duration (min, 0 = untimed)", { type: "number", min: 0 })}{f("pass_mark", "Pass mark %", { type: "number", min: 1, max: 100 })}
           <L l="Options"><div className="space-y-1 text-xs pt-1"><label className="flex gap-2"><input type="checkbox" checked={d.practice_enabled} onChange={(e) => setD({ ...d, practice_enabled: e.target.checked })} data-testid="test-practice-enabled" />Practice mode available</label>
-            <label className="flex gap-2"><input type="checkbox" checked={d.shuffle} onChange={(e) => setD({ ...d, shuffle: e.target.checked })} />Shuffle in practice</label></div></L>
+            <label className="flex gap-2"><input type="checkbox" checked={d.shuffle} onChange={(e) => setD({ ...d, shuffle: e.target.checked })} />Shuffle in practice</label>
+            <label className="flex gap-2"><input type="checkbox" checked={!!d.strict_mode} onChange={(e) => setD({ ...d, strict_mode: e.target.checked })} data-testid="test-strict-mode" />Strict mode (warn & log tab switches)</label></div></L>
           {d.kind === "certification" && <>{f("attempts_max", "Certification attempts", { type: "number", min: 1 })}{f("cooldown_hours", "Cooldown hours", { type: "number", min: 0 })}
             {sel("identity", "Identity check", [["account", "Account only"], ["name", "Account + legal name"], ["webcam", "Name + webcam photo"]])}</>}
         </div>

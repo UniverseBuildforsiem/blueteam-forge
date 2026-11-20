@@ -10,6 +10,7 @@ import { PriceTag, Countdown } from "../components/academy/Price";
 import { Reviews, Stars } from "../components/academy/Reviews";
 import { SampleQuestion } from "../components/exam/Question";
 import { KIND_LABEL } from "../components/exam/Catalog";
+import { BundleOffers } from "../components/academy/Bundles";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
 
 const ID_LABEL = { account: "Tied to your account", name: "Legal name confirmation", webcam: "Name + webcam photo" };
@@ -17,7 +18,7 @@ const ID_LABEL = { account: "Tied to your account", name: "Legal name confirmati
 export function Details({ t }) {
   const cert = t.kind === "certification";
   const rows = [[Target, "Questions", t.questions], [Timer, "Duration", t.duration_min ? `${t.duration_min} minutes` : "Untimed"], [ShieldCheck, "Pass mark", `${t.pass_mark}%`],
-    [RotateCcw, "Attempts", cert ? `${t.attempts_max} certification attempts` : "Unlimited"], ...(cert ? [[Hourglass, "Cooldown", `${t.cooldown_hours} h between failed attempts`], [Fingerprint, "Identity check", ID_LABEL[t.identity]]] : [])];
+    [RotateCcw, "Attempts", cert ? `${t.attempts_max} certification attempts` : "Unlimited"], ...(cert ? [[Hourglass, "Cooldown", `${t.cooldown_hours} h between failed attempts`], [Fingerprint, "Identity check", ID_LABEL[t.identity]]] : []), ...(t.strict_mode ? [[ShieldCheck, "Strict mode", "Tab switches are recorded"]] : [])];
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-cyan-500/15 border border-cyan-500/15" data-testid="test-details">
       {rows.map(([I, l, v]) => <div key={l} className="bg-[#0B0F1A] p-4"><div className="text-[10px] font-mono uppercase text-slate-500 flex items-center gap-1.5"><I className="h-3.5 w-3.5 text-cyan-400" />{l}</div><div className="font-mono text-sm mt-1 text-slate-100" data-testid={`test-detail-${l.toLowerCase().replace(/\s/g, "-")}`}>{v}</div></div>)}
@@ -90,6 +91,7 @@ export default function TestLanding() {
         <div className="my-8 lg:my-0 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6 self-start"><BuyCard t={t} reload={load} /></div>
         <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-2 lg:pt-10">
         <Glass className="p-6"><List title="What you will be tested on" items={t.outcomes} testId="test-outcomes" /></Glass>
+        {!t.owned && <BundleOffers courseId={t.id} />}
         <DomainWeights domains={t.domains} />
         {t.samples?.length > 0 && <section data-testid="test-samples"><h2 className="text-xl font-bold mb-1">Try {t.samples.length} free sample questions</h2><p className="text-xs text-slate-500 mb-3">Answer, check, and read why every option is right or wrong.</p>
           <div className="space-y-4">{t.samples.map((q, i) => <SampleQuestion key={q.qid} q={q} i={i} scenario={q.scenario_id ? t.sample_scenarios?.[q.scenario_id] : null} />)}</div></section>}

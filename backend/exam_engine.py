@@ -134,7 +134,8 @@ async def build_attempt(exam, user, mode, timed, domain, identity):
     att = {"id": new_id(), "exam_id": exam["id"], "exam_title": exam["title"], "user_id": user["id"], "user_name": user["name"], "mode": mode, "domain": domain,
            "status": "in_progress", "number": num, "started_at": started.isoformat(), "pass_mark": int(exam.get("pass_mark") or 70),
            "deadline": (started + timedelta(minutes=dur)).isoformat() if dur and (mode != "practice" or timed) else None,
-           "questions": [snap(q, shuffle) for q in qs], "scenarios": sc, "answers": {}, "flags": [], "checked": [], "hints": [], "last_index": 0, "identity": identity}
+           "questions": [snap(q, shuffle) for q in qs], "scenarios": sc, "answers": {}, "flags": [], "checked": [], "hints": [], "last_index": 0, "identity": identity,
+           "strict": bool(exam.get("strict_mode")) and mode != "practice", "focus_count": 0, "away_seconds": 0, "focus_events": []}
     await db.exam_attempts.insert_one(dict(att))
     return att
 

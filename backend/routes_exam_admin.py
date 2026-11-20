@@ -230,6 +230,7 @@ class ExamIn(BaseModel):
     identity: str = Field(default="name", pattern="^(account|name|webcam)$")
     practice_enabled: bool = True
     shuffle: bool = True
+    strict_mode: bool = False
     outcomes: list[str] = Field(default_factory=list, max_length=30)
     requirements: list[str] = Field(default_factory=list, max_length=20)
     audience: list[str] = Field(default_factory=list, max_length=20)
@@ -310,6 +311,14 @@ async def delete_exam(eid: str, user=Depends(admin_only)):
     return {"ok": True}
 
 
+@router.get("/exam-attempts/{aid}/focus")
+async def focus_log(aid: str, user=Depends(admin_only)):
+    a = await db.exam_attempts.find_one({"id": aid}, {"_id": 0, "user_name": 1, "focus_events": 1, "focus_count": 1, "away_seconds": 1, "started_at": 1})
+    if not a:
+        raise HTTPException(404, "Attempt not found")
+    return a
+
+
 @router.get("/exams/{eid}/analytics")
 async def analytics(eid: str, user=Depends(admin_only)):
     e = await db.exams.find_one({"id": eid}, NO_ID)
@@ -344,7 +353,8 @@ async def analytics(eid: str, user=Depends(admin_only)):
             "avg_time": round(sum(a.get("time_taken") or 0 for a in graded) / len(graded)) if graded else None,
             "items": sorted(items, key=lambda x: (x["p_correct"] if x["p_correct"] is not None else 2)), "dropoff": [{"answered": k, "attempts": v} for k, v in sorted(drop.items())],
             "completion_rate": round(100 * len([a for a in atts if a["status"] == "submitted"]) / len(atts)) if atts else None,
-            "recent": [{k: a.get(k) for k in ("id", "user_name", "mode", "number", "percent", "passed", "time_taken", "submitted_at")} | {"identity": {k: v for k, v in (a.get("identity") or {}).items() if k != "photo_path"} | {"photo": bool((a.get("identity") or {}).get("photo_path"))}} for a in recent]}
+            "focus_flagged": sum(1 for a in atts if a.get("focus_count")),
+            "recent": [{k: a.get(k) for k in ("id", "user_name", "mode", "number", "percent", "passed", "time_taken", "submitted_at", "focus_count", "away_seconds")} | {"identity": {k: v for k, v in (a.get("identity") or {}).items() if k != "photo_path"} | {"photo": bool((a.get("identity") or {}).get("photo_path"))}} for a in recent]}
 
 
 # ---------- seed ----------
