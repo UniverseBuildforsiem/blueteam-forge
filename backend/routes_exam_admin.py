@@ -1,4 +1,5 @@
 import csv
+import re
 import io
 import json
 from typing import Optional
@@ -92,7 +93,7 @@ async def list_q(q: str = "", domain: str = "", tag: str = "", type: str = "", a
     if type:
         f["type"] = type
     if q:
-        f["stem"] = {"$regex": q[:60].replace("\\", "\\\\").replace(".", "\\."), "$options": "i"}
+        f["stem"] = {"$regex": re.escape(q[:60]), "$options": "i"}
     rows = await db.exam_questions.find(f, NO_ID).sort("qid", 1).to_list(3000)
     return {"questions": rows, "domains": sorted(await db.exam_questions.distinct("domain", {"latest": True})), "tags": sorted(await db.exam_questions.distinct("tags", {"latest": True}))}
 
@@ -351,6 +352,7 @@ async def seed_exams():
     from exam_csa_data import questions, SCENARIOS, DOMAINS
     await db.exam_questions.create_index([("qid", 1), ("version", 1)], unique=True)
     await db.exam_attempts.create_index([("exam_id", 1), ("user_id", 1), ("status", 1)])
+    await db.exam_attempts.create_index([("exam_id", 1), ("user_id", 1), ("mode", 1)], unique=True, partialFilterExpression={"status": "in_progress"}, name="one_open_attempt")
     if await db.exams.find_one({"id": "csa-v1"}):
         return
     for sid, (title, kind, body) in SCENARIOS.items():

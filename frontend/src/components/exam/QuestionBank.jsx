@@ -7,7 +7,7 @@ import { Options, ScenarioPanel } from "./Question";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
 const blankQ = () => ({ type: "single", stem: "", options: [{ id: "a", text: "", why: "" }, { id: "b", text: "", why: "" }, { id: "c", text: "", why: "" }, { id: "d", text: "", why: "" }], correct: [], domain: "", difficulty: "medium", hint: "", ref_url: "", ref_label: "", tags: [], scenario_id: null });
-const SAMPLE_CSV = "type,stem,option_a,option_b,option_c,option_d,why_a,why_b,why_c,why_d,correct,domain,difficulty,hint,ref_url,ref_label,tags,scenario_id,scenario_title,scenario_kind,scenario_body\nsingle,Which Windows event ID records a failed logon?,4624,4625,4740,4688,Successful logon,Correct - failed logon,Account lockout,Process creation,b,Incidents Events & Logging,easy,Its twin is 4624,/app/siem,SIEM simulator,windows|logon,,,,\n";
+const SAMPLE_CSV = "type,stem,option_a,option_b,option_c,option_d,why_a,why_b,why_c,why_d,correct,domain,difficulty,hint,ref_url,ref_label,tags,scenario_id,scenario_title,scenario_kind,scenario_body\nsingle,Which Windows event ID records a failed logon?,4624,4625,4740,4688,Successful logon,Correct - failed logon,Account lockout,Process creation,b,\"Incidents, Events & Logging\",easy,Its twin is 4624,/app/siem,SIEM simulator,windows|logon,,,,\n";
 
 function QForm({ q, scenarios, done }) {
   const [d, setD] = useState(q.qid ? q : blankQ());

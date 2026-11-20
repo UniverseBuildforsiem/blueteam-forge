@@ -7,7 +7,7 @@ const short = (s) => (s.length > 22 ? `${s.slice(0, 20)}…` : s);
 
 export function TrendChart({ attempts, passMark }) {
   const data = attempts.filter((a) => !a.domain).map((a, i) => ({ n: `#${i + 1}`, percent: a.percent, mode: a.mode }));
-  if (!data.length) return <div className="h-56 grid place-items-center text-xs font-mono text-slate-500">no attempts yet</div>;
+  if (!data.length) return <div className="h-56 grid place-items-center text-xs font-mono text-slate-500">complete a full-length attempt to see your trend</div>;
   return (
     <div className="h-56" data-testid="trend-chart"><ResponsiveContainer>
       <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

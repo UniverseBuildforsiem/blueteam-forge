@@ -333,3 +333,13 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 ## Backlog
 - P2: Instructor bio/headline editor for landing page
 - P2: LinkedIn Sign-In
+
+## 2026-06 — Certification Tests module (DONE, tested iteration_66 + fixes)
+- Public /tests catalog (TESTS tag, filters vendor/topic/level/free-paid) and /test/:id landing page (details, domain weights, 3 interactive samples, FAQs, reviews, related, buy/enroll via the same checkout as courses — product key `test:{id}`, coupons supported)
+- Student: /app/tests (my tests), /app/tests/:id hub (practice by domain/timed, exam or certification start, live dashboard polling every 15s), /app/tests/attempt/:aid player (timer, autosave, flag, navigator, review screen, auto-submit, resume), /app/tests/result/:aid (score, trend, radar, recommendations, readiness, question review)
+- Certification: attempts limit, cooldown, pass mark, identity per test (account / legal name / name+webcam photo stored in object storage); pass issues SOCP-C- certificate in academy_certs (kind=exam)
+- Admin (admins only): Admin panel tabs "Tests" (editor + analytics: avg, pass rate, difficulty, discrimination, most-missed, drop-off) and "Question bank" (single/multi/TF + case studies, CSV/JSON import with preview, versioning/restore, tags, archive)
+- Seeded "CSA v1 – 312-39" test: 100 questions from user's CSA dump, answers verified/corrected, hints + per-option explanations, 6 domains, 4 case studies
+- Files: backend/exam_engine.py, routes_exams.py, routes_exam_admin.py, exam_csa_data.py; frontend components/exam/*, pages/Tests.jsx, TestLanding.jsx, pages/app/Tests.jsx
+## Backlog
+- P2: Hard delete for scenarios/exams with attempts; per-question time analytics

@@ -74,21 +74,21 @@ export default function TestLanding() {
     <div className="min-h-screen grid-bg" data-testid="test-landing">
       <PublicNav />
       <div className="max-w-6xl mx-auto px-6 py-10 lg:grid lg:grid-cols-[1fr_360px] gap-10 items-start">
-        <div className="lg:order-2 mb-8 lg:mb-0 lg:sticky lg:top-6"><BuyCard t={t} reload={load} /></div>
-        <div className="min-w-0 space-y-10">
-          <div className="border-b border-cyan-500/20 pb-8">
+        <div className="min-w-0 border-b border-cyan-500/20 pb-8 lg:col-start-1 lg:row-start-1">
             <div className="text-xs font-mono text-cyan-400 flex items-center gap-1.5"><Link to={t.signed_in ? "/app/tests" : "/tests"} className="hover:underline" data-testid="test-breadcrumb">Tests</Link><ChevronRight className="h-3 w-3" />{t.vendor}<ChevronRight className="h-3 w-3" />{t.code}</div>
             {t.status !== "published" && <div className="mt-3 text-xs font-mono text-yellow-300 border border-yellow-500/30 p-2 inline-block">Preview — this test is a draft.</div>}
             <h1 className="text-3xl sm:text-4xl font-bold mt-3 leading-tight" data-testid="test-landing-title">{t.title}</h1>
             {t.subtitle && <p className="text-base md:text-lg text-slate-300 mt-3">{t.subtitle}</p>}
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-sm">
               {t.rating ? <span className="inline-flex items-center gap-1.5 text-yellow-300 font-bold" data-testid="test-landing-rating">{t.rating}<Stars value={t.rating} size="h-3.5 w-3.5" /><span className="text-cyan-300 font-normal text-xs">({t.reviews_count} ratings)</span></span> : <span className="text-xs font-mono text-slate-500 inline-flex items-center gap-1"><Star className="h-3.5 w-3.5" />New test</span>}
-              <span className="inline-flex items-center gap-1.5 text-slate-300"><Users className="h-4 w-4" />{t.students.toLocaleString("en-IN")} candidates</span>
+              <span className="inline-flex items-center gap-1.5 text-slate-300"><Users className="h-4 w-4" />{t.students.toLocaleString("en-IN")} candidate{t.students === 1 ? "" : "s"}</span>
               <span className="text-slate-300 font-mono text-xs border border-white/15 px-2 py-0.5">{t.level}</span>
               <span className="text-green-300 font-mono text-xs border border-green-500/30 px-2 py-0.5">{KIND_LABEL[t.kind]}</span>
             </div>
             <div className="mt-6"><Details t={t} /></div>
-          </div>
+        </div>
+        <div className="my-8 lg:my-0 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6 self-start"><BuyCard t={t} reload={load} /></div>
+        <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-2 lg:pt-10">
         <Glass className="p-6"><List title="What you will be tested on" items={t.outcomes} testId="test-outcomes" /></Glass>
         <DomainWeights domains={t.domains} />
         {t.samples?.length > 0 && <section data-testid="test-samples"><h2 className="text-xl font-bold mb-1">Try {t.samples.length} free sample questions</h2><p className="text-xs text-slate-500 mb-3">Answer, check, and read why every option is right or wrong.</p>

@@ -1,4 +1,6 @@
 import base64
+from urllib.parse import quote
+from pymongo.errors import DuplicateKeyError
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
@@ -146,7 +148,11 @@ async def start(eid: str, body: StartIn, user=Depends(get_current_user)):
             identity |= {"method": method, "name": body.name.strip()}
         if method == "webcam" and not body.photo:
             raise HTTPException(400, "Take a webcam photo to verify your identity")
-    att = await E.build_attempt(e, user, body.mode, body.timed, body.domain, identity)
+    try:
+        att = await E.build_attempt(e, user, body.mode, body.timed, body.domain, identity)
+    except DuplicateKeyError:
+        cur = await db.exam_attempts.find_one({"exam_id": eid, "user_id": user["id"], "mode": body.mode, "status": "in_progress"}, {"_id": 0, "id": 1})
+        return {"id": cur["id"], "resumed": True}
     if not att:
         raise HTTPException(400, "This test has no questions yet")
     if body.mode == "certification" and (e.get("identity") == "webcam"):
@@ -205,11 +211,12 @@ async def answer(aid: str, body: AnswerIn, user=Depends(get_current_user)):
     q = next((x for x in a["questions"] if x["qid"] == body.qid), None)
     if not q:
         raise HTTPException(404, "Question not in this attempt")
-    if body.qid in a["checked"]:
+    locked = body.qid in a["checked"]
+    if locked and (body.check or body.flagged is None):
         raise HTTPException(409, "Answer already checked")
     ids = {o["id"] for o in q["options"]}
-    ans = [x for x in body.answer if x in ids]
-    upd = {f"answers.{body.qid}": ans, "last_index": body.index, "last_seen": now_iso()}
+    ans = list(dict.fromkeys(x for x in body.answer if x in ids))[:q.get("choose") or 1]
+    upd = {"last_index": body.index, "last_seen": now_iso(), **({} if locked else {f"answers.{body.qid}": ans})}
     ops = {"$set": upd}
     if body.flagged is not None:
         ops["$addToSet" if body.flagged else "$pull"] = {"flags": body.qid}
@@ -227,8 +234,8 @@ async def answer(aid: str, body: AnswerIn, user=Depends(get_current_user)):
 @router.post("/exam-attempts/{aid}/hint/{qid}")
 async def hint(aid: str, qid: str, user=Depends(get_current_user)):
     a = await mine(aid, user)
-    if a["mode"] != "practice":
-        raise HTTPException(400, "Hints are only available in practice mode")
+    if a["mode"] != "practice" or a["status"] != "in_progress":
+        raise HTTPException(400, "Hints are only available during practice mode")
     q = next((x for x in a["questions"] if x["qid"] == qid), None)
     if not q:
         raise HTTPException(404, "Question not found")
@@ -254,7 +261,7 @@ async def recommendations(a, e):
             if q["domain"] == d["domain"] and q.get("ref_url") and q["ref_url"] not in seen and not E.is_right(q, a["answers"].get(q["qid"])):
                 links.append({"title": q.get("ref_label") or "Related lecture / lab", "link": q["ref_url"]})
                 seen.add(q["ref_url"])
-        out.append({**d, "links": links[:5], "practice": f"/app/tests/{a['exam_id']}?practice={d['domain']}"})
+        out.append({**d, "links": links[:5], "practice": f"/app/tests/{a['exam_id']}?practice={quote(d['domain'])}"})
     return out
 
 

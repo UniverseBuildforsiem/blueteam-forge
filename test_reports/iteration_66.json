@@ -1,0 +1,48 @@
+{
+  "summary": "Tested the certification Tests feature end to end: backend with pytest (13/13 pass after 2 small fixes) and frontend with Playwright as anonymous, student and admin users. Working: public catalog and filters, the CSA landing page (details, 6 domain weights, 3 samples with check/hint/explanations, FAQs, related, 'Sign in to buy'), student hub, practice mode, exam and certification modes, the identity gate, resume, multi-select, scenario panels, results page, admin test editor (fixed list and pool), creating, publishing and enrolling in a free test, question bank (filters, preview, TF create, edit to v2, versions and restore to v3, archive, CSV import, case study add) and analytics. Security holds: no 'correct', 'why' or hint fields in in-progress exam/cert attempts; check=true gives 400; hint gives 400; another user's attempt gives 404; admin routes give 403 to students. One functional bug is still open: in practice mode you cannot flag a question after 'Check answer'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/exam-attempts/{aid}/answer", "issue": "In practice mode, flagging a question after it was checked returns 409 'Answer already checked'. The flag is never saved (UI shows a 'not saved' toast and the Result 'Flagged' filter shows 0). Fix: when the qid is in checked, still apply the flagged add/pull but don't overwrite answers."},
+      {"endpoint": "GET /api/admin/questions?q=(", "issue": "FIXED by me: regex special characters gave 500 (re.error). Now uses re.escape."},
+      {"endpoint": "GET /api/exam-attempts/{aid}/result recommendations[].practice", "issue": "FIXED by me: the domain was not URL-encoded. Names containing '&' (3 of 6 CSA domains) were cut short in ?practice=, so practice would not preselect the domain and starting it failed with 'no questions'. Now uses urllib.parse.quote; preselect checked in the UI."},
+      {"endpoint": "POST /api/exam-attempts/{aid}/hint/{qid}", "issue": "Returns 200 on an already-submitted practice attempt (no status check). Harmless."},
+      {"endpoint": "POST /api/exams/{eid}/start (practice timed)", "issue": "A timed practice session uses the full exam length (180 min) even for a 20-question domain practice."},
+      {"endpoint": "Admin exam/question delete", "issue": "There is no hard delete for exams that have attempts, for questions (archive only) or for scenarios (no DELETE route). Test data can only be cleaned up in the DB."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Player (practice)", "issue": "The flag toggle after 'Check answer' shows as flagged locally, but saving fails with 'Answer already checked'. Same backend 409 as above.", "selector": "[data-testid='question-flag']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Result/Hub trend chart", "issue": "Domain-only practice attempts are excluded, so the chart says 'no attempts yet' even after several practice attempts (hub shows Attempts: 3). The message is misleading; suggest 'complete a full-length attempt to see a trend'.", "affected_selectors": ["[data-testid='result-score']", "[data-testid='hub-attempts']"]}
+    ],
+    "design_issues": [
+      {"screen": "Test landing", "issues": ["'1 candidates' should be '1 candidate'", "On mobile the buy card shows above the title and breadcrumb", "Mobile header: the 'Dashboard' button overlaps the 'SOCProfessionals' logo text (existing header)"]},
+      {"screen": "Result domain chart", "issues": ["Bar chart x-axis labels are truncated ('Incidents, Events &...')"]},
+      {"screen": "Question bank CSV template", "issues": ["The sample CSV row uses domain 'Incidents Events & Logging' (no comma), which doesn't match the real CSA domain 'Incidents, Events & Logging'. Imported template questions create a stray domain. Quote the field in the CSV so the comma can stay."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_exams_engine.py", "/app/test_reports/pytest/exams_results.xml"],
+  "action_items": [
+    "Fix PUT /answer so a flag-only update works on checked practice questions (don't 409; only block answer changes)",
+    "Add a status check to the hint endpoint (optional)",
+    "Fix the CSV template domain name so it matches 'Incidents, Events & Logging'",
+    "Clearer empty-state text for the trend chart when only domain practices exist; fix '1 candidates' plural",
+    "Consider a practice-timed duration scaled to the question count"
+  ],
+  "critical_code_review_comments": [
+    "routes_exams.answer: the checked guard runs before the flag logic, which causes the flag bug",
+    "start(): there is no atomic guard against two concurrent certification starts (race could create 2 cert attempts). Consider a unique partial index on (exam_id, user_id, mode, status=in_progress)",
+    "Multi-select: the server doesn't limit an answer to `choose` options (the UI does). Not exploitable for score, because grading needs an exact set match",
+    "Landing samples include full answers and explanations, and those 3 questions are also in the fixed CSA exam set (intentional, but noted)",
+    "The student purchase of test:csa-v1 was NOT in db.purchases at test start, although the brief said it was granted. The testing agent added it (see seed_data_creation)"
+  ],
+  "updated_files": ["/app/backend/routes_exams.py", "/app/backend/routes_exam_admin.py", "/app/backend/tests/test_exams_engine.py"],
+  "success_rate": {"backend": "100% (13/13 after fixes; 1 open minor bug found via extra script)", "frontend": "~95%"},
+  "seed_data_creation": "Inserted db.purchases {user_id:b9cafa42b8ca (student), product_id:'test:csa-v1', test:true, granted_by:'testing_agent'} because it was missing. Left in place so the student owns the CSA test. Student's CSA attempts now include several practice attempts and 1 certification attempt (FAIL, 1%, legal name 'TEST Demo Student'). The student has 2/3 cert attempts left and a 24h cooldown is active, so the next manual cert start is blocked until about Nov 21 07:30 UTC. The student also gained XP from these attempts. All test-created TEST_ exams (5), their attempts and enrollments, TEST_ questions (4 qids incl. the imported CSV template question) and the TEST_ scenario were deleted from the DB; bank back to 100.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: REACT_APP_BACKEND_URL=... pytest /app/backend/tests/test_exams_engine.py -n 0. It creates TEST_ exams; its cleanup only unpublishes exams with attempts and archives questions, so purge them from the DB afterwards. CSA cert for the student is in cooldown; for cert-mode tests, create a free TEST_ certification exam (as the pytest does). Not tested: webcam identity mode, auto-submit at timeout (180 min; logic reviewed only), Razorpay checkout for the paid test, reviews posting UI."
+}

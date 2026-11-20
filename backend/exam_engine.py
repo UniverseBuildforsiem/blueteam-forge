@@ -126,6 +126,10 @@ async def build_attempt(exam, user, mode, timed, domain, identity):
     qs = order(qs, shuffle)
     num = await db.exam_attempts.count_documents({"exam_id": exam["id"], "user_id": user["id"], "mode": mode}) + 1
     dur = int(exam.get("duration_min") or 0)
+    if domain and dur:
+        sel = exam.get("selection") or {}
+        full = len(sel.get("ids") or []) if sel.get("mode") == "fixed" else sum(int(d.get("count") or 0) for d in sel.get("domains") or [])
+        dur = max(5, round(dur * len(qs) / max(full, len(qs))))
     started = now()
     att = {"id": new_id(), "exam_id": exam["id"], "exam_title": exam["title"], "user_id": user["id"], "user_name": user["name"], "mode": mode, "domain": domain,
            "status": "in_progress", "number": num, "started_at": started.isoformat(), "pass_mark": int(exam.get("pass_mark") or 70),
