@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend retest of the /app/kali workbench, logged in as student. 3 of the 4 earlier fixes now work: (1) The race fix works. I reloaded and clicked kali-lab-lx-users at once. The panel showed lx-users, running `id` sent PUT /kali/state/lx-users, and the sandbox doc in Mongo stayed byte-identical. (2) Nano works. The textarea starts empty, and typing, ^O, ^X then `head -n1` prints the typed text. (3) GET /api/kali/progress works. lx-users showed 6/6 in the list right after a reload, without opening the lab. The 4th fix is NOT done: the lx-users 'Delete the user' task still completes when userdel fails on a user that doesn't exist. The regression checks passed: sandbox loops and pipes, vi :wq, msfconsole, the hint ladder (saved across reload), lab reset and file persistence across reload. One new bug: in vi, `:w` then `:q` loses the file.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "labs.js lx-users task 5 'Delete the user'", "issue": "Still completes before the user exists. On a fresh lab, `sudo userdel -r analyst2` prints \"userdel: user 'analyst2' does not exist\" (nonzero exit) and task 5 turns green right away. The check only tests /userdel/ on last.cmd plus that analyst2 is not in passwd. It does not check last.code === 0 or that task 3 ('Create a user') was done first.", "selector": "[data-testid='kali-task-5']", "priority": "HIGH"},
+      {"component": "Editor.jsx vi :w then :q", "issue": "The file is lost. save() only sets dirty=false and never writes. The real write only happens in onClose(text). `:q` with dirty=false calls onClose(initial), which is null for a new file, so nothing is written. Reproduced: vi TEST_w.txt, i, type, Esc, :w, :q, then cat gives 'No such file'. The same applies to `:w` then `:q!`. On an existing file, `:q` after `:w` brings back the original content.", "selector": "[data-testid='kali-editor-cmd']", "priority": "HIGH"},
+      {"component": "labs.js lx-users task 1 'Groups'", "issue": "Running `id` completes both task 0 and task 1, because the id output contains '(sudo)' and task 1 is out(/sudo/). The check should require the groups command (/groups/.test(last.cmd)).", "selector": "[data-testid='kali-task-1']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [{"screen": "Kali terminal title", "issues": ["The title always shows 'kali@lab-phish-ransom — bash' whatever lab is open (optional item from iteration 63, still open)"]}]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "lx-users task 5: require last.code === 0 (or done.includes('3')) as well as the userdel cmd regex",
+    "Editor.jsx: make :w write for real, e.g. keep a savedText ref that :w updates. :q (clean) and :q! should then close with savedText, not with initial or null",
+    "lx-users task 1: require /groups/ in last.cmd",
+    "Optional: show the current lab id in the terminal title"
+  ],
+  "critical_code_review_comments": [
+    "KaliLabs onRan is async and captures `state`. If the user switches labs while the task checks are still running, setState(nx) can write the old lab's state back over the new lab's. Guard it with `if (curKey.current !== st.key) return` before setState and persist.",
+    "TaskPanel `show` (which hints are open) is not keyed by lab, so open hint and solution boxes carry over to the next lab at the same index. Add key={state.key} to TaskPanel."
+  ],
+  "updated_files": [],
+  "success_rate": {"frontend": "80% (3 of 4 retest items pass; 6 of 6 regression checks pass; 1 new HIGH bug)"},
+  "test_credentials": "student@socprofessionals.academy / Student@123",
+  "seed_data_creation": "None left behind. I backed up the student's pre-existing kali_state sandbox doc first and restored it exactly after testing. I deleted the lx-users and auto-ping-sweep docs that the tests created (student user_id b9cafa42b8ca).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The terminal input is [data-testid=kali-input]. The editor uses kali-editor-text, kali-editor-mode and kali-editor-cmd. In vi, pressing ':' pre-fills the cmd input with ':', so use fill(':wq'). Lab buttons are kali-lab-<id>, e.g. kali-lab-auto-ping-sweep. Back up the student's sandbox kali_state doc before testing and restore it afterwards.",
+  "rca of the issue": "vi data loss: the Editor treats :w as only clearing the dirty flag, and the parent Terminal only writes in onClose. :q after :w therefore closes with initial (null for a new file) and the edits are dropped. Userdel task: the check is a state check (user missing) plus a cmd regex. That state is already true before the user is created, and a failed userdel still matches the regex."
+}

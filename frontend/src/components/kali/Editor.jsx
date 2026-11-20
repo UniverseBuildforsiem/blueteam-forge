@@ -6,11 +6,11 @@ export function Editor({ path, initial, kind, onClose }) {
   const [cmd, setCmd] = useState("");
   const [msg, setMsg] = useState(initial == null ? `"${path}" [New]` : `"${path}" ${(initial.match(/\n/g) || []).length}L`);
   const [dirty, setDirty] = useState(false);
-  const ta = useRef(null), cmdRef = useRef(null), reg = useRef(""), pend = useRef("");
+  const ta = useRef(null), cmdRef = useRef(null), reg = useRef(""), pend = useRef(""), saved = useRef(initial ?? null);
   useEffect(() => { (mode === "CMD" ? cmdRef : ta).current?.focus(); }, [mode]);
   const edit = (v, caret) => { setText(v); setDirty(true); requestAnimationFrame(() => { if (ta.current && caret != null) ta.current.selectionStart = ta.current.selectionEnd = caret; }); };
   const lineAt = (pos) => { const s = text.lastIndexOf("\n", pos - 1) + 1; let e = text.indexOf("\n", pos); if (e < 0) e = text.length; return [s, e]; };
-  const save = () => { setDirty(false); setMsg(`"${path}" written`); };
+  const save = () => { saved.current = text; setDirty(false); setMsg(`"${path}" written`); };
   const normal = (e) => {
     if (e.ctrlKey || e.metaKey) return;
     if (e.key.length !== 1 && e.key !== "Escape") return;
@@ -41,14 +41,14 @@ export function Editor({ path, initial, kind, onClose }) {
     const x = c.slice(1).trim();
     if (x === "w") save();
     else if (x === "wq" || x === "x") onClose(text);
-    else if (x === "q") { if (dirty) setMsg("E37: No write since last change (add ! to override)"); else onClose(initial == null ? null : initial); }
-    else if (x === "q!") onClose(null);
+    else if (x === "q") { if (dirty) setMsg("E37: No write since last change (add ! to override)"); else onClose(saved.current); }
+    else if (x === "q!") onClose(saved.current === initial ? null : saved.current);
     else setMsg(`E492: Not an editor command: ${x}`);
   };
   const nanoKey = (e) => {
     if (!e.ctrlKey) return;
     if (e.key === "o" || e.key === "s") { e.preventDefault(); save(); }
-    if (e.key === "x") { e.preventDefault(); onClose(dirty ? text : initial == null && !text ? null : text); }
+    if (e.key === "x") { e.preventDefault(); onClose(dirty ? text : saved.current); }
   };
   return <div className="absolute inset-0 z-20 flex flex-col bg-[#05070D] font-mono text-[13px]" data-testid="kali-editor">
     <div className="px-3 py-1 text-xs bg-cyan-900/40 text-cyan-100 flex justify-between"><span>{kind === "vi" ? "VIM (simulated)" : "GNU nano (simulated)"} · {path}{dirty ? " [+]" : ""}</span><span data-testid="kali-editor-mode">{mode === "NANO" ? "" : `-- ${mode} --`}</span></div>

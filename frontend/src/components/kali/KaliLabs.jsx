@@ -72,6 +72,7 @@ export function KaliWorkbench({ baseLab }) {
       }
       if (done.length === lab.tasks.length && st.done.length < done.length) toast.success("Lab complete!");
     }
+    if (curKey.current !== st.key) return;
     const nx = { ...st, done };
     setState(nx); setDoneMap((m) => ({ ...m, [st.key]: done.length })); persist(nx);
   };
@@ -81,6 +82,6 @@ export function KaliWorkbench({ baseLab }) {
   return <div className="grid xl:grid-cols-[230px_1fr_320px] gap-4">
     <div className="glass p-3"><LabList cur={cur} setCur={setCur} doneMap={doneMap} /></div>
     {state ? <Terminal key={state.key} lab={baseLab} session={state.session} onRan={onRan} height="640px" /> : <div className="h-[640px] grid place-items-center text-slate-500 text-sm">Loading…</div>}
-    <div className="glass p-3 max-h-[640px] overflow-auto">{state && <TaskPanel lab={lab} done={state.done} hints={state.hints} onHint={hint} onReset={reset} />}</div>
+    <div className="glass p-3 max-h-[640px] overflow-auto">{state && <TaskPanel key={state.key} lab={lab} done={state.done} hints={state.hints} onHint={hint} onReset={reset} />}</div>
   </div>;
 }
