@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { api, errMsg } from "../../lib/api";
 import { TOOLS } from "../../lib/kali";
 import Terminal from "../../components/Terminal";
+import { KaliWorkbench } from "../../components/kali/KaliLabs";
 import { Glass, PageHeader } from "../../components/common";
 
 export function Labs() {
@@ -146,17 +147,12 @@ export function LabRunner() {
 
 export function KaliPage() {
   const [lab, setLab] = useState(null);
-  const term = useRef(null);
   useEffect(() => { api.get("/labs/lab-phish-ransom").then((r) => setLab(r.data)); }, []);
   if (!lab) return null;
   return (
     <div>
-      <PageHeader eyebrow="// kali linux simulator" title="Analyst workstation" sub="Free-play sandbox loaded with the Phishing to Ransomware evidence set. Nothing here touches a real network." />
-      <div className="grid xl:grid-cols-[240px_1fr_300px] gap-4">
-        <Glass className="p-3"><div className="eyebrow mb-2">tools</div><ToolsSidebar onPick={(c) => term.current?.insert(c)} /></Glass>
-        <Terminal ref={term} lab={lab} height="600px" />
-        <Glass className="p-3"><div className="eyebrow mb-2">notes</div><Notes storageKey="notes-kali" /></Glass>
-      </div>
+      <PageHeader eyebrow="// kali linux simulator" title="Analyst workstation" sub="A bash-like shell with a saved virtual filesystem, vi/nano, a simulated Metasploit and guided scripting labs. Nothing here touches a real network." />
+      <KaliWorkbench baseLab={lab} />
     </div>
   );
 }
