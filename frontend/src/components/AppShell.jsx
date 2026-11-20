@@ -1,13 +1,13 @@
 import { NavLink, Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { LayoutDashboard, Route as RouteIcon, CalendarClock, ListChecks, Activity, Siren, Flag, FlaskConical, Terminal, Search, Wrench,
-  Award, CreditCard, GraduationCap, Medal, Mic, ShieldCheck, LogOut, Menu, Zap, BookMarked, Newspaper, KeyRound, Radar, Workflow, Timer, Fish, NotebookPen, ShieldAlert } from "lucide-react";
+  Award, CreditCard, GraduationCap, Medal, Mic, ShieldCheck, LogOut, Menu, Zap, BookMarked, Newspaper, KeyRound, Radar, Workflow, Timer, Fish, NotebookPen, ShieldAlert, ClipboardCheck } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "./common";
 
 const STUDENT = [
   ["Dashboard", "/app", LayoutDashboard], ["Learning Paths", "/app/paths", RouteIcon], ["Live Sessions", "/app/sessions", CalendarClock],
-  ["Quizzes", "/app/quizzes", ListChecks], ["Progress", "/app/progress", Activity], ["Daily Drill", "/app/drill", Zap], ["Courses", "/app/courses", GraduationCap], ["My Notes", "/app/notes", NotebookPen], ["Badges", "/app/badges", Medal], ["Mock Interview", "/app/interview", Mic], ["SOC Challenges", "/app/challenges", Siren], ["Shift Simulator", "/app/shift", Timer], ["Phishing Simulator", "/app/phishing", Fish], ["Vuln Mgmt Lab", "/app/vmlab", ShieldAlert],
+  ["Quizzes", "/app/quizzes", ListChecks], ["Progress", "/app/progress", Activity], ["Daily Drill", "/app/drill", Zap], ["Courses", "/app/courses", GraduationCap], ["Tests", "/app/tests", ClipboardCheck], ["My Notes", "/app/notes", NotebookPen], ["Badges", "/app/badges", Medal], ["Mock Interview", "/app/interview", Mic], ["SOC Challenges", "/app/challenges", Siren], ["Shift Simulator", "/app/shift", Timer], ["Phishing Simulator", "/app/phishing", Fish], ["Vuln Mgmt Lab", "/app/vmlab", ShieldAlert],
   ["CTF Arena", "/app/ctf", Flag], ["Scenario Labs", "/app/labs", FlaskConical], ["Kali Terminal", "/app/kali", Terminal],
   ["SIEM", "/app/siem", Search], ["Investigation Tools", "/app/tools", Wrench], ["Threat Intel", "/app/threat-intel", Radar], ["SOP Library", "/sops", BookMarked], ["Playbooks", "/playbooks", Workflow], ["Blogs", "/blog", Newspaper], ["Certificates", "/app/certificates", Award], ["Billing", "/app/billing", CreditCard], ["Account Settings", "/app/account", KeyRound],
 ];

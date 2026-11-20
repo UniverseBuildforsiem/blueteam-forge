@@ -13,13 +13,13 @@ const STATUS = { draft: "text-slate-400 border-white/15", pending: "text-yellow-
 const blank = () => ({ title: "", subtitle: "", description: "", level: "Beginner", category: "", price: 0, mrp: 0, sale_ends_at: null, cover: "", promo_video: "", outcomes: [], requirements: [], audience: [], final_quiz_id: null,
   modules: [{ id: `m-${Date.now()}`, title: "Module 1", lessons: [] }] });
 const Badge = ({ s }) => <span className={`text-[10px] font-mono uppercase border px-1.5 py-0.5 ${STATUS[s]}`} data-testid="course-status">{s}</span>;
-const L = ({ l, children, cls = "" }) => <label className={`block ${cls}`}><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
+export const L = ({ l, children, cls = "" }) => <label className={`block ${cls}`}><span className="text-[11px] font-mono uppercase text-slate-500">{l}</span><div className="mt-1">{children}</div></label>;
 const toLocal = (iso) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : "");
 const off = (d) => (d.mrp > d.price ? Math.round((100 * (d.mrp - d.price)) / d.mrp) : 0);
 
-function Lines({ k, l, d, setD, ph }) {
+export function Lines({ k, l, d, setD, ph, tid = "course" }) {
   const [txt, setTxt] = useState((d[k] || []).join("\n"));
-  return <L l={l}><textarea className="field h-24 text-sm" placeholder={ph} value={txt} onChange={(e) => { setTxt(e.target.value); setD((x) => ({ ...x, [k]: e.target.value.split("\n") })); }} data-testid={`course-${k}`} /></L>;
+  return <L l={l}><textarea className="field h-24 text-sm" placeholder={ph} value={txt} onChange={(e) => { setTxt(e.target.value); setD((x) => ({ ...x, [k]: e.target.value.split("\n") })); }} data-testid={`${tid}-${k}`} /></L>;
 }
 
 function Meta({ d, setD, quizzes }) {

@@ -39,11 +39,13 @@ from routes_phish_run import router as phish_run_router
 from routes_notes import router as notes_router
 from routes_vmlab import router as vmlab_router, seed_vm
 from routes_kali import router as kali_router
+from routes_exams import router as exams_router
+from routes_exam_admin import router as exam_admin_router, seed_exams
 from playbook_writer import ensure_playbooks
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 app = FastAPI(title="SOCProfessionals Academy API")
-for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router, series_share_router, intel_router, intel_guest_router, sop_lab_router, playbooks_router, shift_router, academy_router, coupons_router, bundles_router, gifts_router, campaigns_router, phish_router, phish_public_router, phish_run_router, notes_router, vmlab_router, kali_router):
+for r in (auth_router, learn_router, practice_router, manage_router, cron_router, share_router, courses_router, book_router, interview_router, sop_router, blog_router, instructor_router, admin_router, promo_router, consult_router, series_router, cover_router, series_email_router, series_share_router, intel_router, intel_guest_router, sop_lab_router, playbooks_router, shift_router, academy_router, coupons_router, bundles_router, gifts_router, campaigns_router, phish_router, phish_public_router, phish_run_router, notes_router, vmlab_router, kali_router, exams_router, exam_admin_router):
     app.include_router(r)
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ["CORS_ORIGINS"].split(","), allow_methods=["*"], allow_headers=["*"])
@@ -111,6 +113,7 @@ async def startup():
         await seed_user(f"bot{i}@socprofessionals.academy", "BotUser@123!x", n, n.split()[0].lower() + str(i), "student", xp, i + 1)
     await seed_collection("paths", S.PATHS)
     await seed_vm()
+    await seed_exams()
     await seed_collection("quizzes", S.QUIZZES)
     await seed_collection("challenges", S.CHALLENGES)
     for c in S.CHALLENGES:

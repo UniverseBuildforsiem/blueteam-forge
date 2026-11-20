@@ -11,26 +11,26 @@ export function Stars({ value, size = "h-4 w-4", onPick, testId }) {
   })}</span>;
 }
 
-function ReviewForm({ c, onSaved }) {
+function ReviewForm({ c, onSaved, postUrl, noun = "course" }) {
   const [r, setR] = useState(c.my_review?.rating || 0);
   const [t, setT] = useState(c.my_review?.text || "");
-  const save = async () => { try { await api.post(`/academy/courses/${c.id}/reviews`, { rating: r, text: t }); toast.success("Thanks for your review!"); onSaved(); } catch (e) { toast.error(errMsg(e)); } };
+  const save = async () => { try { await api.post(postUrl || `/academy/courses/${c.id}/reviews`, { rating: r, text: t }); toast.success("Thanks for your review!"); onSaved(); } catch (e) { toast.error(errMsg(e)); } };
   return (
     <Glass className="p-4 space-y-2" data-testid="review-form">
-      <div className="text-sm font-bold">{c.my_review ? "Update your review" : "Rate this course"}</div>
+      <div className="text-sm font-bold">{c.my_review ? "Update your review" : `Rate this ${noun}`}</div>
       <Stars value={r} size="h-6 w-6" onPick={setR} testId="review-star" />
       <textarea className="field h-20 text-sm" placeholder="What did you think? (optional)" value={t} onChange={(e) => setT(e.target.value)} data-testid="review-text" />
       <button className="glow-btn !text-xs" disabled={!r} onClick={save} data-testid="review-submit">{c.my_review ? "Update review" : "Post review"}</button>
     </Glass>);
 }
 
-export function Reviews({ c, reload }) {
+export function Reviews({ c, reload, postUrl, noun = "course" }) {
   return (
     <section data-testid="course-reviews">
       <h2 className="text-xl font-bold mb-3 flex items-center gap-3">Student reviews
-        {c.rating && <span className="text-base font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="reviews-avg"><Star className="h-4 w-4 fill-yellow-300" />{c.rating} course rating · {c.reviews_count} reviews</span>}</h2>
-      {c.can_review && <div className="mb-4"><ReviewForm c={c} onSaved={reload} /></div>}
-      {!c.reviews.length && <p className="text-sm text-slate-500" data-testid="reviews-empty">No reviews yet{c.owned ? " — be the first after your first lesson." : "."}</p>}
+        {c.rating && <span className="text-base font-mono text-yellow-300 inline-flex items-center gap-2" data-testid="reviews-avg"><Star className="h-4 w-4 fill-yellow-300" />{c.rating} {noun} rating · {c.reviews_count} reviews</span>}</h2>
+      {c.can_review && <div className="mb-4"><ReviewForm c={c} onSaved={reload} postUrl={postUrl} noun={noun} /></div>}
+      {!c.reviews.length && <p className="text-sm text-slate-500" data-testid="reviews-empty">No reviews yet{c.owned ? " — be the first." : "."}</p>}
       <div className="grid md:grid-cols-2 gap-3">{c.reviews.map((r, i) => (
         <Glass key={i} className="p-4" data-testid={`review-${i}`}>
           <div className="flex items-center gap-3"><span className="h-9 w-9 grid place-items-center bg-cyan-500/15 text-cyan-300 font-bold font-mono">{r.name?.[0]}</span>

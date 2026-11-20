@@ -79,10 +79,10 @@ async def delete_coupon(code: str, user=Depends(admin_only)):
 async def apply_coupon(plan_key, plan, code, user):
     if not code:
         return plan
-    if not plan_key.startswith(("course:", "bundle:")):
-        raise HTTPException(400, "Coupons only work on courses and bundles")
+    if not plan_key.startswith(("course:", "bundle:", "test:")):
+        raise HTTPException(400, "Coupons only work on courses, tests and bundles")
     c = await db.academy_coupons.find_one({"code": code.strip().upper(), "active": True}, NO_ID)
-    target = plan_key[7:] if plan_key.startswith("course:") else None
+    target = plan_key.split(":", 1)[1] if plan_key.startswith(("course:", "test:")) else None
     if not c or c.get("course_id") not in ("", target):
         raise HTTPException(400, "This coupon isn't valid for this " + ("course" if target else "bundle"))
     if c.get("starts_at") and parse_dt(c["starts_at"]) > datetime.now(timezone.utc):
@@ -101,7 +101,7 @@ async def apply_coupon(plan_key, plan, code, user):
 class CheckIn(BaseModel):
     code: str = Field(min_length=1, max_length=30)
     course_id: Optional[str] = None
-    plan: Optional[str] = Field(default=None, pattern=r"^(course|bundle):[\w-]+$")
+    plan: Optional[str] = Field(default=None, pattern=r"^(course|bundle|test):[\w-]+$")
     gift: bool = False
 
 

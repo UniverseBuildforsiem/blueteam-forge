@@ -11,9 +11,10 @@ export default function PublicNav() {
     <header className="sticky top-0 z-30 bg-[#0B0F1A]/75 backdrop-blur-xl border-b border-cyan-500/10">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Logo />
-        <nav className="hidden md:flex items-center gap-8 text-sm text-slate-400 font-mono">
+        <nav className="hidden md:flex items-center gap-5 xl:gap-7 text-sm text-slate-400 font-mono whitespace-nowrap">
           <a href="/#features" className="hover:text-cyan-300 transition-colors">Features</a>
           <Link to="/courses" data-testid="nav-courses" className="hover:text-cyan-300 transition-colors">Courses</Link>
+          <Link to="/tests" data-testid="nav-tests" className="hover:text-cyan-300 transition-colors">Tests</Link>
           <Link to="/book" data-testid="nav-ebook" className="hover:text-cyan-300 transition-colors">Ebook</Link>
           <Link to="/blog" data-testid="nav-blog" className="hover:text-cyan-300 transition-colors">Blog</Link>
           <Link to="/sops" data-testid="nav-sops" className="hover:text-cyan-300 transition-colors">SOPs</Link>
@@ -33,6 +34,7 @@ export default function PublicNav() {
         <nav className="md:hidden border-t border-cyan-500/10 px-6 py-3 flex flex-col gap-3 font-mono text-sm text-slate-300" data-testid="nav-mobile-menu" onClick={() => setOpen(false)}>
           <a href="/#features">Features</a>
           <Link to="/courses" data-testid="nav-mobile-courses">Courses</Link>
+          <Link to="/tests" data-testid="nav-mobile-tests">Tests</Link>
           <Link to="/book" data-testid="nav-mobile-ebook">Ebook</Link>
           <Link to="/blog" data-testid="nav-mobile-blog">Blog</Link>
           <Link to="/sops" data-testid="nav-mobile-sops">SOPs</Link>

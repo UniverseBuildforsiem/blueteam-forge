@@ -33,6 +33,11 @@ import VmLab from "./pages/app/VmLab";
 import VmLabPlayer from "./pages/app/VmLabPlayer";
 import { VmQuiz, VmCtf } from "./pages/app/VmLabItem";
 import CourseLanding from "./pages/CourseLanding";
+import Tests from "./pages/Tests";
+import TestLanding from "./pages/TestLanding";
+import { TestsHome, TestHub } from "./pages/app/Tests";
+import TestPlayer from "./components/exam/Player";
+import TestResult from "./components/exam/Result";
 import BundlePage from "./pages/BundlePage";
 import GiftPage from "./pages/GiftPage";
 import Drill from "./pages/app/Drill";
@@ -56,6 +61,8 @@ function AppRouter() {
             <Route path="/" element={<Landing />} />
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/courses" element={<Courses />} />
+            <Route path="/tests" element={<Tests />} />
+            <Route path="/test/:id" element={<TestLanding />} />
             <Route path="/course/:id" element={<CourseLanding />} />
             <Route path="/bundle/:id" element={<BundlePage />} />
             <Route path="/gift/:code" element={<GiftPage />} />
@@ -90,6 +97,10 @@ function AppRouter() {
               <Route path="progress" element={<Progress />} />
               <Route path="drill" element={<Drill />} />
               <Route path="courses" element={<AcademyList />} />
+              <Route path="tests" element={<TestsHome />} />
+              <Route path="tests/:id" element={<TestHub />} />
+              <Route path="tests/attempt/:aid" element={<TestPlayer />} />
+              <Route path="tests/result/:aid" element={<TestResult />} />
               <Route path="notes" element={<MyNotes />} />
               <Route path="vmlab" element={<VmLab />} />
               <Route path="vmlab/lab/:id" element={<VmLabPlayer />} />

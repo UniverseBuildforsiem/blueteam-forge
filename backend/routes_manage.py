@@ -288,6 +288,12 @@ async def item_for(key, user=None):
         if not c or not pricing(c)["price"]:
             raise HTTPException(400, "This course isn't for sale")
         return {"name": f"Course: {c['title']}"[:100], "amount": pricing(c)["price"], "return": f"/course/{c['id']}"}
+    if key.startswith("test:"):
+        from routes_academy import pricing
+        e = await db.exams.find_one({"id": key[5:], "status": "published"}, {"_id": 0, "id": 1, "title": 1, "price": 1, "mrp": 1, "sale_ends_at": 1})
+        if not e or not pricing(e)["price"]:
+            raise HTTPException(400, "This test isn't for sale")
+        return {"name": f"Test: {e['title']}"[:100], "amount": pricing(e)["price"], "return": f"/test/{e['id']}"}
     if key == "vm-lab":
         s = await db.vm_settings.find_one({"id": "main"}) or {}
         if not s.get("price"):
@@ -349,7 +355,7 @@ async def activate(user_id, pid):
             for cid in [p["plan"]] + [f"course:{c}" for c in p.get("courses") or []]:
                 await db.purchases.update_one({"user_id": user_id, "product_id": cid},
                                               {"$setOnInsert": {"user_id": user_id, "product_id": cid, "payment_id": pid, "at": now_iso()}}, upsert=True)
-        elif p["plan"].startswith("course:"):
+        elif p["plan"].startswith(("course:", "test:")):
             from routes_coupons import redeem
             await redeem(p)
             await db.purchases.update_one({"user_id": user_id, "product_id": p["plan"]},

@@ -214,10 +214,11 @@ def cert_png(c):
     d.rectangle((24, 24, 1576, 1106), outline=CYAN, width=3)
     d.rectangle((36, 36, 1564, 1094), outline=GREEN, width=1)
     draw_logo(d)
-    d.text((60, 170), "CERTIFICATE OF COURSE COMPLETION", font=font("LiberationMono-Bold.ttf", 28), fill=MUTED)
+    exam = c.get("kind") == "exam"
+    d.text((60, 170), "CERTIFICATE OF ACHIEVEMENT" if exam else "CERTIFICATE OF COURSE COMPLETION", font=font("LiberationMono-Bold.ttf", 28), fill=MUTED)
     d.text((60, 300), "This certifies that", font=font("LiberationSans-Regular.ttf", 32), fill=(248, 250, 252))
     d.text((60, 350), c["name"][:40], font=font("LiberationSans-Bold.ttf", 80), fill=(248, 250, 252))
-    d.text((60, 480), "has successfully completed the course", font=font("LiberationSans-Regular.ttf", 32), fill=(248, 250, 252))
+    d.text((60, 480), f"has passed the certification exam with {c.get('score')}%" if exam else "has successfully completed the course", font=font("LiberationSans-Regular.ttf", 32), fill=(248, 250, 252))
     d.text((60, 530), c["course_title"][:48], font=font("LiberationMono-Bold.ttf", 46), fill=GREEN)
     mono = font("LiberationSans-Regular.ttf", 26)
     url = f"{os.environ['FRONTEND_URL'].rstrip('/')}/verify/{c['id']}"
