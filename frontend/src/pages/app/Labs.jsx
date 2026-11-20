@@ -147,7 +147,9 @@ export function LabRunner() {
 
 export function KaliPage() {
   const [lab, setLab] = useState(null);
-  useEffect(() => { api.get("/labs/lab-phish-ransom").then((r) => setLab(r.data)); }, []);
+  const [err, setErr] = useState(false);
+  useEffect(() => { api.get("/labs/lab-phish-ransom").then((r) => setLab(r.data)).catch(() => setErr(true)); }, []);
+  if (err) return <div className="text-sm text-red-300 p-6" data-testid="kali-load-error">Could not load the workstation. Please refresh the page.</div>;
   if (!lab) return null;
   return (
     <div>

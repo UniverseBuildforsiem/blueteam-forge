@@ -20,6 +20,12 @@ def check(key):
         raise HTTPException(400, "Bad lab key")
 
 
+@router.get("/progress")
+async def progress(user=Depends(get_current_user)):
+    docs = await db.kali_state.find({"user_id": user["id"]}, {"_id": 0, "key": 1, "done": 1}).to_list(200)
+    return {d["key"]: len(d.get("done") or []) for d in docs}
+
+
 @router.get("/state/{key}")
 async def get_state(key: str, user=Depends(get_current_user)):
     check(key)

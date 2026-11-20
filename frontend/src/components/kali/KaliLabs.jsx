@@ -39,11 +39,17 @@ export function KaliWorkbench({ baseLab }) {
   const [state, setState] = useState(null);
   const [doneMap, setDoneMap] = useState({});
   const saveT = useRef(null);
-  const lab = KALI_LABS.find((l) => l.id === cur);
+  const curKey = useRef(cur);
+  const lab = KALI_LABS.find((l) => l.id === state?.key);
+  useEffect(() => { api.get("/kali/progress").then((r) => setDoneMap((m) => ({ ...r.data, ...m }))).catch(() => {}); }, []);
 
   const load = useCallback(async (key) => {
+    curKey.current = key;
+    clearTimeout(saveT.current);
     setState(null);
-    const r = await api.get(`/kali/state/${key}`).catch(() => ({ data: {} }));
+    let r;
+    try { r = await api.get(`/kali/state/${key}`); } catch (e) { if (curKey.current === key) toast.error(errMsg(e)); return; }
+    if (curKey.current !== key) return;
     const l = KALI_LABS.find((x) => x.id === key);
     let nodes = r.data.fs;
     if (!nodes) { nodes = seed(baseLab?.kali?.fs); Object.entries(l?.starter || {}).forEach(([p, c]) => { nodes[p] = { t: "f", c, m: 0o644, o: "kali", mt: Math.floor(Date.now() / 1000) }; }); }
@@ -69,7 +75,7 @@ export function KaliWorkbench({ baseLab }) {
     const nx = { ...st, done };
     setState(nx); setDoneMap((m) => ({ ...m, [st.key]: done.length })); persist(nx);
   };
-  const reset = async () => { await api.delete(`/kali/state/${cur}`); toast.success("Lab reset"); load(cur); };
+  const reset = async () => { clearTimeout(saveT.current); await api.delete(`/kali/state/${cur}`); toast.success("Lab reset"); load(cur); };
   const hint = () => { const nx = { ...state, hints: Math.min(3, state.hints + 1) }; setState(nx); persist(nx); };
 
   return <div className="grid xl:grid-cols-[230px_1fr_320px] gap-4">

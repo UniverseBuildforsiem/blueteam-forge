@@ -1,0 +1,50 @@
+{
+  "summary": "Full browser test of /app/kali (Kali terminal overhaul) as student. Things that work: page render, lab group order, the sandbox interpreter, vi, msfconsole, auto-checks for lx-users id/groups, hint/solution/ladder buttons, persistence across reload (when you wait for the load to finish), reset, sh-intro read -p prompt, and ping-sweep starter. 4 bugs found: (1) a race condition in KaliWorkbench.load sends lab progress to the wrong state (seen in the DB), (2) nano opens with a stray leading newline, (3) the lx-users 'Delete the user' task completes before the user exists, (4) lab list counters show 0/N after reload until you open the lab.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "KaliWorkbench.load (KaliLabs.jsx L44-53)", "issue": "Race condition: load() has no stale/cancel guard. If the learner clicks a lab before the earlier GET /kali/state/sandbox returns (e.g. right after page load), the late sandbox response overwrites state. The task panel then shows lx-users tasks (lab comes from `cur`) but the terminal runs the sandbox fs. The lab's checks run against it and done ids are PUT to the SANDBOX doc. Reproduced: after reload I clicked lx-users at once, the panel showed 0/6, my lab file was 'missing', and Mongo kali_state sandbox doc got done:['5']. Fix: track the latest key in a ref (or AbortController) and ignore responses whose key !== the current key; also derive the lab from state.key, not cur.", "selector": "[data-testid=kali-lab-lx-users]", "priority": "HIGH"},
+      {"component": "Editor.jsx nano mode", "issue": "`nano <newfile>` opens with text '\\n'. The Enter keystroke from the terminal input leaks into the newly focused textarea (NANO mode accepts onChange; vi NORMAL mode ignores it, so vi is not affected). Every nano-saved file starts with a blank line ('cat note.txt' shows an empty first line, and head -n1 | wc -c = 1). This can break shebangs (#!/bin/bash on line 2) and line-based checks. Fix: open the editor after a tick, or call preventDefault on the Enter keydown in Terminal.onKey before exec.", "selector": "[data-testid=kali-editor-text]", "priority": "HIGH"},
+      {"component": "labs.js lx-users task 5 'Delete the user'", "issue": "The check passes vacuously because analyst2 does not exist at the start. It completes on the very first command (the toast 'Task 6 complete: Delete the user' fires after `id`). It completes again after Reset on any command. Fix: require /userdel/ in last.cmd, or require task 3 to be done first.", "selector": "[data-testid=kali-task-5]", "priority": "MEDIUM"},
+      {"component": "LabList counters", "issue": "doneMap is filled only when a lab is opened, so after a page reload every lab shows 0/N even when progress is saved (lx-users saved 3/6 but the list showed 0/6 until clicked). Fix: add a batch GET of all done counts (e.g. GET /api/kali/state) on mount.", "selector": "[data-testid=kali-lab-list]", "priority": "MEDIUM"},
+      {"component": "Terminal title bar", "issue": "Title always reads 'kali@lab-phish-ransom — bash' (it uses the baseLab id) instead of 'sandbox' or the current lab id.", "selector": "[data-testid=kali-terminal]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Reset during pending save", "issue": "reset() does not clearTimeout(saveT). If the learner runs a command and clicks Reset within 600 ms, the debounced PUT fires after the DELETE and brings the old state back. (Found in code review; not reproduced.)", "affected_selectors": ["[data-testid=kali-reset]"]}
+    ],
+    "design_issues": []
+  },
+  "verified_working": [
+    "Header 'Analyst workstation', lab list, terminal and right panel render",
+    "Group order: Free-play sandbox, LINUX ESSENTIALS, SHELL SCRIPTING, PENTEST AUTOMATION (KaliLabs.jsx line 10 was already in this order)",
+    "echo hi | tr a-z A-Z -> HI; for loop 1 2 3; $((x*2)) -> 10; redirect + cat",
+    "vi hello.sh: i, type, Esc, :wq; cat shows 'echo hello'; bash hello.sh -> hello",
+    "nano opens, ^O/^X save and exit (apart from the leading newline bug)",
+    "msfconsole search vsftpd / use 0 / set RHOSTS / run -> meterpreter; exit, exit -> back to bash",
+    "lx-users: id -> task0 green + toast; groups -> task1; kali-task-count and the list counter update",
+    "hint/solution reveal 'Start with: id' / 'id'",
+    "Persistence across reload (when load is not raced); Reset clears done and files; the ladder resets to 'Show hint'",
+    "sh-intro: echo Hello SOC + read -p prompt work (2/6)",
+    "auto-ping-sweep: starter script shown, 3 ladder steps reveal, then the button is disabled",
+    "No page errors; only expected 401s from auth/me before login"
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Add a stale-response guard in KaliWorkbench.load and derive `lab` from state.key",
+    "Stop the Enter keystroke leaking into the nano textarea (leading newline)",
+    "Make the lx-users 'Delete the user' check require a userdel command or task 3 done first",
+    "Load all lab done counts on mount so the list counters are correct after reload",
+    "clearTimeout(saveT.current) in reset() and when switching labs",
+    "Optional: show the current lab id in the terminal title"
+  ],
+  "critical_code_review_comments": [
+    "KaliPage returns null forever if GET /labs/lab-phish-ransom fails. Add an error state.",
+    "load() swallows GET errors as {} and seeds a fresh fs. A later PUT can then overwrite real saved progress after a temporary network error."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend only)", "frontend": "~85%"},
+  "seed_data_creation": "None. Test files in the student sandbox were cleaned up by direct Mongo edit. I accidentally removed the seeded /home/kali/scripts/hello.sh from the student's sandbox doc and restored it with the seed content from fs.js (without an 'mt' field, same as the seed). I reset the done:['5'] that the race wrote into the sandbox doc. I deleted the lx-users, sh-intro and auto-ping-sweep docs (all created by this test).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login student@socprofessionals.academy / Student@123, go to /app/kali. To reproduce the race: reload, then click kali-lab-lx-users at once; the panel shows 0/6 and the kali_state sandbox doc gets lab done ids. Nano bug: `nano x.txt`, then textarea input_value == '\\n'."
+}

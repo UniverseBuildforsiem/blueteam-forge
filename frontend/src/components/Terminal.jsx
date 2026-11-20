@@ -52,7 +52,7 @@ const Terminal = forwardRef(function Terminal({ lab, height = "520px", session: 
       return;
     }
     if (e.ctrlKey && e.key === "l") { e.preventDefault(); setLines([]); return; }
-    if (e.key === "Enter") exec();
+    if (e.key === "Enter") { e.preventDefault(); exec(); }
     else if (e.key === "ArrowUp") { e.preventDefault(); const n = Math.min(hi + 1, hist.current.length - 1); if (n >= 0) { setHi(n); setCmd(hist.current[hist.current.length - 1 - n]); } }
     else if (e.key === "ArrowDown") { e.preventDefault(); const n = hi - 1; setHi(n); setCmd(n >= 0 ? hist.current[hist.current.length - 1 - n] : ""); }
     else if (e.key === "Tab") {
