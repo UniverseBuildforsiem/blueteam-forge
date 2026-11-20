@@ -4,7 +4,7 @@ import { Editor } from "./kali/Editor";
 
 const isMsf = (p) => p.startsWith("msf") || p.startsWith("meterpreter");
 
-const Terminal = forwardRef(function Terminal({ lab, height = "520px", session: ext, onRan }, ref) {
+const Terminal = forwardRef(function Terminal({ lab, title, height = "520px", session: ext, onRan }, ref) {
   const pendRead = useRef(null), pendEdit = useRef(null);
   const [editor, setEditor] = useState(null);
   const [readP, setReadP] = useState(null);
@@ -68,7 +68,7 @@ const Terminal = forwardRef(function Terminal({ lab, height = "520px", session: 
     <div className="bg-[#05070D] border border-cyan-500/25 rounded-sm font-mono text-[13px] relative scanlines flex flex-col" style={{ height }} onClick={() => !editor && inp.current?.focus()} data-testid="kali-terminal">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-cyan-500/15 text-xs text-slate-500">
         <span className="h-2.5 w-2.5 rounded-full bg-red-500/70" /><span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" /><span className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
-        <span className="ml-2">kali@{lab?.id || "sandbox"} — bash</span><span className="ml-auto hidden sm:inline">{busy && readP === null ? "running… Ctrl+C to abort" : "Tab complete · ↑↓ history · Ctrl+L clear"}</span>
+        <span className="ml-2">kali@{title || lab?.id || "sandbox"} — bash</span><span className="ml-auto hidden sm:inline">{busy && readP === null ? "running… Ctrl+C to abort" : "Tab complete · ↑↓ history · Ctrl+L clear"}</span>
       </div>
       <div ref={box} className="flex-1 overflow-y-auto p-3 space-y-0.5" data-testid="kali-output">
         {lines.map((l, i) => l.t === "cmd" ? <div key={i} className="whitespace-pre-wrap break-words"><span className="text-green-400">{l.p}</span> <span className="text-slate-100">{l.v}</span></div>
@@ -77,7 +77,7 @@ const Terminal = forwardRef(function Terminal({ lab, height = "520px", session: 
           <input ref={inp} value={cmd} onChange={(e) => setCmd(e.target.value)} onKeyDown={onKey} spellCheck={false} autoComplete="off"
             className="flex-1 bg-transparent outline-none text-slate-100 caret-green-400" data-testid="kali-input" autoFocus /></div>
       </div>
-      {editor && <Editor path={editor.path} initial={editor.content} kind={editor.kind} onClose={(txt) => { setEditor(null); const r = pendEdit.current; pendEdit.current = null; r(txt); }} />}
+      {editor && <Editor path={editor.path} initial={editor.content} kind={editor.kind} onClose={(txt) => { setEditor(null); const r = pendEdit.current; pendEdit.current = null; r(txt && !txt.endsWith("\n") ? txt + "\n" : txt); }} />}
     </div>
   );
 });

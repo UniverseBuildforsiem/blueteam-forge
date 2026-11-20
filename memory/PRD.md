@@ -325,3 +325,11 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Next: Module 3 Web Application Scanning (P1), Module 4 PCI DSS & Policy Compliance (P1), instructor bio editor (P2), LinkedIn sign-in (P2).
 - 2026-06: Module 3 Web App Scanning (8 labs vm-lab-was-01..08 + quiz vm-quiz-was-core + CTF vm-ctf-was-hunt) and Module 4 PCI DSS & Policy Compliance (6 scenario labs vm-lab-pci-01..06 + quiz vm-quiz-pci-core). Lab 1 of each free. Data: backend/vm_m3.py (SOCP Shop https://shop.socp.test sitemap/WAS findings w/ OWASP+CWE, PCI hosts 203.0.113.10-13, CIS-style controls on M2 Windows hosts). Terminal: backend/vm_web.py (curl -I / login / robots.txt, ssh pciadmin rpm -q openssh, net accounts /domain). Labs: backend/vm_labs3.py; scenario checklists = lab `scenarios` + event scenario.checked {sid, picked}. UI: components/vmlab/was/* (Web Apps, Auth, Option Profiles, Scans + sitemap/findings drawers, Schedules, Reports, Search Lists) and pc/* (Scenario, PCI Merchant scope/scans/disputes, Policies + control edit, Compliance Scans, Posture, Exceptions, Reports). Console picks app per module (BY_MODULE). SEED_VERSION=4. Tests: backend/tests/test_vm_module34_labs.py (24) — iteration_62 all pass.
 - Next backlog: instructor bio editor (P2), LinkedIn sign-in (P2).
+
+## 2026-06 — Kali Terminal Overhaul (DONE, tested iterations 63–65)
+- In-browser JS bash interpreter + persisted virtual FS (/api/kali/state/{key}, GET /api/kali/progress), vi/nano, simulated msfconsole, auto-checked labs
+- Lab order: Linux essentials → Shell scripting → Pentest automation
+- Fixes: lab-switch race guard, nano Enter leak, vi :w/:q save, trailing newline on save, lx-users checks, list counters on reload, terminal title shows lab id
+## Backlog
+- P2: Instructor bio/headline editor for landing page
+- P2: LinkedIn Sign-In
