@@ -17,7 +17,8 @@ function useStrict(a, idx) {
     const leave = (event) => { if (!away.current) away.current = { event, t: Date.now() }; };
     const back = () => {
       const w = away.current; if (!w) return; away.current = null;
-      const secs = Math.round((Date.now() - w.t) / 1000);
+      const ms = Date.now() - w.t, secs = Math.round(ms / 1000);
+      if (w.event === "blur" && ms < 1500) return;
       api.post(`/exam-attempts/${a.id}/focus`, { event: w.event, away_seconds: secs, question: qi.current + 1 }).then((r) => setCount(r.data.focus_count)).catch(() => {});
       setWarn(true);
     };

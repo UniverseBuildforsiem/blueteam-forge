@@ -64,7 +64,7 @@ export default function AdminBundles() {
       {bs && !bs.length && <Empty text="No bundles yet" />}
       <Glass className="divide-y divide-white/5">{(bs || []).map((b) => (
         <div key={b.id} className="p-3 flex flex-wrap items-center gap-3 text-sm" data-testid={`bundle-row-${b.id}`}>
-          <div className="flex-1 min-w-[200px]"><div className="font-bold">{b.title}</div><div className="text-[11px] font-mono text-slate-500">{b.course_ids.length} courses{b.test_ids?.length ? ` + ${b.test_ids.length} tests` : ""} · worth {inr(b.pricing.value)} · {b.buyers} buyers · updated {fmtDate(b.updated_at)}</div></div>
+          <div className="flex-1 min-w-[200px]"><div className="font-bold">{b.title}</div><div className="text-[11px] font-mono text-slate-500">{[b.course_ids.length && `${b.course_ids.length} courses`, b.test_ids?.length && `${b.test_ids.length} tests`].filter(Boolean).join(" + ")} · worth {inr(b.pricing.value)} · {b.buyers} buyers · updated {fmtDate(b.updated_at)}</div></div>
           <span className="font-mono text-yellow-300" data-testid={`bundle-row-price-${b.id}`}>{inr(b.pricing.price)}{b.pricing.regular ? <span className="text-slate-500 line-through ml-1.5 text-xs">{inr(b.pricing.regular)}</span> : null}</span>
           <Switch checked={b.active} onCheckedChange={() => toggle(b)} data-testid={`bundle-active-${b.id}`} />
           <a href={`/bundle/${b.id}`} className="text-slate-400 hover:text-cyan-300" data-testid={`bundle-view-${b.id}`}><Eye className="h-4 w-4" /></a>

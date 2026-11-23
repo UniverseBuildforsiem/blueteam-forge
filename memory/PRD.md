@@ -343,3 +343,8 @@ Full-stack cybersecurity learning platform "SOCForge" for aspiring SOC analysts:
 - Files: backend/exam_engine.py, routes_exams.py, routes_exam_admin.py, exam_csa_data.py; frontend components/exam/*, pages/Tests.jsx, TestLanding.jsx, pages/app/Tests.jsx
 ## Backlog
 - P2: Hard delete for scenarios/exams with attempts; per-question time analytics
+
+## 2026-06 — Bundles with tests + Strict mode (DONE, iteration_67)
+- Bundles (Admin > Bundles) accept any mix of published courses and tests (`test_ids`); bundle purchase/gift grants `test:<id>`; bundles show on test landing ("Save with a bundle")
+- Strict mode per test (Admin > Tests editor checkbox): exam/certification attempts log tab hides & window blurs (>1.5s) via POST /api/exam-attempts/{aid}/focus; candidate sees warning dialog + STRICT badge; admin analytics shows flagged attempts and per-attempt focus log
+- Note: no academy course is published yet — publish the CSA course in Admin > Courses to bundle it with the CSA exam

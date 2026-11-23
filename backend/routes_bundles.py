@@ -236,7 +236,7 @@ async def send_wishlist_reminders():
         if lines and w["kind"] == "bundle":
             mine = (await personal(item, await bundle_courses(item), user))["your_price"]
             if mine != p["price"]:
-                lines.append(f"Because you already own some of its courses, your price is just {inr(mine)}.")
+                lines.append(f"Because you already own some of its items, your price is just {inr(mine)}.")
         if lines and await send_email(to=user["email"], subject=subj, html=email_template(user["name"], lines + ["Remove it from your wishlist to stop these reminders."], link, "View on SOCProfessionals Academy")):
             sent += 1
     logger.info(f"Wishlist reminders sent: {sent}")
